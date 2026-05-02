@@ -1,8 +1,10 @@
 import eslint from '@eslint/js';
+import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: [
       '**/node_modules/**',
@@ -74,6 +76,20 @@ export default tseslint.config(
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
+    },
+  },
+
+  // Désactive les règles type-aware pour les fichiers JS / MJS / CJS qui ne sont pas
+  // dans le programme TypeScript (sinon parserOptions.projectService les rejette).
+  {
+    files: ['**/*.{js,mjs,cjs}'],
+    ...tseslint.configs.disableTypeChecked,
+    languageOptions: {
+      globals: { ...globals.node },
+      parserOptions: {
+        projectService: false,
+        project: null,
+      },
     },
   },
 
