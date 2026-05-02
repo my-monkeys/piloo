@@ -56,5 +56,10 @@ pnpm-debug.log*
 coverage/
 
 # OpenAPI generated artifacts (regenerated)
+# Le openapi.yaml lui-même est commité (source du contrat) ; les clients
+# dérivés (TS pour apps/web, Dart pour apps/mobile) sont régénérés.
 packages/api-contract/generated/
+apps/web/lib/api/types.ts
+apps/web/lib/api/generated/
 apps/mobile/lib/generated/
+apps/mobile/lib/gen/openapi/

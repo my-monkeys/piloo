@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: Piloo API
+  version: 0.0.0
+  description: "API REST de Piloo — carnet numérique de médicaments. Source de vérité : les schémas Zod du package @piloo/api-contract."
+servers:
+  - url: http://localhost:3000/api
+    description: Local dev
+  - url: https://piloo.fr/api
+    description: Production
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+            - degraded
+          example: ok
+        version:
+          type: string
+          example: 0.0.0
+        timestamp:
+          type: string
+          format: date-time
+          example: 2026-05-02T12:00:00.000Z
+      required:
+        - status
+        - version
+        - timestamp
+  parameters: {}
+paths:
+  /health:
+    get:
+      summary: Liveness probe
+      description: Renvoie le statut du serveur. Utilisé par les health checks Vercel et le monitoring.
+      tags:
+        - health
+      responses:
+        "200":
+          description: Serveur OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+webhooks: {}
