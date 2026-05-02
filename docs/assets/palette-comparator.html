@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Piloo — Comparateur de palettes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=Instrument+Serif&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 16px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f5f5f0;
+    color: #1a1a1a;
+    padding: 2rem 1rem 4rem;
+    line-height: 1.5;
+  }
+
+  .intro {
+    max-width: 900px;
+    margin: 0 auto 3rem;
+    text-align: center;
+    padding: 2rem 1rem;
+  }
+
+  .intro h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2rem, 4vw, 3rem);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  .intro p {
+    color: #666;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .comparator {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .palette {
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .palette-header {
+    padding: 1.5rem 1.75rem;
+    color: white;
+  }
+
+  .palette-header .label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.85;
+    margin-bottom: 0.5rem;
+  }
+
+  .palette-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.5rem;
+    font-weight: 500;
+  }
+
+  .palette-header p {
+    font-size: 0.875rem;
+    opacity: 0.85;
+    margin-top: 0.25rem;
+  }
+
+  /* Color swatches */
+  .swatches {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 0;
+  }
+
+  .swatch {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: flex-end;
+    padding: 0.5rem;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .swatch.light {
+    color: #333;
+    text-shadow: none;
+  }
+
+  .content {
+    padding: 1.5rem;
+    flex: 1;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #888;
+    margin-bottom: 0.75rem;
+    margin-top: 1.5rem;
+  }
+
+  .section-title:first-child {
+    margin-top: 0;
+  }
+
+  /* ==== PALETTE A — Apaisant & clinique ==== */
+  .palette-a {
+    background: #fafaf5;
+    color: #2d2a24;
+    font-family: 'Manrope', sans-serif;
+  }
+  .palette-a .palette-header {
+    background: #5a7a6b;
+  }
+
+  .palette-a .app-header {
+    background: white;
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border: 1px solid #e8e4d9;
+  }
+  .palette-a .app-logo {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: #2d2a24;
+    letter-spacing: -0.02em;
+  }
+  .palette-a .app-logo span {
+    color: #5a7a6b;
+  }
+  .palette-a .bell {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e8e4d9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: #5a7a6b;
+  }
+
+  .palette-a .card {
+    background: white;
+    border-radius: 16px;
+    padding: 1rem 1.25rem;
+    border: 1px solid #e8e4d9;
+    margin-bottom: 0.75rem;
+  }
+
+  .palette-a .card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .palette-a .card-sub {
+    font-size: 0.8125rem;
+    color: #7a756a;
+  }
+
+  .palette-a .btn {
+    background: #2d2a24;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.25rem;
+    border-radius: 100px;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 0.875rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .palette-a .btn-primary {
+    background: #5a7a6b;
+  }
+  .palette-a .btn-soft {
+    background: #e8e4d9;
+    color: #2d2a24;
+  }
+
+  .palette-a .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.625rem;
+    border-radius: 100px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .palette-a .badge.success { background: #d4e3d5; color: #3d5a45; }
+  .palette-a .badge.warn { background: #f7e8c9; color: #7a5a1f; }
+  .palette-a .badge.error { background: #f0d4cb; color: #8a3a28; }
+  .palette-a .badge.info { background: #d4dde4; color: #3d5566; }
+
+  .palette-a .timeline-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #e8e4d9;
+    border-radius: 12px;
+    margin-bottom: 0.5rem;
+  }
+  .palette-a .dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #5a7a6b;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+  .palette-a .dot.done {
+    background: #5a7a6b;
+    position: relative;
+  }
+  .palette-a .dot.done::after {
+    content: '✓';
+    color: white;
+    font-size: 0.75rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .palette-a .timeline-text { flex: 1; font-size: 0.875rem; }
+  .palette-a .timeline-time { font-size: 0.75rem; color: #7a756a; }
+
+  /* ==== PALETTE C — Nordique utilitaire ==== */
+  .palette-c {
+    background: #fcfcfa;
+    color: #1e2530;
+    font-family: 'Inter', sans-serif;
+  }
+  .palette-c .palette-header {
+    background: #2f3a4a;
+  }
+
+  .palette-c .app-header {
+    background: white;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e4e6eb;
+    border-radius: 4px;
+  }
+  .palette-c .app-logo {
+    font-family: 'Instrument Serif', serif;
+    font-weight: 400;
+    font-size: 1.5rem;
+    letter-spacing: -0.01em;
+    color: #1e2530;
+  }
+  .palette-c .app-logo span {
+    color: #c25e3e;
+  }
+  .palette-c .bell {
+    width: 32px;
+    height: 32px;
+    background: #f1f2f4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: #2f3a4a;
+    border-radius: 4px;
+  }
+
+  .palette-c .card {
+    background: white;
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    border: 1px solid #e4e6eb;
+    margin-bottom: 0.75rem;
+  }
+
+  .palette-c .card-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .palette-c .card-sub {
+    font-size: 0.8125rem;
+    color: #6b7280;
+  }
+
+  .palette-c .btn {
+    background: #1e2530;
+    color: white;
+    border: none;
+    padding: 0.625rem 1.125rem;
+    border-radius: 4px;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.005em;
+  }
+  .palette-c .btn-primary {
+    background: #c25e3e;
+  }
+  .palette-c .btn-soft {
+    background: #f1f2f4;
+    color: #1e2530;
+    border: 1px solid #e4e6eb;
+  }
+
+  .palette-c .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .palette-c .badge.success { background: #e6f0e8; color: #2f5a3a; }
+  .palette-c .badge.warn { background: #fbeed5; color: #7d5a16; }
+  .palette-c .badge.error { background: #f4d9d1; color: #8c3b26; }
+  .palette-c .badge.info { background: #e1e5ec; color: #2f3a4a; }
+
+  .palette-c .timeline-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #e4e6eb;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+  .palette-c .dot {
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    border: 2px solid #2f3a4a;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+  .palette-c .dot.done {
+    background: #c25e3e;
+    border-color: #c25e3e;
+    position: relative;
+  }
+  .palette-c .dot.done::after {
+    content: '✓';
+    color: white;
+    font-size: 0.75rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+  }
+  .palette-c .timeline-text { flex: 1; font-size: 0.875rem; letter-spacing: -0.005em; }
+  .palette-c .timeline-time { font-size: 0.75rem; color: #6b7280; font-variant-numeric: tabular-nums; }
+
+  /* ==== PALETTE AC — Mélange des deux ==== */
+  .palette-ac {
+    background: #faf8f3;
+    color: #252a30;
+    font-family: 'Manrope', sans-serif;
+  }
+  .palette-ac .palette-header {
+    background: #4a6b64;
+  }
+
+  .palette-ac .app-header {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    border: 1px solid #e5e0d3;
+  }
+  .palette-ac .app-logo {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1.375rem;
+    letter-spacing: -0.02em;
+    color: #252a30;
+  }
+  .palette-ac .app-logo span {
+    color: #4a6b64;
+  }
+  .palette-ac .bell {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f1ede2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: #4a6b64;
+  }
+
+  .palette-ac .card {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    border: 1px solid #e5e0d3;
+    margin-bottom: 0.75rem;
+  }
+
+  .palette-ac .card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+    letter-spacing: -0.015em;
+  }
+
+  .palette-ac .card-sub {
+    font-size: 0.8125rem;
+    color: #6b7280;
+  }
+
+  .palette-ac .btn {
+    background: #252a30;
+    color: white;
+    border: none;
+    padding: 0.65rem 1.2rem;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .palette-ac .btn-primary {
+    background: #4a6b64;
+  }
+  .palette-ac .btn-soft {
+    background: #f1ede2;
+    color: #252a30;
+  }
+
+  .palette-ac .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .palette-ac .badge.success { background: #d8e3d5; color: #355b3e; }
+  .palette-ac .badge.warn { background: #f5e4c3; color: #7a541c; }
+  .palette-ac .badge.error { background: #eed0c5; color: #8a382a; }
+  .palette-ac .badge.info { background: #d8dfe6; color: #35475a; }
+
+  .palette-ac .timeline-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #e5e0d3;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+  }
+  .palette-ac .dot {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #4a6b64;
+    margin-right: 0.75rem;
+    flex-shrink: 0;
+  }
+  .palette-ac .dot.done {
+    background: #4a6b64;
+    border-color: #4a6b64;
+    position: relative;
+  }
+  .palette-ac .dot.done::after {
+    content: '✓';
+    color: white;
+    font-size: 0.75rem;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    line-height: 1;
+  }
+  .palette-ac .timeline-text { flex: 1; font-size: 0.875rem; }
+  .palette-ac .timeline-time { font-size: 0.75rem; color: #6b7280; font-variant-numeric: tabular-nums; }
+
+  /* Global footer */
+  .verdict {
+    max-width: 900px;
+    margin: 4rem auto 0;
+    padding: 2rem;
+    background: white;
+    border-radius: 16px;
+    border: 1px solid #e8e4d9;
+  }
+
+  .verdict h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+  }
+
+  .verdict p {
+    font-size: 0.9375rem;
+    color: #4a4a4a;
+    margin-bottom: 0.75rem;
+  }
+
+  .verdict strong {
+    color: #1a1a1a;
+  }
+
+  @media (max-width: 700px) {
+    .comparator {
+      grid-template-columns: 1fr;
+    }
+    body {
+      padding: 1rem 0.5rem 3rem;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Piloo — 3 directions visuelles</h1>
+  <p>Même composants, trois palettes. Clique mentalement sur celle où tu te vois vivre tous les jours.</p>
+</div>
+
+<div class="comparator">
+
+  <!-- ============ PALETTE A ============ -->
+  <div class="palette palette-a">
+    <div class="palette-header">
+      <div class="label">Direction A</div>
+      <h2>Apaisant & clinique</h2>
+      <p>Beige, vert sauge, typographie Manrope + Fraunces</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#fafaf5;color:#333">#fafaf5</div>
+      <div class="swatch light" style="background:#e8e4d9">#e8e4d9</div>
+      <div class="swatch" style="background:#5a7a6b">#5a7a6b</div>
+      <div class="swatch" style="background:#2d2a24">#2d2a24</div>
+      <div class="swatch" style="background:#8a3a28">#8a3a28</div>
+      <div class="swatch" style="background:#7a5a1f">#7a5a1f</div>
+    </div>
+    <div class="content">
+      <div class="section-title">Application</div>
+      <div class="app-header">
+        <div class="app-logo">pil<span>oo</span></div>
+        <div class="bell">🔔</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Doliprane 1000 mg</div>
+        <div class="card-sub">3 boîtes · Paracétamol · Périme dans 8 mois</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Kardegic 75 mg</div>
+        <div class="card-sub">1 boîte · Presque vide · Renouveler</div>
+      </div>
+
+      <div class="section-title">Boutons</div>
+      <button class="btn btn-primary">Scanner une boîte</button>
+      <button class="btn btn-soft">Annuler</button>
+      <button class="btn">Voir tout</button>
+
+      <div class="section-title">Statuts</div>
+      <span class="badge success">● Prise validée</span>
+      <span class="badge warn">● Stock bas</span>
+      <span class="badge error">● Périmé</span>
+      <span class="badge info">● Info</span>
+
+      <div class="section-title">Timeline</div>
+      <div class="timeline-item">
+        <div class="dot done"></div>
+        <div class="timeline-text">Doliprane 1000 mg</div>
+        <div class="timeline-time">8:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Kardegic 75 mg</div>
+        <div class="timeline-time">12:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Vitamine D</div>
+        <div class="timeline-time">19:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PALETTE C ============ -->
+  <div class="palette palette-c">
+    <div class="palette-header">
+      <div class="label">Direction C</div>
+      <h2>Nordique utilitaire</h2>
+      <p>Gris-bleu, terracotta, Inter + Instrument Serif</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#fcfcfa;color:#333">#fcfcfa</div>
+      <div class="swatch light" style="background:#f1f2f4">#f1f2f4</div>
+      <div class="swatch" style="background:#2f3a4a">#2f3a4a</div>
+      <div class="swatch" style="background:#1e2530">#1e2530</div>
+      <div class="swatch" style="background:#c25e3e">#c25e3e</div>
+      <div class="swatch" style="background:#6b7280">#6b7280</div>
+    </div>
+    <div class="content">
+      <div class="section-title">Application</div>
+      <div class="app-header">
+        <div class="app-logo">pil<span>oo</span></div>
+        <div class="bell">🔔</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Doliprane 1000 mg</div>
+        <div class="card-sub">3 boîtes · Paracétamol · Périme dans 8 mois</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Kardegic 75 mg</div>
+        <div class="card-sub">1 boîte · Presque vide · Renouveler</div>
+      </div>
+
+      <div class="section-title">Boutons</div>
+      <button class="btn btn-primary">Scanner une boîte</button>
+      <button class="btn btn-soft">Annuler</button>
+      <button class="btn">Voir tout</button>
+
+      <div class="section-title">Statuts</div>
+      <span class="badge success">✓ Prise validée</span>
+      <span class="badge warn">! Stock bas</span>
+      <span class="badge error">× Périmé</span>
+      <span class="badge info">i Info</span>
+
+      <div class="section-title">Timeline</div>
+      <div class="timeline-item">
+        <div class="dot done"></div>
+        <div class="timeline-text">Doliprane 1000 mg</div>
+        <div class="timeline-time">08:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Kardegic 75 mg</div>
+        <div class="timeline-time">12:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Vitamine D</div>
+        <div class="timeline-time">19:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PALETTE A+C ============ -->
+  <div class="palette palette-ac">
+    <div class="palette-header">
+      <div class="label">Direction A+C</div>
+      <h2>Mélange des deux</h2>
+      <p>Chaleur du beige + précision nordique, Manrope + Fraunces</p>
+    </div>
+    <div class="swatches">
+      <div class="swatch" style="background:#faf8f3;color:#333">#faf8f3</div>
+      <div class="swatch light" style="background:#f1ede2">#f1ede2</div>
+      <div class="swatch" style="background:#4a6b64">#4a6b64</div>
+      <div class="swatch" style="background:#252a30">#252a30</div>
+      <div class="swatch" style="background:#a8472e">#a8472e</div>
+      <div class="swatch" style="background:#6b7280">#6b7280</div>
+    </div>
+    <div class="content">
+      <div class="section-title">Application</div>
+      <div class="app-header">
+        <div class="app-logo">pil<span>oo</span></div>
+        <div class="bell">🔔</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Doliprane 1000 mg</div>
+        <div class="card-sub">3 boîtes · Paracétamol · Périme dans 8 mois</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Kardegic 75 mg</div>
+        <div class="card-sub">1 boîte · Presque vide · Renouveler</div>
+      </div>
+
+      <div class="section-title">Boutons</div>
+      <button class="btn btn-primary">Scanner une boîte</button>
+      <button class="btn btn-soft">Annuler</button>
+      <button class="btn">Voir tout</button>
+
+      <div class="section-title">Statuts</div>
+      <span class="badge success">● Prise validée</span>
+      <span class="badge warn">● Stock bas</span>
+      <span class="badge error">● Périmé</span>
+      <span class="badge info">● Info</span>
+
+      <div class="section-title">Timeline</div>
+      <div class="timeline-item">
+        <div class="dot done"></div>
+        <div class="timeline-text">Doliprane 1000 mg</div>
+        <div class="timeline-time">08:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Kardegic 75 mg</div>
+        <div class="timeline-time">12:00</div>
+      </div>
+      <div class="timeline-item">
+        <div class="dot"></div>
+        <div class="timeline-text">Vitamine D</div>
+        <div class="timeline-time">19:00</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="verdict">
+  <h3>Mon avis en synthèse</h3>
+  <p><strong>A — Apaisant & clinique</strong> est le plus doux, le plus chaleureux. Cards arrondies, boutons en pill. Idéal pour les personnes âgées et familles. Un peu moins différenciant côté pro (sent le "wellness app").</p>
+  <p><strong>C — Nordique utilitaire</strong> est le plus distinctif. Coins nets, typographie précise, l'accent terracotta apporte la chaleur. Fonctionne aussi bien pour particuliers que pros. Look "carnet soigné". <strong>Ma reco si tu veux te démarquer.</strong></p>
+  <p><strong>A+C</strong> prend la chaleur de A (beige fond, typo serif Fraunces pour les titres) et la précision de C (coins moins arrondis, hiérarchie claire, accent terracotta). <strong>Le meilleur compromis</strong> : chaleureux sans être mielleux, pro sans être froid.</p>
+  <p style="margin-top:1.5rem;padding-top:1.5rem;border-top:1px solid #e8e4d9"><strong>Note pratique</strong> : ces palettes sont des points de départ. En implémentation Flutter/Tailwind, on définira des tokens précis (primary 50 à 900, semantic colors, spacing, etc.) à partir de la direction retenue.</p>
+</div>
+
+</body>
+</html>

@@ -1,44 +1,57 @@
 # Piloo
 
-Carnet numérique de médicaments. Pont léger patient ↔ pro de santé.
+> Carnet numérique de médicaments pour la maison — un pont léger entre les particuliers, les aidants, et les professionnels de santé à domicile.
 
-**Project hub** : https://piloo-project.my-monkey.fr/
+## Vision
+
+Permettre à chacun de gérer son armoire à pharmacie comme une vraie officine : scanner ses boîtes, connaître ses stocks, suivre ses prises. Pour les professionnels de santé à domicile (aides-soignants, IDEL), maintenir à jour l'inventaire de leurs patients avec un partage bidirectionnel et des alertes.
+
+**Positionnement** : carnet de suivi personnel numérique. Pas un dispositif médical, pas un outil de validation clinique. Juste un meilleur cahier.
+
+## Pour démarrer
+
+1. Lire `docs/dossier-cadrage.md` pour la vision complète
+2. Lire `docs/spec.md` pour les spécifications fonctionnelles
+3. Lire `docs/architecture.md` pour les décisions techniques
+4. Consulter `CLAUDE.md` (ou les `CLAUDE.md` de chaque app/package) pour travailler avec Claude Code
+
+## Structure
+
+```
+mon-officine/
+├── README.md                  → Ce fichier
+├── CLAUDE.md                  → Instructions Claude Code (contexte global)
+├── docs/                      → Documentation projet
+│   ├── dossier-cadrage.md     → Vision produit complète
+│   ├── spec.md                → Spécifications fonctionnelles
+│   ├── architecture.md        → Architecture technique
+│   ├── data-model.md          → Modèle de données
+│   ├── api-contract.md        → Conventions API REST + OpenAPI
+│   ├── ui-ux-guidelines.md    → Guidelines UI/UX
+│   └── roadmap.md             → Planning M1-M3
+├── apps/
+│   ├── web/                   → Application web Next.js 15
+│   └── mobile/                → Application mobile Flutter
+├── packages/
+│   ├── db-schema/             → Schéma Drizzle + migrations Postgres
+│   └── api-contract/          → Schémas Zod + OpenAPI généré
+├── .gitignore
+└── .env.example
+```
 
 ## Stack
 
-- **Mobile** : Flutter 3.x + Drift (SQLite)
-- **Web + API** : Next.js 15 (App Router) + TypeScript + Zod
-- **DB** : PostgreSQL + Drizzle
-- **Sync** : custom append-only operations log + last-write-wins
-- **Auth** : Better Auth ou Clerk (à trancher M1)
-- **Notifications** : FCM + Brevo
+- **Mobile** : Flutter 3.x + Dart
+- **Web** : Next.js 15 (App Router) + TypeScript
+- **Backend** : API Routes Next.js + Zod + OpenAPI
+- **DB** : PostgreSQL + Drizzle ORM
+- **DB mobile locale** : SQLite + Drift
+- **Monorepo** : Turborepo (pour le JS/TS, Flutter cohabite à côté)
 
-## Documentation
+## État actuel
 
-Toutes les specs sont sur le hub : https://piloo-project.my-monkey.fr/
+Phase : **cadrage terminé, pas encore de code**. La documentation est prête, le développement démarre.
 
-- [Dossier de cadrage](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=dossier-cadrage.md)
-- [Spécifications](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=spec.md)
-- [Architecture](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=architecture.md)
-- [Data model](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=data-model.md)
-- [API contract](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=api-contract.md)
-- [UI/UX guidelines](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=ui-ux-guidelines.md)
-- [Roadmap](https://piloo-project.my-monkey.fr/docs/viewer.html?doc=roadmap.md)
-- [Design recap (25 écrans mobile)](https://piloo-project.my-monkey.fr/design/recap.html)
+## Licence
 
-## Repo structure (à venir)
-
-```
-piloo/
-├── apps/
-│   ├── mobile/          # Flutter
-│   └── web/             # Next.js (web + API)
-├── packages/
-│   ├── db-schema/       # Drizzle schema partagée
-│   └── api-contract/    # Zod + OpenAPI
-└── docs/                # Specs source
-```
-
-## Positionnement
-
-Piloo est un **carnet de suivi personnel**, **pas un dispositif médical** au sens MDR. Pas de validation clinique, pas de recommandation médicale.
+À définir.

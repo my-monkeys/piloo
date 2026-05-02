@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piloo — Roadmap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f3;
+    --surface: #ffffff;
+    --surface-subtle: #f1ede2;
+    --border: #e5e0d3;
+    --primary: #4a6b64;
+    --primary-soft: #dbe3e0;
+    --accent: #a8472e;
+    --accent-soft: #f3d9cd;
+    --text: #252a30;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --p0: #B60205;
+    --p1: #D93F0B;
+    --p2: #FBCA04;
+    --p3: #6B7280;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 1400px; margin: 0 auto; padding: 56px 32px 96px; }
+  @media (max-width: 720px) { .container { padding: 32px 20px 64px; } }
+
+  .breadcrumb { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+  .breadcrumb a { color: var(--text-2); }
+
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(40px, 6vw, 64px);
+    font-weight: 500;
+    letter-spacing: -1px;
+    line-height: 1.05;
+    margin: 8px 0 16px;
+  }
+  .intro {
+    font-size: 16px;
+    color: var(--text-2);
+    max-width: 760px;
+    line-height: 1.65;
+  }
+
+  .summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin: 32px 0 12px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+  .stat-card.accent { background: var(--accent-soft); border-color: var(--accent); }
+  .stat-card.primary { background: var(--primary-soft); border-color: var(--primary); }
+  .stat-num {
+    font-family: 'Fraunces', serif;
+    font-size: 32px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--text);
+  }
+  .stat-card.accent .stat-num { color: var(--accent); }
+  .stat-card.primary .stat-num { color: var(--primary); }
+  .stat-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-top: 4px;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin: 24px 0 24px;
+    font-size: 12px;
+  }
+  .legend-row { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .legend-row strong { color: var(--text); margin-right: 6px; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface-subtle);
+    color: var(--text-2);
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .pill .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .pill.p0 { background: #fce7e7; color: var(--p0); }
+  .pill.p0 .dot { background: var(--p0); }
+  .pill.p1 { background: #fde2d3; color: var(--p1); }
+  .pill.p1 .dot { background: var(--p1); }
+  .pill.p2 { background: #fef5c4; color: #7a541c; }
+  .pill.p2 .dot { background: var(--p2); }
+
+  /* gantt: 4 columns by milestone */
+  .gantt {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 12px;
+  }
+  @media (max-width: 1100px) { .gantt { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 640px) { .gantt { grid-template-columns: 1fr; } }
+
+  .lane {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+  }
+  .lane.m1 { border-top: 4px solid var(--primary); }
+  .lane.m2 { border-top: 4px solid var(--accent); }
+  .lane.m3 { border-top: 4px solid #5319E7; }
+  .lane.m4 { border-top: 4px solid var(--text-3); }
+  .lane-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 10px;
+  }
+  .lane-title {
+    font-family: 'Fraunces', serif;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.2px;
+  }
+  .lane-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .lane-sub {
+    font-size: 11px;
+    color: var(--text-2);
+    margin-top: -8px;
+    margin-bottom: 4px;
+    line-height: 1.4;
+  }
+
+  .epic {
+    display: block;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    text-decoration: none;
+    color: var(--text);
+    transition: transform 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+    position: relative;
+  }
+  .epic:hover {
+    transform: translateY(-1px);
+    border-color: var(--primary);
+    box-shadow: 0 4px 12px rgba(37,42,48,0.06);
+    text-decoration: none;
+  }
+  .epic-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .epic-num {
+    font-family: 'Fraunces', serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0;
+  }
+  .epic-num::before { content: '#'; opacity: 0.5; }
+  .epic-bar { flex: 1; height: 1px; background: var(--border); }
+  .epic-prio {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  .epic-prio.p0 { background: var(--p0); }
+  .epic-prio.p1 { background: var(--p1); }
+  .epic-prio.p2 { background: var(--p2); }
+  .epic-prio.p3 { background: var(--p3); }
+  .epic-title {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+  .epic-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--surface-subtle);
+    color: var(--text-2);
+  }
+  .tag.platform-mobile { background: var(--primary-soft); color: var(--primary); }
+  .tag.platform-web { background: var(--accent-soft); color: var(--accent); }
+  .tag.platform-backend { background: #e5e0d3; color: var(--text); }
+  .tag.platform-shared { background: #d8dfe6; color: #35475a; }
+
+  /* domain board section */
+  section.domain-section { margin-top: 64px; }
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .section-intro {
+    color: var(--text-2);
+    max-width: 760px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .domain-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+  .domain-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: block;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.12s, transform 0.12s;
+  }
+  .domain-card:hover { border-color: var(--primary); transform: translateY(-1px); text-decoration: none; }
+  .domain-name {
+    font-family: 'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
+  .domain-desc { font-size: 11px; color: var(--text-2); line-height: 1.4; }
+
+  footer {
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    color: var(--text-3);
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="breadcrumb"><a href="/">← Project hub</a></div>
+
+<header>
+  <span class="eyebrow">Roadmap & priorisation</span>
+  <h1>Plan d'attaque</h1>
+  <p class="intro"><strong>159 tickets</strong> structurés en 25 epics + 134 tasks, répartis sur 4 milestones. Cliquer un epic ouvre le ticket GitHub correspondant.</p>
+
+  <div class="summary">
+    <div class="stat-card primary"><div class="stat-num">159</div><div class="stat-lbl">Tickets totaux</div></div>
+    <div class="stat-card"><div class="stat-num">25</div><div class="stat-lbl">Epics</div></div>
+    <div class="stat-card accent"><div class="stat-num">85</div><div class="stat-lbl">M1 — Fondations</div></div>
+    <div class="stat-card"><div class="stat-num">54</div><div class="stat-lbl">M2 — Cœur</div></div>
+    <div class="stat-card"><div class="stat-num">18</div><div class="stat-lbl">M3 — Partages</div></div>
+    <div class="stat-card"><div class="stat-num">2</div><div class="stat-lbl">M4+ — Pro/v2</div></div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-row">
+      <strong>Priorité</strong>
+      <span class="pill p0"><span class="dot"></span> P0 blocker</span>
+      <span class="pill p1"><span class="dot"></span> P1 must</span>
+      <span class="pill p2"><span class="dot"></span> P2 should</span>
+    </div>
+    <div class="legend-row">
+      <strong>Plateforme</strong>
+      <span class="tag platform-mobile">mobile</span>
+      <span class="tag platform-web">web</span>
+      <span class="tag platform-backend">backend</span>
+      <span class="tag platform-shared">shared</span>
+    </div>
+  </div>
+</header>
+
+<div class="gantt">
+
+  <!-- M1 -->
+  <div class="lane m1">
+    <div class="lane-head">
+      <div>
+        <div class="lane-title">M1 — Fondations</div>
+        <div class="lane-meta">Cible juillet 2026</div>
+      </div>
+    </div>
+    <div class="lane-sub">Setup, scan, BDPM, sync. Cible: app mobile fonctionnelle pour test interne.</div>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/1">
+      <div class="epic-head"><span class="epic-num">1</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Project setup &amp; monorepo</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">setup</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/2">
+      <div class="epic-head"><span class="epic-num">2</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">DB schema &amp; migrations</div>
+      <div class="epic-meta"><span class="tag platform-backend">backend</span><span class="tag">setup</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/3">
+      <div class="epic-head"><span class="epic-num">3</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">API foundation (Zod + OpenAPI + Auth)</div>
+      <div class="epic-meta"><span class="tag platform-backend">backend</span><span class="tag">auth</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/4">
+      <div class="epic-head"><span class="epic-num">4</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Mobile app foundation (Flutter)</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">setup</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/5">
+      <div class="epic-head"><span class="epic-num">5</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Design system (tokens + components)</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">design-system</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/6">
+      <div class="epic-head"><span class="epic-num">6</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Auth flows (mobile + web)</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">auth</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/7">
+      <div class="epic-head"><span class="epic-num">7</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Onboarding</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">onboarding</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/8">
+      <div class="epic-head"><span class="epic-num">8</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Officines (CRUD + switcher)</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">officines</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/9">
+      <div class="epic-head"><span class="epic-num">9</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">BDPM ingestion</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">bdpm</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/10">
+      <div class="epic-head"><span class="epic-num">10</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Scan DataMatrix</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">scan</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/11">
+      <div class="epic-head"><span class="epic-num">11</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Inventory (boîtes + fiche info)</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">inventory</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/18">
+      <div class="epic-head"><span class="epic-num">18</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Sync offline</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">sync</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/21">
+      <div class="epic-head"><span class="epic-num">21</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Privacy &amp; RGPD compliance</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">legal</span></div>
+    </a>
+  </div>
+
+  <!-- M2 -->
+  <div class="lane m2">
+    <div class="lane-head">
+      <div>
+        <div class="lane-title">M2 — Cœur</div>
+        <div class="lane-meta">Cible septembre 2026</div>
+      </div>
+    </div>
+    <div class="lane-sub">Timeline, ordonnances, notifs push. Cible: beta fermée.</div>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/12">
+      <div class="epic-head"><span class="epic-num">12</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Popup actions rapides</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">inventory</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/13">
+      <div class="epic-head"><span class="epic-num">13</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Ordonnances</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">ordonnance</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/14">
+      <div class="epic-head"><span class="epic-num">14</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Timeline Aujourd'hui</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">timeline</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/15">
+      <div class="epic-head"><span class="epic-num">15</span><span class="epic-bar"></span><span class="epic-prio p0"></span></div>
+      <div class="epic-title">Notifications push (FCM)</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">notif</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/16">
+      <div class="epic-head"><span class="epic-num">16</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Notifications email &amp; SMS (Brevo)</div>
+      <div class="epic-meta"><span class="tag platform-backend">backend</span><span class="tag">notif</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/17">
+      <div class="epic-head"><span class="epic-num">17</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Alertes système</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">alertes</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/20">
+      <div class="epic-head"><span class="epic-num">20</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Plus / Paramètres</div>
+      <div class="epic-meta"><span class="tag platform-mobile">mobile</span><span class="tag">settings</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/22">
+      <div class="epic-head"><span class="epic-num">22</span><span class="epic-bar"></span><span class="epic-prio p2"></span></div>
+      <div class="epic-title">Résumés IA médicaments</div>
+      <div class="epic-meta"><span class="tag platform-backend">backend</span><span class="tag">ai</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/23">
+      <div class="epic-head"><span class="epic-num">23</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Web desktop app</div>
+      <div class="epic-meta"><span class="tag platform-web">web</span><span class="tag">design-system</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/24">
+      <div class="epic-head"><span class="epic-num">24</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Tests &amp; QA</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">tests</span></div>
+    </a>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/25">
+      <div class="epic-head"><span class="epic-num">25</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Déploiement &amp; distribution</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">devops</span></div>
+    </a>
+  </div>
+
+  <!-- M3 -->
+  <div class="lane m3">
+    <div class="lane-head">
+      <div>
+        <div class="lane-title">M3 — Partages &amp; beta</div>
+        <div class="lane-meta">Cible octobre 2026</div>
+      </div>
+    </div>
+    <div class="lane-sub">Multi-utilisateurs + tests terrain. Cible: beta ouverte.</div>
+
+    <a class="epic" href="https://github.com/my-monkeys/piloo/issues/19">
+      <div class="epic-head"><span class="epic-num">19</span><span class="epic-bar"></span><span class="epic-prio p1"></span></div>
+      <div class="epic-title">Partages M3 (rôles + invitations)</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">partage</span></div>
+    </a>
+
+    <div class="epic" style="background: var(--surface-subtle); cursor: default; opacity: 0.85">
+      <div class="epic-head"><span class="epic-num" style="color: var(--text-3)">+17</span><span class="epic-bar"></span></div>
+      <div class="epic-title" style="color: var(--text-2)">Tâches additionnelles</div>
+      <div class="epic-meta"><span class="tag">soumission stores</span><span class="tag">beta fermée</span><span class="tag">monitoring</span></div>
+    </div>
+  </div>
+
+  <!-- M4+ -->
+  <div class="lane m4">
+    <div class="lane-head">
+      <div>
+        <div class="lane-title">M4+ — Pro &amp; v2</div>
+        <div class="lane-meta">Post-MVP</div>
+      </div>
+    </div>
+    <div class="lane-sub">Vue pro web, OCR ordonnance, dashboard multi-patients.</div>
+
+    <div class="epic" style="background: var(--surface-subtle); cursor: default">
+      <div class="epic-head"><span class="epic-num">26</span><span class="epic-bar"></span><span class="epic-prio p2"></span></div>
+      <div class="epic-title">Vue pro web (multi-patients)</div>
+      <div class="epic-meta"><span class="tag platform-web">web</span><span class="tag">partage</span></div>
+    </div>
+
+    <div class="epic" style="background: var(--surface-subtle); cursor: default">
+      <div class="epic-head"><span class="epic-num">27</span><span class="epic-bar"></span><span class="epic-prio p3"></span></div>
+      <div class="epic-title">OCR ordonnance v2</div>
+      <div class="epic-meta"><span class="tag platform-shared">shared</span><span class="tag">ai</span></div>
+    </div>
+  </div>
+
+</div>
+
+<section class="domain-section">
+  <h2>Vues filtrées GitHub</h2>
+  <p class="section-intro">Liens directs vers les issues filtrées par domaine ou platform.</p>
+  <div class="domain-grid">
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Apriority%3Ap0+milestone%3A%22M1%20%E2%80%94%20Fondations%20techniques%22">
+      <div class="domain-name">M1 P0 — à attaquer</div>
+      <div class="domain-desc">Tous les blockers du milestone en cours.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Aplatform%3Amobile">
+      <div class="domain-name">Mobile only</div>
+      <div class="domain-desc">66 tickets — tout ce qui touche l'app Flutter.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Aplatform%3Aweb">
+      <div class="domain-name">Web only</div>
+      <div class="domain-desc">10 tickets — landing + dashboard + pages auth.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Aplatform%3Abackend">
+      <div class="domain-name">Backend only</div>
+      <div class="domain-desc">45 tickets — API, DB, BDPM, crons.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Aauth">
+      <div class="domain-name">Auth</div>
+      <div class="domain-desc">Inscription, login, Apple/Google, vérif email.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Ascan">
+      <div class="domain-name">Scan</div>
+      <div class="domain-desc">Caméra + GS1 + DataMatrix.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Async">
+      <div class="domain-name">Sync offline</div>
+      <div class="domain-desc">Pending operations + push/pull + LWW.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Apartage">
+      <div class="domain-name">Partages</div>
+      <div class="domain-desc">RBAC + invitations M3.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Adevops">
+      <div class="domain-name">DevOps &amp; deploy</div>
+      <div class="domain-desc">CI/CD, stores, hosting.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Alegal">
+      <div class="domain-name">Legal &amp; RGPD</div>
+      <div class="domain-desc">Conformité + roadmap HDS.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Adomain%3Atests">
+      <div class="domain-name">Tests &amp; QA</div>
+      <div class="domain-desc">Unitaires, intégration, E2E, beta.</div>
+    </a>
+    <a class="domain-card" href="https://github.com/my-monkeys/piloo/issues?q=is%3Aopen+label%3Atype%3Aepic">
+      <div class="domain-name">Tous les epics</div>
+      <div class="domain-desc">Vue d'ensemble des 25 grandes briques.</div>
+    </a>
+  </div>
+</section>
+
+<footer>
+  <div>Piloo project hub · plan d'attaque MVP</div>
+  <div><a href="/">← Hub</a> · <a href="/design/recap.html">Design recap</a> · <a href="https://github.com/my-monkeys/piloo">GitHub repo</a></div>
+</footer>
+
+</div>
+</body>
+</html>

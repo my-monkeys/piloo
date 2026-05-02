@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Piloo — Web desktop · Design recap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #faf8f3; --surface: #fff; --surface-subtle: #f1ede2; --border: #e5e0d3;
+    --primary: #4a6b64; --primary-soft: #dbe3e0;
+    --accent: #a8472e; --accent-soft: #f3d9cd;
+    --text: #252a30; --text-2: #6b7280; --text-3: #9ca3af;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Manrope', system-ui, sans-serif; background: var(--bg); color: var(--text); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .container { max-width: 1600px; margin: 0 auto; padding: 64px 32px 96px; }
+  @media (max-width: 720px) { .container { padding: 32px 20px 64px; } }
+
+  .breadcrumb { font-size: 12px; color: var(--text-3); margin-bottom: 12px; }
+  .breadcrumb a { color: var(--text-2); }
+  .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: 'Fraunces', serif; font-size: clamp(48px, 8vw, 88px); font-weight: 500; letter-spacing: -2px; line-height: 1; margin: 12px 0 16px; }
+  h1 .pil { color: var(--primary); }
+  h1 .oo { color: var(--accent); }
+  .tagline { font-family: 'Fraunces', serif; font-size: clamp(20px, 2.5vw, 28px); font-weight: 400; max-width: 720px; line-height: 1.3; margin-bottom: 24px; }
+  .intro { font-size: 16px; color: var(--text-2); max-width: 720px; line-height: 1.65; }
+  .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 32px; }
+  .chip { padding: 6px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .chip.accent { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+  .chip.primary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary); }
+
+  section { margin-top: 80px; }
+  h2 { font-family: 'Fraunces', serif; font-size: clamp(28px, 3.5vw, 40px); font-weight: 500; letter-spacing: -0.5px; margin-bottom: 8px; }
+  h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin: 40px 0 16px; }
+  .section-intro { color: var(--text-2); max-width: 760px; margin-bottom: 24px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 32px 24px; }
+  .grid-item { display: block; text-decoration: none; color: var(--text); }
+  .grid-item:hover { text-decoration: none; }
+  .browser {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(37,42,48,.06);
+    transition: transform .2s ease, box-shadow .2s ease;
+  }
+  .grid-item:hover .browser { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(37,42,48,.1); }
+  .browser-bar { display: flex; align-items: center; gap: 6px; padding: 10px 12px; background: var(--surface-subtle); border-bottom: 1px solid var(--border); }
+  .browser-bar .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--border); }
+  .browser-bar .dot:nth-child(1) { background: #ed6a5e; }
+  .browser-bar .dot:nth-child(2) { background: #f5bf4f; }
+  .browser-bar .dot:nth-child(3) { background: #61c554; }
+  .browser-bar .url { flex: 1; padding: 4px 12px; background: var(--surface); border-radius: 6px; font-size: 11px; color: var(--text-3); font-family: 'JetBrains Mono', monospace; margin-left: 12px; }
+  .browser img { display: block; width: 100%; height: auto; }
+  .item-label { margin-top: 14px; }
+  .item-num { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
+  .item-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 500; }
+  .item-desc { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+
+  .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 32px 0; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; }
+  .stat-num { font-family: 'Fraunces', serif; font-size: 32px; font-weight: 500; line-height: 1; }
+  .stat-lbl { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-3); margin-top: 4px; }
+
+  footer { margin-top: 96px; padding-top: 32px; border-top: 1px solid var(--border); color: var(--text-3); font-size: 13px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="breadcrumb"><a href="/">← Project hub</a></div>
+
+<header>
+  <span class="eyebrow">Web desktop · 24 écrans</span>
+  <h1><span class="pil">pil</span><span class="oo">oo</span></h1>
+  <p class="tagline">Web desktop — vue d'ensemble.</p>
+  <p class="intro">Maquettes web pour l'app desktop Piloo. Pensées comme complément du mobile pour la consultation en bureau, la saisie massive (ordonnances, IDEL avec 15 patients), et l'admin (partages, paramètres). Same design system que mobile : tokens, palette vert-sauge + terracotta, Fraunces + Manrope.</p>
+
+  <div class="summary">
+    <div class="stat-card"><div class="stat-num" style="color: var(--primary)">24</div><div class="stat-lbl">Écrans livrés</div></div>
+    <div class="stat-card"><div class="stat-num">28</div><div class="stat-lbl">Composants foundation</div></div>
+    <div class="stat-card"><div class="stat-num">4</div><div class="stat-lbl">Layouts (public, auth, app, drawer)</div></div>
+    <div class="stat-card"><div class="stat-num" style="color: var(--accent)">1440px</div><div class="stat-lbl">Largeur cible</div></div>
+  </div>
+
+  <div class="meta">
+    <span class="chip primary">Next.js 15</span>
+    <span class="chip">shadcn/ui customisé</span>
+    <span class="chip accent">Tokens partagés mobile</span>
+    <span class="chip">Sidebar + Topbar</span>
+  </div>
+</header>
+
+<section>
+  <h2>Pages publiques</h2>
+  <p class="section-intro">Landing marketing + parcours d'auth complet (Apple + Google + email).</p>
+  <div class="grid">
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr</span></div><img src="design/exports/web/W01-landing.png" alt="Landing"></div><div class="item-label"><span class="item-num">W1</span><div class="item-title">Landing marketing</div><div class="item-desc">Hero + 3 étapes + features + trust + CTA + footer</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/login</span></div><img src="design/exports/web/W02-login.png" alt="Login"></div><div class="item-label"><span class="item-num">W2</span><div class="item-title">Connexion</div><div class="item-desc">Apple + Google + email/password + reset link</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/signup</span></div><img src="design/exports/web/W03-signup.png" alt="Signup"></div><div class="item-label"><span class="item-num">W3</span><div class="item-title">Inscription</div><div class="item-desc">Form complet + checkbox CGU/RGPD</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/verify</span></div><img src="design/exports/web/W04-verif-email.png" alt="Vérif email"></div><div class="item-label"><span class="item-num">W4</span><div class="item-title">Vérification email</div><div class="item-desc">Card centrée + relance avec timer</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/forgot</span></div><img src="design/exports/web/W05-mdp-oublie.png" alt="Mdp oublie"></div><div class="item-label"><span class="item-num">W5</span><div class="item-title">Mot de passe oublié</div><div class="item-desc">Form email + lien retour</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Onboarding</h2>
+  <p class="section-intro">Choix type compte + welcome carousel post-signup.</p>
+  <div class="grid">
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/onboarding/type</span></div><img src="design/exports/web/W06-choix-type.png" alt="Choix type"></div><div class="item-label"><span class="item-num">W6</span><div class="item-title">Choix type compte</div><div class="item-desc">Particulier vs Pro de santé · 2 cards radio</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/dashboard (modal)</span></div><img src="design/exports/web/W07-welcome-modal.png" alt="Welcome modal"></div><div class="item-label"><span class="item-num">W7</span><div class="item-title">Welcome modal</div><div class="item-desc">Carousel 3 slides post-inscription</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>App principale</h2>
+  <p class="section-intro">Layout sidebar + topbar. Dashboard, timeline, inventaire, ordonnances, alertes, profil.</p>
+  <div class="grid">
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/dashboard</span></div><img src="design/exports/web/W08-dashboard.png" alt="Dashboard"></div><div class="item-label"><span class="item-num">W8</span><div class="item-title">Dashboard</div><div class="item-desc">4 KPIs + Prochaines prises + Alertes récentes</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/today</span></div><img src="design/exports/web/W09-aujourdhui.png" alt="Aujourd'hui"></div><div class="item-label"><span class="item-num">W9</span><div class="item-title">Aujourd'hui (Day)</div><div class="item-desc">Timeline par moment + side panel résumé</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/today?view=week</span></div><img src="design/exports/web/W10-week-view.png" alt="Aujourd'hui (Week)"></div><div class="item-label"><span class="item-num">W10</span><div class="item-title">Aujourd'hui (Week)</div><div class="item-desc">Grille 7j × 4 moments avec statuts colorés</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/officine</span></div><img src="design/exports/web/W11-officine.png" alt="Officine"></div><div class="item-label"><span class="item-num">W11</span><div class="item-title">Officine (table + drawer)</div><div class="item-desc">Layout L4 — table avec filtres + détail boîte right side</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/med/CIP13</span></div><img src="design/exports/web/W12-fiche-medicament.png" alt="Fiche médicament"></div><div class="item-label"><span class="item-num">W12</span><div class="item-title">Fiche médicament (modal)</div><div class="item-desc">Infos BDPM + résumé IA + lien notice officielle</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/ordonnances</span></div><img src="design/exports/web/W13-ordonnances.png" alt="Ordonnances"></div><div class="item-label"><span class="item-num">W13</span><div class="item-title">Ordonnances liste</div><div class="item-desc">Cards avec prescripteur + médocs preview</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/ordonnances/new</span></div><img src="design/exports/web/W14-creation-ordonnance.png" alt="Création ordonnance"></div><div class="item-label"><span class="item-num">W14</span><div class="item-title">Création ordonnance</div><div class="item-desc">Modal multi-step · posologie phrase naturelle (P2)</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/ordonnances/:id</span></div><img src="design/exports/web/W15-ordonnance-detail.png" alt="Ordonnance détail"></div><div class="item-label"><span class="item-num">W15</span><div class="item-title">Ordonnance détail</div><div class="item-desc">Praticien + 4 stats observance + 3 prescriptions</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/alertes</span></div><img src="design/exports/web/W16-alertes.png" alt="Alertes"></div><div class="item-label"><span class="item-num">W16</span><div class="item-title">Alertes feed</div><div class="item-desc">Groupé par date · 5 types d'alertes</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">app.piloo.fr/settings/profile</span></div><img src="design/exports/web/W17-profil.png" alt="Profil"></div><div class="item-label"><span class="item-num">W17</span><div class="item-title">Profil</div><div class="item-desc">Sidebar settings + édition profil</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Settings sub-pages</h2>
+  <p class="section-intro">Paramètres complets : notifications, sécurité, RGPD.</p>
+  <div class="grid">
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../notifications</span></div><img src="design/exports/web/W18-notifs.png" alt="Notifications"></div><div class="item-label"><span class="item-num">W18</span><div class="item-title">Notifications &amp; horaires</div><div class="item-desc">Matrice canal × event + horaires défaut</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../security</span></div><img src="design/exports/web/W19-securite.png" alt="Sécurité"></div><div class="item-label"><span class="item-num">W19</span><div class="item-title">Sécurité (2FA)</div><div class="item-desc">Mot de passe + 2FA TOTP + sessions actives</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../account</span></div><img src="design/exports/web/W20-compte-rgpd.png" alt="Compte RGPD"></div><div class="item-label"><span class="item-num">W20</span><div class="item-title">Compte &amp; RGPD</div><div class="item-desc">Export · langue · thème · zone danger</div></div></div>
+  </div>
+</section>
+
+<section>
+  <h2>Partages M3</h2>
+  <p class="section-intro">Multi-utilisateurs et rôles Propriétaire / Éditeur / Lecteur.</p>
+  <div class="grid">
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../officines</span></div><img src="design/exports/web/W21-mes-officines.png" alt="Mes officines"></div><div class="item-label"><span class="item-num">W21</span><div class="item-title">Mes officines</div><div class="item-desc">Grid cards · rôle + officine active</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../partages</span></div><img src="design/exports/web/W22-gestion-partages.png" alt="Gestion partages"></div><div class="item-label"><span class="item-num">W22</span><div class="item-title">Gestion partages</div><div class="item-desc">Table membres + invitations en attente</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">.../partages (modal)</span></div><img src="design/exports/web/W23-modal-inviter.png" alt="Modal Inviter"></div><div class="item-label"><span class="item-num">W23</span><div class="item-title">Modal Inviter</div><div class="item-desc">Email + 3 rôles radio + lien 72h</div></div></div>
+    <div class="grid-item"><div class="browser"><div class="browser-bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="url">piloo.fr/invite/abc</span></div><img src="design/exports/web/W24-accepter-invitation.png" alt="Accepter invitation"></div><div class="item-label"><span class="item-num">W24</span><div class="item-title">Accepter invitation</div><div class="item-desc">Page publique · aperçu officine + droits + CTA</div></div></div>
+  </div>
+</section>
+
+<footer>
+  <div>Piloo · web desktop design · 24 écrans</div>
+  <div><a href="/">← Hub</a> · <a href="/design/recap.html">Mobile recap</a> · <a href="https://github.com/my-monkeys/piloo">GitHub repo</a></div>
+</footer>
+
+</div>
+</body>
+</html>
