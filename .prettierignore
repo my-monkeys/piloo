@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+.turbo/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+# Generated artifacts (regenerated from sources)
+packages/api-contract/generated/
+apps/mobile/lib/generated/
+**/generated/
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Flutter / Dart
+.dart_tool/
+**/ios/Pods/
+**/android/.gradle/
+
+# Misc
+.env
+.env.*
+!.env.example
+*.min.js
+*.min.css
