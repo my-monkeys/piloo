@@ -15,7 +15,11 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build", "openapi:generate"],
+      "dependsOn": [
+        "^build",
+        "openapi:generate",
+        "//#openapi:generate-ts-client"
+      ],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
@@ -28,11 +32,19 @@
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": ["^build", "openapi:generate"],
+      "dependsOn": [
+        "^build",
+        "openapi:generate",
+        "//#openapi:generate-ts-client"
+      ],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^build", "openapi:generate"],
+      "dependsOn": [
+        "^build",
+        "openapi:generate",
+        "//#openapi:generate-ts-client"
+      ],
       "outputs": ["coverage/**"]
     },
     "openapi:generate": {
@@ -43,6 +55,36 @@
         "generated/**",
         "src/generated/**"
       ]
+    },
+    "//#openapi:generate-ts-client": {
+      "dependsOn": ["@piloo/api-contract#openapi:generate"],
+      "inputs": [
+        "scripts/generate-openapi.ts",
+        "scripts/generate-ts-client.sh",
+        "packages/api-contract/openapi.yaml"
+      ],
+      "outputs": [
+        "apps/web/lib/api/types.ts",
+        "apps/web/lib/api/generated/**"
+      ]
+    },
+    "//#openapi:generate-dart-client": {
+      "dependsOn": ["@piloo/api-contract#openapi:generate"],
+      "inputs": [
+        "scripts/generate-openapi.ts",
+        "scripts/generate-dart-client.sh",
+        "packages/api-contract/openapi.yaml"
+      ],
+      "outputs": [
+        "apps/mobile/lib/gen/openapi/**"
+      ]
+    },
+    "//#openapi:generate-clients": {
+      "dependsOn": [
+        "//#openapi:generate-ts-client",
+        "//#openapi:generate-dart-client"
+      ],
+      "outputs": []
     },
     "clean": {
       "cache": false
