@@ -11,7 +11,7 @@
     "./schemas/*": "./src/schemas/*.ts"
   },
   "scripts": {
-    "generate": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/generate.ts",
+    "openapi:generate": "node --experimental-strip-types --no-warnings=ExperimentalWarning scripts/generate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

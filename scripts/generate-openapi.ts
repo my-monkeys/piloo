@@ -34,7 +34,7 @@ export const DEFAULT_STEPS: readonly Step[] = [
   {
     name: 'api-contract:generate',
     command: 'pnpm',
-    args: ['--filter', '@piloo/api-contract', 'generate'],
+    args: ['--filter', '@piloo/api-contract', 'openapi:generate'],
   },
   {
     name: 'ts-client',
@@ -85,7 +85,11 @@ export function runSteps(steps: readonly Step[], env: RunnerEnv): StepResult[] {
   return results;
 }
 
-function defaultExec(cmd: string, args: readonly string[], cwd: string): { exitCode: number | null } {
+function defaultExec(
+  cmd: string,
+  args: readonly string[],
+  cwd: string,
+): { exitCode: number | null } {
   const opts: SpawnSyncOptionsWithStringEncoding = {
     cwd,
     stdio: 'inherit',
