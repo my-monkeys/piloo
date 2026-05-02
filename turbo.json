@@ -15,11 +15,7 @@
   ],
   "tasks": {
     "build": {
-      "dependsOn": [
-        "^build",
-        "openapi:generate",
-        "//#openapi:generate-ts-client"
-      ],
+      "dependsOn": ["^build", "openapi:generate"],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
@@ -32,19 +28,11 @@
       "outputs": []
     },
     "typecheck": {
-      "dependsOn": [
-        "^build",
-        "openapi:generate",
-        "//#openapi:generate-ts-client"
-      ],
+      "dependsOn": ["^build", "openapi:generate"],
       "outputs": []
     },
     "test": {
-      "dependsOn": [
-        "^build",
-        "openapi:generate",
-        "//#openapi:generate-ts-client"
-      ],
+      "dependsOn": ["^build", "openapi:generate"],
       "outputs": ["coverage/**"]
     },
     "openapi:generate": {
@@ -57,7 +45,6 @@
       ]
     },
     "//#openapi:generate-ts-client": {
-      "dependsOn": ["@piloo/api-contract#openapi:generate"],
       "inputs": [
         "scripts/generate-openapi.ts",
         "scripts/generate-ts-client.sh",
@@ -69,7 +56,6 @@
       ]
     },
     "//#openapi:generate-dart-client": {
-      "dependsOn": ["@piloo/api-contract#openapi:generate"],
       "inputs": [
         "scripts/generate-openapi.ts",
         "scripts/generate-dart-client.sh",
