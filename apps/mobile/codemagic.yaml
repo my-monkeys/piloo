@@ -1,0 +1,80 @@
+workflows:
+  android-release:
+    name: Android Release (Play Console internal track)
+    instance_type: mac_mini_m1
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      groups:
+        # KEYSTORE_FILE (base64), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+        - android_keystore
+        # GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (JSON contents)
+        - google_play
+      vars:
+        PACKAGE_NAME: 'fr.mymonkey.piloo'
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: 'v*'
+          include: true
+    cache:
+      cache_paths:
+        - $HOME/.gradle/caches
+        - $HOME/.pub-cache
+    scripts:
+      - name: Decode keystore from CI secret
+        script: |
+          set -eu
+          mkdir -p apps/mobile/android/app
+          echo "$KEYSTORE_FILE" | base64 --decode > apps/mobile/android/app/keystore.jks
+          test -s apps/mobile/android/app/keystore.jks
+      - name: Write key.properties
+        script: |
+          set -eu
+          cat <<EOF > apps/mobile/android/key.properties
+          storePassword=$KEYSTORE_PASSWORD
+          keyPassword=$KEY_PASSWORD
+          keyAlias=$KEY_ALIAS
+          storeFile=keystore.jks
+          EOF
+      - name: Sync version from git tag
+        script: |
+          set -eu
+          TAG="${CM_TAG:-}"
+          if [ -z "$TAG" ]; then
+            echo "CM_TAG is empty; this workflow only runs on tag pushes." >&2
+            exit 1
+          fi
+          VERSION="${TAG#v}"
+          BUILD_NUMBER="$(git rev-list --count HEAD)"
+          cd apps/mobile
+          # pubspec version: <semver>+<build_number>; required by Play Console.
+          sed -i.bak -E "s/^version: .*/version: ${VERSION}+${BUILD_NUMBER}/" pubspec.yaml
+          rm -f pubspec.yaml.bak
+          grep "^version: " pubspec.yaml
+      - name: Resolve Flutter packages
+        working_directory: apps/mobile
+        script: flutter pub get
+      - name: Static analysis
+        working_directory: apps/mobile
+        script: flutter analyze
+      - name: Unit tests
+        working_directory: apps/mobile
+        script: flutter test
+      - name: Build signed AAB (Play upload)
+        working_directory: apps/mobile
+        script: flutter build appbundle --release
+      - name: Build signed APK (internal distribution)
+        working_directory: apps/mobile
+        script: flutter build apk --release
+    artifacts:
+      - apps/mobile/build/**/outputs/**/*.aab
+      - apps/mobile/build/**/outputs/**/*.apk
+      - apps/mobile/build/**/outputs/**/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+        submit_as_draft: true
+        in_app_update_priority: 0
