@@ -15,6 +15,8 @@
     "test": "turbo run test",
     "openapi:generate": "turbo run openapi:generate",
     "openapi:check": "turbo run openapi:generate && git diff --exit-code packages/api-contract/openapi.yaml",
+    "db:generate": "pnpm --filter @piloo/db-schema generate",
+    "db:migrate": "pnpm --filter @piloo/db-schema migrate",
     "clean": "turbo run clean && rm -rf node_modules .turbo"
   },
   "devDependencies": {
