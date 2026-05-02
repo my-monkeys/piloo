@@ -48,6 +48,19 @@ mon-officine/
 - **DB mobile locale** : SQLite + Drift
 - **Monorepo** : Turborepo (pour le JS/TS, Flutter cohabite à côté)
 
+## Commandes (onboarding dev)
+
+Toutes les commandes JS/TS se lancent à la racine via **pnpm + Turborepo**. Flutter (`apps/mobile`) a son propre tooling (`flutter pub get`, `flutter run`, etc.).
+
+| Commande | Description |
+|---|---|
+| `pnpm dev` | Lance l'app web Next.js (`apps/web`) en mode développement (hot reload, http://localhost:3000). |
+| `pnpm test` | Exécute les tests unitaires de tous les packages JS/TS (Vitest). |
+| `pnpm lint` | Lint ESLint + Prettier sur tout le monorepo. À passer avant chaque commit. |
+| `pnpm openapi:generate` | Régénère `packages/api-contract/openapi.yaml` depuis les schémas Zod, puis les clients TS et Dart. À relancer après toute modification des schémas Zod côté backend. |
+
+> Pré-requis : Node ≥ 20, pnpm ≥ 9. Pour mobile : Flutter 3.x. Voir `.env.example` pour les variables d'environnement requises.
+
 ## État actuel
 
 Phase : **cadrage terminé, pas encore de code**. La documentation est prête, le développement démarre.
