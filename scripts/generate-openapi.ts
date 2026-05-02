@@ -77,7 +77,7 @@ export function runSteps(steps: readonly Step[], env: RunnerEnv): StepResult[] {
       continue;
     }
 
-    env.log(`✗ ${step.name}: failed (exit ${exitCode ?? 'null'})`);
+    env.log(`✗ ${step.name}: failed (exit ${String(exitCode)})`);
     results.push({ name: step.name, status: 'failed', exitCode });
     return results;
   }

@@ -10,9 +10,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "lint": "turbo run lint",
-    "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "lint": "eslint . && turbo run lint",
+    "typecheck": "tsc --noEmit -p tsconfig.json && turbo run typecheck",
+    "test": "vitest run && turbo run test",
     "openapi:generate": "turbo run openapi:generate openapi:generate-ts-client openapi:generate-dart-client",
     "openapi:generate-ts-client": "bash scripts/generate-ts-client.sh",
     "openapi:generate-dart-client": "bash scripts/generate-dart-client.sh",
@@ -23,9 +23,16 @@
     "clean": "turbo run clean && rm -rf node_modules .turbo"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^25.6.0",
     "@vitest/coverage-v8": "^4.1.5",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.6.0",
+    "jiti": "^2.6.1",
     "turbo": "^2.3.3",
-    "typescript": "^5.7.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.59.1",
     "vitest": "^4.1.5"
   }
 }
