@@ -64,7 +64,7 @@ mon-officine/
 - **Flutter** vit à côté, piloté par son propre `flutter pub` et `flutter build`. Turbo l'ignore.
 - **CI/CD** :
   - GitHub Actions pour le backend/web (lint, tests, deploy Vercel).
-  - **Codemagic** pour Flutter (build iOS/Android, upload TestFlight/Play Console). Voir [ADR 001](./adr/001-flutter-ci.md).
+  - **Codemagic** pour Flutter (build iOS/Android, upload TestFlight/Play Console). Voir [ADR 0002](./adr/0002-flutter-ci.md).
 
 ---
 
@@ -355,6 +355,6 @@ Les ADR suivants documentent les décisions structurantes. Chaque nouveau ADR su
 
 ### Builds mobile
 
-- **Codemagic** pour iOS + Android (cf. [ADR 001](./adr/001-flutter-ci.md)).
+- **Codemagic** pour iOS + Android (cf. [ADR 0002](./adr/0002-flutter-ci.md)).
 - Versioning synchronisé avec les tags git.
 - TestFlight pour iOS beta, Play Console internal track pour Android.
