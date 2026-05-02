@@ -1,0 +1,55 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "globalDependencies": [
+    "**/.env.*local",
+    ".env",
+    ".env.example",
+    "tsconfig.base.json"
+  ],
+  "globalEnv": [
+    "NODE_ENV",
+    "CI",
+    "VERCEL",
+    "VERCEL_ENV"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build", "openapi:generate"],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**",
+        "build/**"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "typecheck": {
+      "dependsOn": ["^build", "openapi:generate"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build", "openapi:generate"],
+      "outputs": ["coverage/**"]
+    },
+    "openapi:generate": {
+      "dependsOn": ["^openapi:generate"],
+      "inputs": ["src/**/*.ts", "schemas/**/*.ts", "scripts/**/*.ts"],
+      "outputs": [
+        "openapi.yaml",
+        "generated/**",
+        "src/generated/**"
+      ]
+    },
+    "clean": {
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    }
+  }
+}

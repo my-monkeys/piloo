@@ -1,0 +1,24 @@
+{
+  "name": "piloo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Piloo — carnet numérique de médicaments (monorepo)",
+  "packageManager": "pnpm@10.26.1",
+  "engines": {
+    "node": ">=20.10.0",
+    "pnpm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "openapi:generate": "turbo run openapi:generate",
+    "openapi:check": "turbo run openapi:generate && git diff --exit-code packages/api-contract/openapi.yaml",
+    "clean": "turbo run clean && rm -rf node_modules .turbo"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3",
+    "typescript": "^5.7.2"
+  }
+}
