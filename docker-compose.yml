@@ -1,0 +1,39 @@
+# Postgres pour le dev local de Piloo.
+#
+# Usage :
+#   docker compose up -d        # démarre Postgres en arrière-plan
+#   docker compose down         # arrête (les données persistent dans le volume)
+#   docker compose down -v      # arrête ET supprime les données (reset complet)
+#
+# Connexion depuis l'host : postgres://piloo:piloo@localhost:5433/piloo
+# Le port 5433 (au lieu de 5432) évite les conflits avec un Postgres déjà
+# installé localement.
+#
+# Variables d'environnement reconnues (voir .env.example si présent) :
+#   POSTGRES_USER       — utilisateur applicatif (défaut: piloo)
+#   POSTGRES_PASSWORD   — mot de passe (défaut: piloo, dev only !)
+#   POSTGRES_DB         — base initiale créée (défaut: piloo)
+#   POSTGRES_PORT       — port exposé sur l'host (défaut: 5433)
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: piloo-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-piloo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-piloo}
+      POSTGRES_DB: ${POSTGRES_DB:-piloo}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - piloo_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-piloo} -d ${POSTGRES_DB:-piloo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  piloo_postgres_data:
+    name: piloo_postgres_data
