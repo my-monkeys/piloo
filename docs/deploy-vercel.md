@@ -75,6 +75,7 @@ Pour chaque variable, cocher les environnements concernés : `Production`, `Prev
 | `S3_ACCESS_KEY_ID` | Access key IAM/compatible. | ✅ | ✅ | ✅ | 🔐 |
 | `S3_SECRET_ACCESS_KEY` | Secret key IAM/compatible. | ✅ | ✅ | ✅ | 🔐 |
 | `NEXT_PUBLIC_APP_URL` | URL publique de l'app (ex: `https://piloo.fr` en prod, vide en preview pour laisser Vercel injecter). | ✅ | ⚪ | ✅ | ⚪ |
+| `CRON_SECRET` | Secret partagé Vercel Cron ↔ endpoint `/api/cron/*` (header `Authorization: Bearer …`). 32+ bytes random. **Production uniquement** — le cron ne tourne pas en preview. | ✅ | ⚪ | ⚪ | 🔐 |
 
 Légende :
 - ✅ requis dans cet env
@@ -109,7 +110,32 @@ vercel env pull .env.local
 
 ---
 
-## 4. À faire manuellement (récap)
+## 4. Cron jobs
+
+Le projet déclare des cron jobs dans `apps/web/vercel.json` (clé `crons`).
+Vercel Cron ne tourne que sur l'environnement **Production** — les previews
+n'invoquent jamais ces endpoints.
+
+| Path | Schedule | Description | ADR |
+|---|---|---|---|
+| `/api/cron/import-bdpm` | `0 3 5 * *` (le 5 du mois, 03:00 UTC) | Import mensuel BDPM (TSV data.gouv → Postgres → SQLite/S3). | [0003](adr/0003-bdpm-monthly-cron.md) |
+
+**Sécurité** : chaque endpoint `/api/cron/*` doit valider le header
+`Authorization: Bearer ${CRON_SECRET}` avant d'exécuter le job. Toute
+requête sans ce header → `401`. Le secret est une env var prod (cf.
+tableau §2).
+
+**Vérification post-deploy** :
+1. Dashboard Vercel → Project → **Cron Jobs** : vérifier que les entrées
+   du `vercel.json` sont listées avec le bon schedule.
+2. **Run Cron** manuellement depuis le dashboard (bouton ▶️) pour valider
+   l'authentification et l'exécution end-to-end.
+3. Inspecter les logs (`Logs → Cron`) — pas de CIP / nom médicament en
+   clair.
+
+---
+
+## 5. À faire manuellement (récap)
 
 Ce qui ne peut pas être automatisé depuis le repo :
 
@@ -124,7 +150,7 @@ Ce qui ne peut pas être automatisé depuis le repo :
 
 ---
 
-## 5. Notes
+## 6. Notes
 
 - **Pas de HDS sur Vercel**. Tant que l'app contient des données médicales en prod réelle, l'hébergement Vercel ne suffit pas (cf. `CLAUDE.md` racine — "HDS obligatoire avant toute prod commerciale"). Vercel = OK pour le **POC** et la **démo**, à migrer vers un hébergeur HDS-certifié avant ouverture grand public.
 - **Pas de tracking tiers** côté Vercel Analytics sur les écrans avec données médicales — utiliser au mieux le mode "anonymous" ou se passer de l'outil.

@@ -13,5 +13,11 @@
   "github": {
     "silent": false,
     "autoJobCancelation": true
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/import-bdpm",
+      "schedule": "0 3 5 * *"
+    }
+  ]
 }
