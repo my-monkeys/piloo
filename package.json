@@ -5,7 +5,7 @@
   "description": "Piloo — carnet numérique de médicaments (monorepo)",
   "packageManager": "pnpm@10.26.1",
   "engines": {
-    "node": ">=20.10.0",
+    "node": ">=22.6.0",
     "pnpm": ">=10.0.0"
   },
   "scripts": {
