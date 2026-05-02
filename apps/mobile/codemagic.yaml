@@ -1,0 +1,153 @@
+# Codemagic CI/CD — Piloo mobile (Flutter)
+#
+# Décision : ADR docs/adr/0002-flutter-ci.md (Codemagic retenu pour M1/M2).
+# Doc opérateur : docs/deploy-mobile-ios.md (certs, secrets, runbook).
+#
+# Workflows définis :
+#   - ios-testflight : build IPA + upload TestFlight, déclenché par tag `v*`.
+#   - ios-pr-check   : `flutter analyze` + `flutter test` sur PR (rapide, pas de signing).
+#
+# Le pipeline Android vit dans un workflow séparé (ticket dédié).
+
+workflows:
+  ios-testflight:
+    name: iOS — Build & TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    # Tag `v*` uniquement. Les pushes sur branches sont gérés par `ios-pr-check`.
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*"
+          include: true
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+      # Groupes de variables stockés dans le vault Codemagic (cf. docs/deploy-mobile-ios.md §Secrets).
+      groups:
+        - app_store_credentials # APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_PRIVATE_KEY
+        - ios_signing # CERTIFICATE_PRIVATE_KEY (clé privée du distribution certificate)
+
+      vars:
+        BUNDLE_ID: "app.piloo.mobile"
+        XCODE_WORKSPACE: "Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+
+    # Intégration App Store Connect API : auto-fetch du provisioning profile + cert.
+    integrations:
+      app_store_connect: piloo_appstore_api_key
+
+    scripts:
+      - name: Vérifier que le tag respecte le format vX.Y.Z
+        script: |
+          set -euo pipefail
+          if [[ ! "${CM_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Tag invalide : '${CM_TAG}' (attendu : vX.Y.Z, ex. v1.2.3)" >&2
+            exit 1
+          fi
+          echo "✅ Tag valide : ${CM_TAG}"
+
+      - name: Dériver la version Flutter depuis le tag git
+        # Convention : tag v1.2.3 → pubspec version "1.2.3+<build_number>".
+        # Le build_number Codemagic est monotone par projet → garantit l'unicité côté App Store.
+        script: |
+          set -euo pipefail
+          VERSION_NAME="${CM_TAG#v}"
+          BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          echo "VERSION_NAME=${VERSION_NAME}"
+          echo "BUILD_NUMBER=${BUILD_NUMBER}"
+          # Patch in-place du pubspec — non commité, juste pour ce build.
+          sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
+          grep "^version:" pubspec.yaml
+
+      - name: Installer les dépendances Flutter
+        script: flutter pub get
+
+      - name: Générer le code (freezed / json / openapi)
+        # Tolérant si le projet n'a pas encore de code generation (M1 early).
+        script: |
+          if grep -q "build_runner" pubspec.yaml; then
+            dart run build_runner build --delete-conflicting-outputs
+          else
+            echo "build_runner non configuré — skip"
+          fi
+
+      - name: Analyse statique
+        script: flutter analyze
+
+      - name: Tests unitaires
+        script: flutter test
+
+      - name: Provisionner le certificat de distribution iOS
+        # Codemagic récupère/crée auto le provisioning profile via l'API App Store Connect.
+        # Le distribution certificate doit être fourni via le groupe `ios_signing`
+        # (variable `CERTIFICATE_PRIVATE_KEY`) — voir docs/deploy-mobile-ios.md.
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "${BUNDLE_ID}" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA (release, signé)
+        script: |
+          flutter build ipa --release \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - flutter_drive.log
+
+    publishing:
+      app_store_connect:
+        # API key Codemagic-managed (cf. integrations).
+        # Submit_to_testflight: true pour traitement automatique côté Apple.
+        # Pas de submit_to_app_store : la promotion vers App Store reste manuelle (review humaine).
+        auth: integration
+        submit_to_testflight: true
+        beta_groups:
+          - "Piloo Internes"
+
+      email:
+        # Fallback notification — Slack/Discord à brancher plus tard si besoin.
+        recipients:
+          - dev@piloo.app
+        notify:
+          success: true
+          failure: true
+
+  ios-pr-check:
+    name: iOS — PR check (analyze + test)
+    instance_type: mac_mini_m2
+    max_build_duration: 20
+
+    triggering:
+      events:
+        - pull_request
+      branch_patterns:
+        - pattern: "main"
+          include: true
+          source: false
+
+    environment:
+      flutter: stable
+
+    scripts:
+      - name: Installer les dépendances
+        script: flutter pub get
+      - name: Générer le code (best-effort)
+        script: |
+          if grep -q "build_runner" pubspec.yaml; then
+            dart run build_runner build --delete-conflicting-outputs
+          fi
+      - name: flutter analyze
+        script: flutter analyze
+      - name: flutter test
+        script: flutter test
