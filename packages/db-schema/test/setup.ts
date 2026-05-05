@@ -46,7 +46,7 @@ export async function setupTestDb(): Promise<TestDb> {
 }
 
 export async function truncateAll(handle: DbHandle): Promise<void> {
-  // CASCADE couvre les FKs (Task 5 ajoute partages).
+  // CASCADE couvre les FKs.
   // Liste de la plus dépendante à la moins dépendante par convention.
-  await handle.client`TRUNCATE TABLE officines, users RESTART IDENTITY CASCADE`;
+  await handle.client`TRUNCATE TABLE partages, officines, users RESTART IDENTITY CASCADE`;
 }
