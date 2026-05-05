@@ -97,7 +97,7 @@ mon-officine/
 | Server state | TanStack Query | Cache, invalidation |
 | Client state | Zustand | Léger, typé |
 | ORM | Drizzle | Typage TS natif, migrations SQL |
-| Auth | Better Auth ou Clerk | À trancher en M1 |
+| Auth | Better Auth | Tranché en M1, cf. [ADR 0004](./adr/0004-auth-provider.md) |
 | Validation API | Zod + zod-to-openapi | Contrat partagé |
 | Tests | Vitest + Playwright | Unit + E2E |
 | Deploy | Vercel (POC) ou Railway | |
