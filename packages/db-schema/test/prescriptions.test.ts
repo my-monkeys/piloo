@@ -29,7 +29,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'T',
       prenom: 'U',
       typeCompte: 'particulier',
@@ -97,7 +97,7 @@ describe('prescriptions', () => {
   it('rejette FK ordonnance inconnue', async () => {
     await expect(
       env.handle.db.insert(prescriptions).values(baseRx('00000000-0000-0000-0000-000000000000')),
-    ).rejects.toThrow(/foreign key|fk/);
+    ).rejects.toMatchObject({ cause: { message: expect.stringMatching(/foreign key|fk/) } });
   });
 
   it("la suppression dure d'une ordonnance avec prescription est bloquée (RESTRICT)", async () => {

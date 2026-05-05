@@ -28,13 +28,17 @@ async function main(): Promise<void> {
       return;
     }
 
+    // Le mot de passe vit dans `accounts` (cf. Better Auth, ADR 0004) et n'est
+    // pas créé par le seed : pour se connecter en local, passer par
+    // /api/auth/sign-up/email puis pointer ce user vers les données de seed
+    // existantes (ou simplement signer up avec un autre email — le seed sert
+    // surtout de fixture pour les FK officines/boites/partages).
     const [user] = await handle.db
       .insert(users)
       .values({
         email: SEED_EMAIL,
-        // bcrypt hash of "piloo-dev" — never used in prod, juste un placeholder
-        passwordHash: '$2b$10$DEV.SEED.PLACEHOLDER.HASH/NOT/USABLE/IN/PROD',
-        emailVerifiedAt: new Date(),
+        name: 'Dev Piloo',
+        emailVerified: true,
         nom: 'Dev',
         prenom: 'Piloo',
         typeCompte: 'particulier',

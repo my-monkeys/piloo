@@ -22,7 +22,7 @@ async function insertUser(overrides: Partial<NewUser> = {}) {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'hash',
+      name: 'Test User',
       nom: 'Test',
       prenom: 'User',
       typeCompte: 'particulier',
@@ -57,7 +57,9 @@ describe('officines', () => {
         type: 'perso',
         proprietaireUserId: '00000000-0000-0000-0000-000000000000',
       } satisfies NewOfficine),
-    ).rejects.toThrow(/foreign key|fk_officines/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/foreign key|fk_officines/) },
+    });
   });
 
   it('rejette un type invalide', async () => {
@@ -69,7 +71,9 @@ describe('officines', () => {
         type: 'inconnu',
         proprietaireUserId: u.id,
       }),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it("soft-delete : la ligne reste, peut être recréée à l'identique", async () => {

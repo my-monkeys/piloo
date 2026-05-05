@@ -22,7 +22,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'T',
       prenom: 'U',
       typeCompte: 'particulier',
@@ -84,7 +84,9 @@ describe('alertes', () => {
         // @ts-expect-error enum runtime
         baseAlerte(f.officine.id, f.user.id, { type: 'autre' }),
       ),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it('badge non lues : index partiel ne couvre que lue_a IS NULL et non soft-deleted', async () => {
@@ -110,6 +112,6 @@ describe('alertes', () => {
       env.handle.db
         .insert(alertes)
         .values(baseAlerte('00000000-0000-0000-0000-000000000000', f.user.id)),
-    ).rejects.toThrow(/foreign key|fk/);
+    ).rejects.toMatchObject({ cause: { message: expect.stringMatching(/foreign key|fk/) } });
   });
 });

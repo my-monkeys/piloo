@@ -22,7 +22,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `o${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'O',
       prenom: 'O',
       typeCompte: 'particulier',
@@ -32,7 +32,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `e${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'E',
       prenom: 'E',
       typeCompte: 'particulier',
@@ -77,7 +77,9 @@ describe('partages', () => {
         role: 'viewer',
         invitedAt: new Date(),
       }),
-    ).rejects.toThrow(/duplicate key|partages_officine_user/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/duplicate key|partages_officine_user/) },
+    });
   });
 
   it('autorise un nouveau partage après soft-delete du précédent', async () => {
@@ -117,6 +119,8 @@ describe('partages', () => {
         role: 'admin',
         invitedAt: new Date(),
       }),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 });
