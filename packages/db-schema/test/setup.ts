@@ -15,7 +15,7 @@ const MIGRATIONS_FOLDER = resolve(dirname(fileURLToPath(import.meta.url)), '..',
 export interface TestDb {
   readonly handle: DbHandle;
   readonly url: string;
-  teardown: () => Promise<void>;
+  readonly teardown: () => Promise<void>;
 }
 
 export async function setupTestDb(): Promise<TestDb> {
@@ -25,24 +25,22 @@ export async function setupTestDb(): Promise<TestDb> {
     .withPassword('piloo')
     .start();
 
-  const url = container.getConnectionUri();
-  const handle = createDb(url);
-
-  // Migration folder is generated cumulatively across Tasks 4-5 and finalized in Task 6.
-  // If checking out this branch standalone without running pnpm db:generate first,
-  // the migrations folder may be incomplete or missing. Developers should ensure
-  // they've run pnpm db:generate to regenerate all pending migrations before running tests.
-  // See docs/roadmap.md and packages/db-schema/CLAUDE.md for context.
-  await migrate(handle.db, { migrationsFolder: MIGRATIONS_FOLDER });
-
-  return {
-    handle,
-    url,
-    teardown: async () => {
-      await handle.close();
-      await container.stop();
-    },
-  };
+  try {
+    const url = container.getConnectionUri();
+    const handle = createDb(url);
+    await migrate(handle.db, { migrationsFolder: MIGRATIONS_FOLDER });
+    return {
+      handle,
+      url,
+      teardown: async () => {
+        await handle.close();
+        await container.stop();
+      },
+    };
+  } catch (err) {
+    await container.stop();
+    throw err;
+  }
 }
 
 export async function truncateAll(handle: DbHandle): Promise<void> {
