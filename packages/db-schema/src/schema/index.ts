@@ -6,3 +6,4 @@ export * from './bdpm.ts';
 export * from './ordonnances.ts';
 export * from './prescriptions.ts';
 export * from './prises_planifiees.ts';
+export * from './alertes.ts';
