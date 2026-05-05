@@ -20,6 +20,8 @@
     "openapi:check": "turbo run openapi:generate && ([ ! -f packages/api-contract/openapi.yaml ] || git diff --exit-code packages/api-contract/openapi.yaml)",
     "db:generate": "pnpm --filter @piloo/db-schema generate",
     "db:migrate": "pnpm --filter @piloo/db-schema migrate",
+    "db:seed": "pnpm --filter @piloo/db-schema seed",
+    "db:reset": "pnpm --filter @piloo/db-schema reset",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "prepare": "husky"
   },
