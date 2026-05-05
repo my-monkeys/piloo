@@ -1,0 +1,1144 @@
+{
+  "id": "0549628f-4bc2-4e89-8a56-774b49088add",
+  "prevId": "47301f57-cfc1-4371-82e5-364b88bb7d04",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.medicaments_bdpm": {
+      "name": "medicaments_bdpm",
+      "schema": "",
+      "columns": {
+        "cis": {
+          "name": "cis",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cip13": {
+          "name": "cip13",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cip7": {
+          "name": "cip7",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "denomination": {
+          "name": "denomination",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "forme": {
+          "name": "forme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dosage": {
+          "name": "dosage",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "voie_administration": {
+          "name": "voie_administration",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "titulaire": {
+          "name": "titulaire",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut_amm": {
+          "name": "statut_amm",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "taux_remboursement": {
+          "name": "taux_remboursement",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "version_bdpm": {
+          "name": "version_bdpm",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_bdpm_cip13": {
+          "name": "idx_bdpm_cip13",
+          "columns": [
+            {
+              "expression": "cip13",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_bdpm_denomination": {
+          "name": "idx_bdpm_denomination",
+          "columns": [
+            {
+              "expression": "denomination",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.boites": {
+      "name": "boites",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "officine_id": {
+          "name": "officine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cip13": {
+          "name": "cip13",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lot": {
+          "name": "lot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "numero_serie": {
+          "name": "numero_serie",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "peremption": {
+          "name": "peremption",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unites_initiales": {
+          "name": "unites_initiales",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "unites_restantes": {
+          "name": "unites_restantes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut": {
+          "name": "statut",
+          "type": "statut_boite",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ajoutee_par": {
+          "name": "ajoutee_par",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "boites_officine_cip13_lot_serie_unique": {
+          "name": "boites_officine_cip13_lot_serie_unique",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "cip13",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "numero_serie",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"boites\".\"deleted_at\" IS NULL AND \"boites\".\"numero_serie\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "boites_officine_cip13_lot_unique": {
+          "name": "boites_officine_cip13_lot_unique",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "cip13",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "lot",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"boites\".\"deleted_at\" IS NULL AND \"boites\".\"numero_serie\" IS NULL AND \"boites\".\"lot\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_boites_officine_statut": {
+          "name": "idx_boites_officine_statut",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "statut",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_boites_cip13": {
+          "name": "idx_boites_cip13",
+          "columns": [
+            {
+              "expression": "cip13",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_boites_peremption": {
+          "name": "idx_boites_peremption",
+          "columns": [
+            {
+              "expression": "peremption",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "boites_officine_id_officines_id_fk": {
+          "name": "boites_officine_id_officines_id_fk",
+          "tableFrom": "boites",
+          "tableTo": "officines",
+          "columnsFrom": ["officine_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "boites_ajoutee_par_users_id_fk": {
+          "name": "boites_ajoutee_par_users_id_fk",
+          "tableFrom": "boites",
+          "tableTo": "users",
+          "columnsFrom": ["ajoutee_par"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.users": {
+      "name": "users",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email_verified_at": {
+          "name": "email_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom": {
+          "name": "nom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prenom": {
+          "name": "prenom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type_compte": {
+          "name": "type_compte",
+          "type": "type_compte",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telephone": {
+          "name": "telephone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "preferences": {
+          "name": "preferences",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_users_email": {
+          "name": "idx_users_email",
+          "columns": [
+            {
+              "expression": "email",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_users_deleted_at": {
+          "name": "idx_users_deleted_at",
+          "columns": [
+            {
+              "expression": "deleted_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"users\".\"deleted_at\" IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.officines": {
+      "name": "officines",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nom": {
+          "name": "nom",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "type": {
+          "name": "type",
+          "type": "type_officine",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proprietaire_user_id": {
+          "name": "proprietaire_user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date_naissance": {
+          "name": "date_naissance",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_officines_proprietaire": {
+          "name": "idx_officines_proprietaire",
+          "columns": [
+            {
+              "expression": "proprietaire_user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "officines_proprietaire_user_id_users_id_fk": {
+          "name": "officines_proprietaire_user_id_users_id_fk",
+          "tableFrom": "officines",
+          "tableTo": "users",
+          "columnsFrom": ["proprietaire_user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.partages": {
+      "name": "partages",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "officine_id": {
+          "name": "officine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "role_partage",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "invited_by": {
+          "name": "invited_by",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "invited_at": {
+          "name": "invited_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "partages_officine_user_unique": {
+          "name": "partages_officine_user_unique",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "\"partages\".\"deleted_at\" IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "partages_officine_id_officines_id_fk": {
+          "name": "partages_officine_id_officines_id_fk",
+          "tableFrom": "partages",
+          "tableTo": "officines",
+          "columnsFrom": ["officine_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "partages_user_id_users_id_fk": {
+          "name": "partages_user_id_users_id_fk",
+          "tableFrom": "partages",
+          "tableTo": "users",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "partages_invited_by_users_id_fk": {
+          "name": "partages_invited_by_users_id_fk",
+          "tableFrom": "partages",
+          "tableTo": "users",
+          "columnsFrom": ["invited_by"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ordonnances": {
+      "name": "ordonnances",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "officine_id": {
+          "name": "officine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "prescripteur": {
+          "name": "prescripteur",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "date_prescription": {
+          "name": "date_prescription",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "source_ordonnance",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'manuelle'"
+        },
+        "photo_url": {
+          "name": "photo_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "saisie_par": {
+          "name": "saisie_par",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_ordonnances_officine": {
+          "name": "idx_ordonnances_officine",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ordonnances_officine_id_officines_id_fk": {
+          "name": "ordonnances_officine_id_officines_id_fk",
+          "tableFrom": "ordonnances",
+          "tableTo": "officines",
+          "columnsFrom": ["officine_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "ordonnances_saisie_par_users_id_fk": {
+          "name": "ordonnances_saisie_par_users_id_fk",
+          "tableFrom": "ordonnances",
+          "tableTo": "users",
+          "columnsFrom": ["saisie_par"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.prescriptions": {
+      "name": "prescriptions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "ordonnance_id": {
+          "name": "ordonnance_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cip13": {
+          "name": "cip13",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cis": {
+          "name": "cis",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom_texte": {
+          "name": "nom_texte",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "posologie": {
+          "name": "posologie",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "duree_jours": {
+          "name": "duree_jours",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "indication": {
+          "name": "indication",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_prescriptions_ordonnance": {
+          "name": "idx_prescriptions_ordonnance",
+          "columns": [
+            {
+              "expression": "ordonnance_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_prescriptions_cip13": {
+          "name": "idx_prescriptions_cip13",
+          "columns": [
+            {
+              "expression": "cip13",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "prescriptions_ordonnance_id_ordonnances_id_fk": {
+          "name": "prescriptions_ordonnance_id_ordonnances_id_fk",
+          "tableFrom": "prescriptions",
+          "tableTo": "ordonnances",
+          "columnsFrom": ["ordonnance_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.prises_planifiees": {
+      "name": "prises_planifiees",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "prescription_id": {
+          "name": "prescription_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "officine_id": {
+          "name": "officine_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "datetime_prevue": {
+          "name": "datetime_prevue",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "datetime_validation": {
+          "name": "datetime_validation",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "statut": {
+          "name": "statut",
+          "type": "statut_prise",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'prevue'"
+        },
+        "validee_par": {
+          "name": "validee_par",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "notes": {
+          "name": "notes",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_prises_officine_datetime": {
+          "name": "idx_prises_officine_datetime",
+          "columns": [
+            {
+              "expression": "officine_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "datetime_prevue",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_prises_statut_datetime": {
+          "name": "idx_prises_statut_datetime",
+          "columns": [
+            {
+              "expression": "statut",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "datetime_prevue",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "prises_planifiees_prescription_id_prescriptions_id_fk": {
+          "name": "prises_planifiees_prescription_id_prescriptions_id_fk",
+          "tableFrom": "prises_planifiees",
+          "tableTo": "prescriptions",
+          "columnsFrom": ["prescription_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "prises_planifiees_officine_id_officines_id_fk": {
+          "name": "prises_planifiees_officine_id_officines_id_fk",
+          "tableFrom": "prises_planifiees",
+          "tableTo": "officines",
+          "columnsFrom": ["officine_id"],
+          "columnsTo": ["id"],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        },
+        "prises_planifiees_validee_par_users_id_fk": {
+          "name": "prises_planifiees_validee_par_users_id_fk",
+          "tableFrom": "prises_planifiees",
+          "tableTo": "users",
+          "columnsFrom": ["validee_par"],
+          "columnsTo": ["id"],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.statut_boite": {
+      "name": "statut_boite",
+      "schema": "public",
+      "values": ["active", "vide", "perimee"]
+    },
+    "public.type_compte": {
+      "name": "type_compte",
+      "schema": "public",
+      "values": ["particulier", "pro"]
+    },
+    "public.type_officine": {
+      "name": "type_officine",
+      "schema": "public",
+      "values": ["perso", "patient"]
+    },
+    "public.role_partage": {
+      "name": "role_partage",
+      "schema": "public",
+      "values": ["owner", "editor", "viewer"]
+    },
+    "public.source_ordonnance": {
+      "name": "source_ordonnance",
+      "schema": "public",
+      "values": ["manuelle", "ocr"]
+    },
+    "public.statut_prise": {
+      "name": "statut_prise",
+      "schema": "public",
+      "values": ["prevue", "prise", "sautee", "oubliee"]
+    }
+  },
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
