@@ -2,16 +2,15 @@
 // Lance un Postgres jetable via testcontainers, applique les migrations Drizzle,
 // expose un DbHandle. Appelé en beforeAll dans chaque suite. Idempotent — un
 // container par suite, teardown obligatoire en afterAll.
-//
-// Task 6 step 6.4 : décommenter les 4 lignes suivantes pour activer les migrations.
-// import { migrate } from 'drizzle-orm/postgres-js/migrator';
-// import { dirname, resolve } from 'node:path';
-// import { fileURLToPath } from 'node:url';
-// const MIGRATIONS_FOLDER = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
 
 import { createDb, type DbHandle } from '../src/db.ts';
+
+const MIGRATIONS_FOLDER = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
 
 export interface TestDb {
   readonly handle: DbHandle;
@@ -29,8 +28,12 @@ export async function setupTestDb(): Promise<TestDb> {
   const url = container.getConnectionUri();
   const handle = createDb(url);
 
-  // await migrate(handle.db, { migrationsFolder: MIGRATIONS_FOLDER });
-  // Réactivé Task 6 step 6.4 quand la première migration existe.
+  // Migration folder is generated cumulatively across Tasks 4-5 and finalized in Task 6.
+  // If checking out this branch standalone without running pnpm db:generate first,
+  // the migrations folder may be incomplete or missing. Developers should ensure
+  // they've run pnpm db:generate to regenerate all pending migrations before running tests.
+  // See docs/roadmap.md and packages/db-schema/CLAUDE.md for context.
+  await migrate(handle.db, { migrationsFolder: MIGRATIONS_FOLDER });
 
   return {
     handle,
@@ -43,6 +46,8 @@ export async function setupTestDb(): Promise<TestDb> {
 }
 
 export async function truncateAll(handle: DbHandle): Promise<void> {
-  // Ordre de TRUNCATE inverse des FKs. Cascade pour gérer les liens.
-  await handle.client`TRUNCATE TABLE partages, officines, users RESTART IDENTITY CASCADE`;
+  // CASCADE couvre les FKs futures (Tasks 4-5 ajoutent officines + partages).
+  // L'ordre des tables ne compte pas avec CASCADE, mais on liste de la plus
+  // dépendante à la moins dépendante par convention.
+  await handle.client`TRUNCATE TABLE users RESTART IDENTITY CASCADE`;
 }
