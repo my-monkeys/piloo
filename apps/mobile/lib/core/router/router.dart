@@ -21,6 +21,7 @@ import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
 import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
+import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
 import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
@@ -140,10 +141,7 @@ GoRouter buildRouter() {
               GoRoute(
                 path: RoutePath.officine,
                 name: RouteName.officine,
-                builder: (_, _) => PlaceholderScreen(
-                  title: 'Officine',
-                  subtitle: 'Inventaire',
-                ),
+                builder: (_, _) => const OfficineScreen(),
               ),
             ],
           ),
