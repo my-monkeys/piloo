@@ -19,6 +19,7 @@ import 'package:go_router/go_router.dart';
 import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
 import 'package:piloo/features/auth/presentation/legal_screen.dart';
+import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
@@ -112,10 +113,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.permissions,
         name: RouteName.permissions,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Permissions',
-          subtitle: 'O3 (#68) — caméra + notifs',
-        ),
+        builder: (_, _) => const PermissionsScreen(),
       ),
 
       // Tab bar principale (Aujourd'hui / Officine / Plus)

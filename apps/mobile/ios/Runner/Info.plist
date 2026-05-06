@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Piloo utilise la caméra pour scanner le code DataMatrix de tes boîtes de médicaments.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Piloo accède à tes contacts pour t'aider à inviter tes proches plus facilement. Aucun contact n'est envoyé à nos serveurs.</string>
 </dict>
 </plist>
