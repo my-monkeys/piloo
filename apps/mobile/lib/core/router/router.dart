@@ -23,6 +23,7 @@ import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
+import 'package:piloo/features/inventory/presentation/boite_detail_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
@@ -186,9 +187,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/boites/:boiteId',
         name: RouteName.boiteDetail,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Détail boîte',
-          params: {'boiteId': state.pathParameters['boiteId'] ?? ''},
+        builder: (_, state) => BoiteDetailScreen(
+          boiteId: state.pathParameters['boiteId'],
         ),
       ),
       GoRoute(
