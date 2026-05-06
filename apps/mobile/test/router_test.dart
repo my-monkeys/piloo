@@ -3,7 +3,6 @@
 // arrivent bien jusqu'à l'écran.
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 
 import 'package:piloo/core/router/router.dart';
 import 'package:piloo/core/router/routes.dart';
