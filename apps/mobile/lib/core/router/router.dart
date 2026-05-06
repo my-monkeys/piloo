@@ -20,6 +20,7 @@ import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
 import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/permissions_screen.dart';
+import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
@@ -150,8 +151,7 @@ GoRouter buildRouter() {
               GoRoute(
                 path: RoutePath.alertes,
                 name: RouteName.alertes,
-                builder: (_, _) =>
-                    PlaceholderScreen(title: 'Alertes', subtitle: 'Liste'),
+                builder: (_, _) => const AlertesScreen(),
               ),
             ],
           ),
