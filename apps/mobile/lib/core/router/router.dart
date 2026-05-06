@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
+import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
@@ -106,10 +107,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.legal,
         name: RouteName.legal,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Mentions légales',
-          subtitle: 'O2 (#67) — disclaimer carnet de suivi',
-        ),
+        builder: (_, _) => const LegalScreen(),
       ),
       GoRoute(
         path: RoutePath.permissions,

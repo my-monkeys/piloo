@@ -11,11 +11,14 @@ class PilooCheckbox extends StatelessWidget {
   const PilooCheckbox({
     required this.value,
     required this.onChanged,
+    this.size = 20,
     super.key,
   });
 
   final bool value;
   final ValueChanged<bool> onChanged;
+  // 20 par défaut (CGU A4 inscription), 22 sur l'O2 mentions légales.
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +26,8 @@ class PilooCheckbox extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () => onChanged(!value),
       child: Container(
-        width: 20,
-        height: 20,
+        width: size,
+        height: size,
         decoration: BoxDecoration(
           color: value ? PilooColors.primary : PilooColors.surface,
           borderRadius: BorderRadius.circular(PilooRadius.sm),

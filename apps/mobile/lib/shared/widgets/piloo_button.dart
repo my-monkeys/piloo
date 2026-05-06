@@ -63,6 +63,9 @@ class PilooButton extends StatelessWidget {
 
     final disabled = onPressed == null || isLoading;
 
+    // SizedBox width infinity force le bouton à fill le parent : sans ça,
+    // le Row interne peut overflow horizontalement quand le label est
+    // long (ex: "Accepter et continuer" sur viewports tests).
     return Opacity(
       opacity: disabled && !isLoading ? 0.5 : 1.0,
       child: Material(
@@ -78,6 +81,7 @@ class PilooButton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 if (isLoading)
                   SizedBox(
@@ -93,7 +97,14 @@ class PilooButton extends StatelessWidget {
                     Icon(style.icon, size: 20, color: style.fg),
                     const SizedBox(width: 10),
                   ],
-                  Text(label, style: textStyle),
+                  Flexible(
+                    child: Text(
+                      label,
+                      style: textStyle,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
                 ],
               ],
             ),
