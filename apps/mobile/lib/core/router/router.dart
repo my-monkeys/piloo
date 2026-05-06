@@ -22,6 +22,7 @@ import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
+import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
@@ -160,8 +161,7 @@ GoRouter buildRouter() {
               GoRoute(
                 path: RoutePath.more,
                 name: RouteName.more,
-                builder: (_, _) =>
-                    PlaceholderScreen(title: 'Plus', subtitle: 'Paramètres'),
+                builder: (_, _) => const MoreScreen(),
               ),
             ],
           ),
