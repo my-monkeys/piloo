@@ -15,6 +15,8 @@ export default defineConfig(
       '**/out/**',
       '**/coverage/**',
       '**/generated/**',
+      'apps/web/lib/api/types.ts',
+      '**/next-env.d.ts',
       '**/*.tsbuildinfo',
       'apps/mobile/**',
       '.octogent/**',
