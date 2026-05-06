@@ -1,11 +1,37 @@
 // Tests du router (#45) : la config se construit, toutes les routes M1
 // sont accessibles par leur path/nom typé, et les paramètres dynamiques
 // arrivent bien jusqu'à l'écran.
+//
+// Depuis #58, la route `/` est SplashScreen (animations infinies +
+// timer de redirect). On wrap avec un ProviderScope pour les
+// dépendances Riverpod et on évite `pumpAndSettle` (les loader dots
+// du splash bouclent forever).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piloo/core/router/router.dart';
 import 'package:piloo/core/router/routes.dart';
+import 'package:piloo/core/storage/secure_storage.dart';
+import 'package:piloo/features/auth/data/session_storage.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
+
+Widget _wrap(GoRouterApp app) {
+  return ProviderScope(
+    overrides: [
+      sessionStorageProvider.overrideWithValue(
+        SessionStorage(InMemorySecureStorage()),
+      ),
+    ],
+    child: app.build(),
+  );
+}
+
+class GoRouterApp {
+  GoRouterApp(this.router);
+  final dynamic router;
+  Widget build() => MaterialApp.router(routerConfig: router);
+}
 
 void main() {
   group('buildRouter', () {
@@ -15,8 +41,9 @@ void main() {
       final router = buildRouter();
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(GoRouterApp(router)));
+      // Pas de pumpAndSettle : les loader dots du splash bouclent.
+      await tester.pump(const Duration(milliseconds: 50));
 
       expect(router.routerDelegate.currentConfiguration.uri.path, '/');
     });
@@ -27,8 +54,9 @@ void main() {
       final router = buildRouter();
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(GoRouterApp(router)));
+      // Pas de pumpAndSettle : les loader dots du splash bouclent.
+      await tester.pump(const Duration(milliseconds: 50));
 
       // Routes simples (pas de paramètre)
       const flat = [
@@ -76,8 +104,9 @@ void main() {
       final router = buildRouter();
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
-      await tester.pumpAndSettle();
+      await tester.pumpWidget(_wrap(GoRouterApp(router)));
+      // Pas de pumpAndSettle : les loader dots du splash bouclent.
+      await tester.pump(const Duration(milliseconds: 50));
 
       router.go(RoutePath.boiteDetail('abc-123'));
       await tester.pumpAndSettle();
@@ -110,7 +139,8 @@ void main() {
       final router = buildRouter();
       addTearDown(router.dispose);
 
-      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpWidget(_wrap(GoRouterApp(router)));
+      await tester.pump(const Duration(milliseconds: 50));
 
       router.go(RoutePath.today);
       await tester.pumpAndSettle();
@@ -161,9 +191,11 @@ void main() {
         RouteName.settingsHoraires,
         RouteName.settingsSecurity,
         RouteName.proDashboard,
+        RouteName.dev,
       };
-      // 32 routes M1 — si l'effectif baisse c'est qu'on a un doublon.
-      expect(allNames.length, 32);
+      // 32 routes M1 + 1 dev cachée = 33 — si l'effectif baisse c'est
+      // qu'on a un doublon.
+      expect(allNames.length, 33);
     });
   });
 }
