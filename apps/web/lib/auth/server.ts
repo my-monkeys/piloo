@@ -12,6 +12,8 @@ import { bearer } from 'better-auth/plugins';
 
 import { getDb } from '@/lib/db';
 
+import { createPersonalOfficineFor } from './hooks.ts';
+
 interface BuildAuthOptions {
   db: Db;
   secret: string;
@@ -59,6 +61,22 @@ function buildAuth({ db, secret, baseURL }: BuildAuthOptions) {
         // Cohérence avec les autres tables (uuid v4) — cf. règle "IDs UUID v4"
         // du CLAUDE.md packages/db-schema.
         generateId: () => crypto.randomUUID(),
+      },
+    },
+    databaseHooks: {
+      user: {
+        create: {
+          // #69 — auto-création de l'officine perso pour les comptes
+          // particuliers. Pour les comptes pro, le user crée ses
+          // officines "patient" à la demande.
+          after: async (user) => {
+            await createPersonalOfficineFor(db, {
+              id: user.id,
+              name: user.name,
+              typeCompte: (user as { typeCompte?: string }).typeCompte,
+            });
+          },
+        },
       },
     },
     plugins: [bearer()],
