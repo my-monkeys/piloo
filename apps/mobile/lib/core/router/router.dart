@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
 
@@ -24,8 +25,16 @@ import 'placeholder_screen.dart';
 import 'routes.dart';
 
 GoRouter buildRouter() {
+  // Override dev-only : permet de booter directement sur n'importe quelle
+  // route via `flutter run --dart-define=PILOO_BOOT_ROUTE=/sign-in`. Si vide,
+  // on tombe sur le splash normal. Pratique pour la review design en
+  // simulateur, vu la difficulté d'enchaîner des taps rapides via xcrun.
+  const bootRouteOverride = String.fromEnvironment('PILOO_BOOT_ROUTE');
+  final initialLocation =
+      bootRouteOverride.isNotEmpty ? bootRouteOverride : RoutePath.splash;
+
   return GoRouter(
-    initialLocation: RoutePath.splash,
+    initialLocation: initialLocation,
     debugLogDiagnostics: false,
     routes: [
       // Onboarding & auth (top-level, pas de tab bar)
@@ -59,8 +68,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.signIn,
         name: RouteName.signIn,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Connexion', subtitle: 'A3 (#61)'),
+        builder: (_, _) => const SignInScreen(),
       ),
       GoRoute(
         path: RoutePath.signUp,

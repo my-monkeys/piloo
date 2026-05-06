@@ -25,6 +25,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
+import 'package:piloo/features/auth/data/session.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -56,8 +57,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   }
 
   Future<void> _scheduleRedirect() async {
-    // Lit la session persistée (in-memory en tests, secure storage en prod).
-    final session = await ref.read(sessionProvider.future);
+    // Lit la session persistée. Timeout de 3s : flutter_secure_storage peut
+    // bloquer sur iOS simulator (premier accès Keychain) — sans timeout, le
+    // splash reste figé indéfiniment. Au pire on tombe sur /welcome,
+    // l'utilisateur peut se reconnecter.
+    Session? session;
+    try {
+      session = await ref.read(sessionProvider.future).timeout(
+            const Duration(seconds: 3),
+            onTimeout: () => null,
+          );
+    } catch (_) {
+      session = null;
+    }
     if (!mounted || _redirected) return;
     // Timer cancellable — annulé au dispose ou si on entre dans le menu
     // dev avant que le délai mini ne soit écoulé.
@@ -74,14 +86,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     _tapResetTimer?.cancel();
     if (_logoTapCount >= 5) {
       _logoTapCount = 0;
-      _redirected = true;
-      _redirectTimer?.cancel();
-      context.push(RoutePath.dev);
+      _openDevMenu();
       return;
     }
     _tapResetTimer = Timer(const Duration(seconds: 1), () {
       _logoTapCount = 0;
     });
+  }
+
+  void _openDevMenu() {
+    if (_redirected) return;
+    _redirected = true;
+    _redirectTimer?.cancel();
+    context.push(RoutePath.dev);
   }
 
   @override
@@ -100,6 +117,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                     GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: _onLogoTap,
+                      // Backup easter egg : un long-press de 1.5s sur le
+                      // logo pousse direct le dev menu. Plus fiable que
+                      // 5 taps quand on automate via MCP/simctl (les taps
+                      // sont latence-bornés).
+                      onLongPress: _openDevMenu,
                       child: const _LogoBadge(),
                     ),
                     const SizedBox(height: 20),
