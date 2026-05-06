@@ -21,6 +21,10 @@ import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
 import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
+import 'package:piloo/features/today/presentation/today_screen.dart';
+import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
+import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
+import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
 import 'package:piloo/features/auth/presentation/verify_email_screen.dart';
@@ -116,7 +120,9 @@ GoRouter buildRouter() {
         builder: (_, _) => const PermissionsScreen(),
       ),
 
-      // Tab bar principale (Aujourd'hui / Officine / Plus)
+      // Tab bar principale Pill5 — Aujourd'hui / Officine / Alertes / Plus
+      // (Alertes est un onglet, pas un push global, pour matcher la
+      // maquette `AtFMv`).
       StatefulShellRoute.indexedStack(
         builder: (_, _, navigationShell) => _MainShell(shell: navigationShell),
         branches: [
@@ -125,10 +131,7 @@ GoRouter buildRouter() {
               GoRoute(
                 path: RoutePath.today,
                 name: RouteName.today,
-                builder: (_, _) => PlaceholderScreen(
-                  title: 'Aujourd\'hui',
-                  subtitle: 'Timeline de prises du jour',
-                ),
+                builder: (_, _) => const TodayScreen(),
               ),
             ],
           ),
@@ -147,6 +150,16 @@ GoRouter buildRouter() {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: RoutePath.alertes,
+                name: RouteName.alertes,
+                builder: (_, _) =>
+                    PlaceholderScreen(title: 'Alertes', subtitle: 'Liste'),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: RoutePath.more,
                 name: RouteName.more,
                 builder: (_, _) =>
@@ -157,18 +170,12 @@ GoRouter buildRouter() {
         ],
       ),
 
-      // Actions globales (push par-dessus)
+      // Action globale Scan (push par-dessus la coquille)
       GoRoute(
         path: RoutePath.scan,
         name: RouteName.scan,
         builder: (_, _) =>
             PlaceholderScreen(title: 'Scan', subtitle: 'DataMatrix (#80)'),
-      ),
-      GoRoute(
-        path: RoutePath.alertes,
-        name: RouteName.alertes,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Alertes', subtitle: 'Liste'),
       ),
 
       // Boîtes
@@ -309,32 +316,31 @@ class _MainShell extends StatelessWidget {
 
   final StatefulNavigationShell shell;
 
+  static const _tabs = [
+    PilooTabItem(icon: PhosphorIconsFill.sunHorizon, label: 'AUJ.'),
+    PilooTabItem(icon: PhosphorIconsRegular.firstAidKit, label: 'OFFICINE'),
+    PilooTabItem(icon: PhosphorIconsRegular.bell, label: 'ALERTES'),
+    PilooTabItem(icon: PhosphorIconsRegular.dotsThreeCircle, label: 'PLUS'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFFAF8F3),
+      // extendBody pour que la zone derrière la pilule soit transparente
+      // (sinon le scroll content est coupé sous la tab bar).
+      extendBody: true,
       body: shell,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: shell.currentIndex,
-        onDestinationSelected: (i) =>
+      bottomNavigationBar: PilooTabBar(
+        items: _tabs,
+        currentIndex: shell.currentIndex,
+        onTap: (i) =>
             shell.goBranch(i, initialLocation: i == shell.currentIndex),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.today_outlined),
-            selectedIcon: Icon(Icons.today),
-            label: 'Aujourd\'hui',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.medical_services_outlined),
-            selectedIcon: Icon(Icons.medical_services),
-            label: 'Officine',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.more_horiz_outlined),
-            selectedIcon: Icon(Icons.more_horiz),
-            label: 'Plus',
-          ),
-        ],
       ),
+      floatingActionButton: PilooScanFab(
+        onTap: () => GoRouter.of(context).goNamed(RouteName.scan),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }
