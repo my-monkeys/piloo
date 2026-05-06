@@ -155,6 +155,164 @@ components:
             - string
             - "null"
           maxLength: 2000
+    ListBoitesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Boite"
+      required:
+        - items
+    Boite:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        cip13:
+          type: string
+          pattern: ^\d{13}$
+        lot:
+          type:
+            - string
+            - "null"
+          maxLength: 64
+        numero_serie:
+          type:
+            - string
+            - "null"
+          maxLength: 64
+        peremption:
+          type: string
+          format: date
+        unites_initiales:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        unites_restantes:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        statut:
+          type: string
+          enum:
+            - active
+            - vide
+            - perimee
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        ajoutee_par:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - cip13
+        - lot
+        - numero_serie
+        - peremption
+        - unites_initiales
+        - unites_restantes
+        - statut
+        - notes
+        - ajoutee_par
+        - created_at
+        - updated_at
+        - deleted_at
+    BoiteApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    CreateBoiteInput:
+      type: object
+      properties:
+        cip13:
+          type: string
+          pattern: ^\d{13}$
+        lot:
+          type:
+            - string
+            - "null"
+          maxLength: 64
+        numero_serie:
+          type:
+            - string
+            - "null"
+          maxLength: 64
+        peremption:
+          type: string
+          format: date
+        unites_initiales:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        unites_restantes:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - cip13
+        - peremption
+    UpdateBoiteInput:
+      type: object
+      properties:
+        statut:
+          type: string
+          enum:
+            - active
+            - vide
+            - perimee
+        unites_restantes:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
   parameters: {}
 paths:
   /health:
@@ -336,4 +494,208 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiError"
+  /v1/officines/{officineId}/boites:
+    get:
+      summary: Liste les boîtes d'une officine
+      description: Renvoie les boîtes non soft-deleted, triées par création décroissante.
+      tags:
+        - boites
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListBoitesResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "403":
+          description: Pas d'accès à l'officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+    post:
+      summary: Crée une boîte dans une officine
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - boites
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBoiteInput"
+      responses:
+        "201":
+          description: Boîte créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Boite"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+  /v1/boites/{id}:
+    get:
+      summary: Détail d'une boîte
+      tags:
+        - boites
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Détail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Boite"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "403":
+          description: Pas d'accès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+    patch:
+      summary: Met à jour une boîte (stock, statut, notes)
+      description: Réservé aux rôles owner et editor sur l'officine de la boîte.
+      tags:
+        - boites
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateBoiteInput"
+      responses:
+        "200":
+          description: Boîte mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Boite"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+    delete:
+      summary: Supprime (soft-delete) une boîte
+      description: Réservé aux rôles owner et editor sur l'officine de la boîte.
+      tags:
+        - boites
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimée
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BoiteApiError"
 webhooks: {}
