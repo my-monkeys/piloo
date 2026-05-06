@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:piloo/features/auth/presentation/account_type_screen.dart';
+import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
@@ -94,10 +95,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.forgotPassword,
         name: RouteName.forgotPassword,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Mot de passe oublié',
-          subtitle: 'A6 (#63)',
-        ),
+        builder: (_, _) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: RoutePath.resetPassword,
