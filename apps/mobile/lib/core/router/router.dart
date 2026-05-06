@@ -18,6 +18,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 
+import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
 import 'routes.dart';
 
@@ -30,10 +31,9 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.splash,
         name: RouteName.splash,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Splash',
-          subtitle: 'A1 — redirection auth (#58)',
-        ),
+        // Temporaire : DevHomeScreen (liste cliquable des 32 routes M1)
+        // tant que l'écran A1 Splash (#58) n'est pas implémenté.
+        builder: (_, _) => const DevHomeScreen(),
       ),
       GoRoute(
         path: RoutePath.welcome,

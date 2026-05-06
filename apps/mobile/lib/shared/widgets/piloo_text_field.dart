@@ -92,10 +92,20 @@ class _PilooTextFieldState extends State<PilooTextField> {
                   onSubmitted: widget.onSubmitted,
                   style: inputTextStyle,
                   cursorColor: PilooColors.primary,
+                  // Material 3 dessine un border par défaut sur chaque état
+                  // (enabled/focused/disabled/error). `border:` seul ne couvre
+                  // pas les états — il faut tous les tuer un par un, sinon
+                  // un trait gris apparaît à l'intérieur du conteneur blanc.
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
+                    filled: false,
                     border: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    focusedErrorBorder: InputBorder.none,
                     hintText: widget.hint,
                     hintStyle: hintStyle,
                   ),

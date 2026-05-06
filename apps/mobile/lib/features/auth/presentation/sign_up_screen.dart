@@ -29,6 +29,7 @@ import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_checkbox.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_text_field.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({this.typeCompte = 'particulier', super.key});
@@ -46,7 +47,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _password = TextEditingController();
   bool _cguAccepted = false;
   bool _submitting = false;
-  String? _errorMessage;
 
   @override
   void dispose() {
@@ -58,11 +58,9 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   }
 
   Future<void> _onSubmit() async {
-    setState(() => _errorMessage = null);
-
     final invalid = _localValidationError();
     if (invalid != null) {
-      setState(() => _errorMessage = invalid);
+      PilooToast.error(context, invalid);
       return;
     }
 
@@ -86,7 +84,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         (_) => false,
       );
     } on AuthApiException catch (e) {
-      if (mounted) setState(() => _errorMessage = e.message);
+      if (mounted) PilooToast.error(context, e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -166,10 +164,6 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       value: _cguAccepted,
                       onChanged: (v) => setState(() => _cguAccepted = v),
                     ),
-                    if (_errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      _ErrorBanner(message: _errorMessage!),
-                    ],
                     const SizedBox(height: 24),
                     PilooButton(
                       label: 'Créer mon compte',
@@ -307,32 +301,6 @@ class _CguRow extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: PilooColors.error,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        message,
-        style: GoogleFonts.manrope(
-          fontSize: 13,
-          color: PilooColors.errorOn,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
     );
   }
 }
