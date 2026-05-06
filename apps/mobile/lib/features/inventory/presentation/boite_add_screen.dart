@@ -38,11 +38,77 @@ class BoiteAddScreen extends StatefulWidget {
 class _BoiteAddScreenState extends State<BoiteAddScreen> {
   _StockLevel _stock = _StockLevel.plein;
   final _notesCtrl = TextEditingController();
+  final _lotCtrl = TextEditingController(text: 'LOT42AB7');
+  // Péremption : on stocke (mois, année) pour rester aligné avec ce
+  // qu'on récupère du DataMatrix (AI 17 = YYMM).
+  int _expMonth = 3;
+  int _expYear = 2028;
+  String _officine = 'Maison';
+
+  static const _months = [
+    'janvier',
+    'février',
+    'mars',
+    'avril',
+    'mai',
+    'juin',
+    'juillet',
+    'août',
+    'septembre',
+    'octobre',
+    'novembre',
+    'décembre',
+  ];
+
+  static const _officines = ['Maison', 'Voiture', 'Bureau', 'Maman'];
+
+  String get _expLabel =>
+      '${_expMonth.toString().padLeft(2, '0')} / $_expYear';
 
   @override
   void dispose() {
     _notesCtrl.dispose();
+    _lotCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _editPeremption() async {
+    final picked = await showModalBottomSheet<({int month, int year})>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _PeremptionPicker(
+        initialMonth: _expMonth,
+        initialYear: _expYear,
+        months: _months,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() {
+        _expMonth = picked.month;
+        _expYear = picked.year;
+      });
+    }
+  }
+
+  Future<void> _pickOfficine() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _OfficinePicker(
+        current: _officine,
+        options: _officines,
+      ),
+    );
+    if (picked != null && mounted) {
+      setState(() => _officine = picked);
+    }
   }
 
   @override
@@ -68,12 +134,16 @@ class _BoiteAddScreenState extends State<BoiteAddScreen> {
                         Expanded(
                           child: _Field(
                             label: 'PÉREMPTION',
-                            child: _ValueRow(
-                              text: '03 / 2028',
-                              trailing: const Icon(
-                                PhosphorIconsRegular.pencilSimple,
-                                size: 16,
-                                color: PilooColors.textSecondary,
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTap: _editPeremption,
+                              child: _ValueRow(
+                                text: _expLabel,
+                                trailing: const Icon(
+                                  PhosphorIconsRegular.pencilSimple,
+                                  size: 16,
+                                  color: PilooColors.textSecondary,
+                                ),
                               ),
                             ),
                           ),
@@ -82,7 +152,7 @@ class _BoiteAddScreenState extends State<BoiteAddScreen> {
                         Expanded(
                           child: _Field(
                             label: 'N° DE LOT',
-                            child: _ValueRow(text: 'LOT42AB7'),
+                            child: _LotField(controller: _lotCtrl),
                           ),
                         ),
                       ],
@@ -90,17 +160,21 @@ class _BoiteAddScreenState extends State<BoiteAddScreen> {
                     const SizedBox(height: 16),
                     _Field(
                       label: 'OFFICINE CIBLE',
-                      child: _ValueRow(
-                        leading: const Icon(
-                          PhosphorIconsFill.house,
-                          size: 16,
-                          color: PilooColors.primary,
-                        ),
-                        text: 'Maison',
-                        trailing: const Icon(
-                          PhosphorIconsRegular.caretDown,
-                          size: 14,
-                          color: PilooColors.textSecondary,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: _pickOfficine,
+                        child: _ValueRow(
+                          leading: const Icon(
+                            PhosphorIconsFill.house,
+                            size: 16,
+                            color: PilooColors.primary,
+                          ),
+                          text: _officine,
+                          trailing: const Icon(
+                            PhosphorIconsRegular.caretDown,
+                            size: 14,
+                            color: PilooColors.textSecondary,
+                          ),
                         ),
                       ),
                     ),
@@ -388,6 +462,300 @@ class _StockChip extends StatelessWidget {
             color:
                 selected ? PilooColors.textOnPrimary : PilooColors.textPrimary,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LotField extends StatelessWidget {
+  const _LotField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: PilooColors.surface,
+        borderRadius: BorderRadius.circular(PilooRadius.md),
+        border: Border.all(color: PilooColors.border),
+      ),
+      alignment: Alignment.centerLeft,
+      child: TextField(
+        controller: controller,
+        textCapitalization: TextCapitalization.characters,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
+          filled: false,
+          border: InputBorder.none,
+          enabledBorder: InputBorder.none,
+          focusedBorder: InputBorder.none,
+          disabledBorder: InputBorder.none,
+        ),
+        style: GoogleFonts.manrope(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: PilooColors.textPrimary,
+        ),
+      ),
+    );
+  }
+}
+
+class _PeremptionPicker extends StatefulWidget {
+  const _PeremptionPicker({
+    required this.initialMonth,
+    required this.initialYear,
+    required this.months,
+  });
+
+  final int initialMonth;
+  final int initialYear;
+  final List<String> months;
+
+  @override
+  State<_PeremptionPicker> createState() => _PeremptionPickerState();
+}
+
+class _PeremptionPickerState extends State<_PeremptionPicker> {
+  late int _month = widget.initialMonth;
+  late int _year = widget.initialYear;
+
+  @override
+  Widget build(BuildContext context) {
+    final years = List.generate(12, (i) => DateTime.now().year + i);
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: PilooColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Center(
+              child: Text(
+                'Date de péremption',
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 180,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: CupertinoPickerWheel(
+                      items: [for (var i = 0; i < 12; i++) widget.months[i]],
+                      initialIndex: _month - 1,
+                      onChanged: (i) => setState(() => _month = i + 1),
+                    ),
+                  ),
+                  Expanded(
+                    child: CupertinoPickerWheel(
+                      items: years.map((y) => '$y').toList(),
+                      initialIndex: years.indexOf(_year).clamp(0, years.length - 1),
+                      onChanged: (i) => setState(() => _year = years[i]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            PilooButton(
+              label: 'Confirmer',
+              variant: PilooButtonVariant.primary,
+              onPressed: () =>
+                  Navigator.of(context).pop((month: _month, year: _year)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mini-roulette type Cupertino. Bande primary-soft au centre pour
+/// indiquer la sélection courante + item central rendu en primary
+/// gras (les autres en text-tertiary plus léger).
+class CupertinoPickerWheel extends StatefulWidget {
+  const CupertinoPickerWheel({
+    required this.items,
+    required this.initialIndex,
+    required this.onChanged,
+    super.key,
+  });
+
+  final List<String> items;
+  final int initialIndex;
+  final ValueChanged<int> onChanged;
+
+  @override
+  State<CupertinoPickerWheel> createState() => _CupertinoPickerWheelState();
+}
+
+class _CupertinoPickerWheelState extends State<CupertinoPickerWheel> {
+  late int _selected = widget.initialIndex;
+
+  static const double _itemExtent = 36;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Bande primary-soft qui marque la zone de sélection. Le picker
+        // est dessiné par-dessus pour que l'item central apparaisse
+        // posé sur la bande.
+        Container(
+          height: _itemExtent,
+          margin: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: PilooColors.primarySoft,
+            borderRadius: BorderRadius.circular(PilooRadius.md),
+          ),
+        ),
+        ListWheelScrollView.useDelegate(
+          controller: FixedExtentScrollController(
+            initialItem: widget.initialIndex,
+          ),
+          itemExtent: _itemExtent,
+          perspective: 0.005,
+          diameterRatio: 1.6,
+          physics: const FixedExtentScrollPhysics(),
+          onSelectedItemChanged: (i) {
+            setState(() => _selected = i);
+            widget.onChanged(i);
+          },
+          childDelegate: ListWheelChildBuilderDelegate(
+            childCount: widget.items.length,
+            builder: (_, i) {
+              final isSelected = i == _selected;
+              return Center(
+                child: Text(
+                  widget.items[i],
+                  style: GoogleFonts.manrope(
+                    fontSize: isSelected ? 17 : 16,
+                    fontWeight:
+                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    color: isSelected
+                        ? PilooColors.primary
+                        : PilooColors.textTertiary,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _OfficinePicker extends StatelessWidget {
+  const _OfficinePicker({required this.current, required this.options});
+
+  final String current;
+  final List<String> options;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: PilooColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Center(
+              child: Text(
+                'Choisir une officine',
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...options.map((o) {
+              final selected = o == current;
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => Navigator.of(context).pop(o),
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: PilooColors.surface,
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                    border: Border.all(
+                      color: selected
+                          ? PilooColors.primary
+                          : PilooColors.border,
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        PhosphorIconsFill.house,
+                        size: 18,
+                        color: selected
+                            ? PilooColors.primary
+                            : PilooColors.textSecondary,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          o,
+                          style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            fontWeight: selected
+                                ? FontWeight.w600
+                                : FontWeight.w500,
+                            color: PilooColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      if (selected)
+                        const Icon(
+                          PhosphorIconsBold.check,
+                          size: 16,
+                          color: PilooColors.primary,
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ],
         ),
       ),
     );
