@@ -17,9 +17,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:piloo/features/auth/presentation/account_type_screen.dart';
+import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
+import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
+import 'package:piloo/features/auth/presentation/verify_email_screen.dart';
+import 'package:piloo/features/auth/presentation/welcome_screen.dart';
 
 import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
@@ -55,8 +59,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.welcome,
         name: RouteName.welcome,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Welcome', subtitle: 'O1 (#66)'),
+        builder: (_, _) => const WelcomeScreen(),
       ),
       GoRoute(
         path: RoutePath.accountType,
@@ -82,16 +85,18 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.verifyEmail,
         name: RouteName.verifyEmail,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Vérification email', subtitle: 'A5 (#62)'),
+        // L'email est passé via state.extra (depuis SignUp ou SignIn).
+        // Default placeholder utilisé en review design.
+        builder: (_, state) {
+          final extra = state.extra;
+          final email = extra is String ? extra : 'votre@email.fr';
+          return VerifyEmailScreen(email: email);
+        },
       ),
       GoRoute(
         path: RoutePath.forgotPassword,
         name: RouteName.forgotPassword,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Mot de passe oublié',
-          subtitle: 'A6 (#63)',
-        ),
+        builder: (_, _) => const ForgotPasswordScreen(),
       ),
       GoRoute(
         path: RoutePath.resetPassword,
@@ -102,10 +107,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.legal,
         name: RouteName.legal,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Mentions légales',
-          subtitle: 'O2 (#67) — disclaimer carnet de suivi',
-        ),
+        builder: (_, _) => const LegalScreen(),
       ),
       GoRoute(
         path: RoutePath.permissions,
