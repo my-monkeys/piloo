@@ -16,6 +16,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
+
+import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
 import 'routes.dart';
 
@@ -28,10 +31,9 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.splash,
         name: RouteName.splash,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Splash',
-          subtitle: 'A1 — redirection auth (#58)',
-        ),
+        // Temporaire : DevHomeScreen (liste cliquable des 32 routes M1)
+        // tant que l'écran A1 Splash (#58) n'est pas implémenté.
+        builder: (_, _) => const DevHomeScreen(),
       ),
       GoRoute(
         path: RoutePath.welcome,
@@ -56,8 +58,13 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.signUp,
         name: RouteName.signUp,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Inscription', subtitle: 'A4 (#60)'),
+        // `typeCompte` est passé via `extra` (chaîne) — par défaut
+        // 'particulier' tant que l'écran A2 (#59) n'est pas en place.
+        builder: (_, state) {
+          final extra = state.extra;
+          final typeCompte = extra is String ? extra : 'particulier';
+          return SignUpScreen(typeCompte: typeCompte);
+        },
       ),
       GoRoute(
         path: RoutePath.verifyEmail,
