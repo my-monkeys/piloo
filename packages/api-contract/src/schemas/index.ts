@@ -2,3 +2,4 @@
 // registry OpenAPI à l'import — ne pas oublier d'importer ici les nouveaux
 // schémas pour qu'ils apparaissent dans openapi.yaml.
 export * from './health.ts';
+export * from './officines.ts';
