@@ -16,6 +16,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
@@ -60,10 +61,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.accountType,
         name: RouteName.accountType,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Type de compte',
-          subtitle: 'A2 (#59) — Particulier / Pro',
-        ),
+        builder: (_, _) => const AccountTypeScreen(),
       ),
       GoRoute(
         path: RoutePath.signIn,
