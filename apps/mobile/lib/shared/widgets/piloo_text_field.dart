@@ -24,6 +24,7 @@ class PilooTextField extends StatefulWidget {
     this.textInputAction,
     this.autofillHints,
     this.onSubmitted,
+    this.height = 44,
     super.key,
   });
 
@@ -36,6 +37,9 @@ class PilooTextField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
   final ValueChanged<String>? onSubmitted;
+  // 44 sur A4, 48 sur A3 — la maquette propose 2 hauteurs selon la
+  // densité du formulaire.
+  final double height;
 
   @override
   State<PilooTextField> createState() => _PilooTextFieldState();
@@ -67,7 +71,7 @@ class _PilooTextFieldState extends State<PilooTextField> {
         Text(widget.label.toUpperCase(), style: labelStyle),
         const SizedBox(height: 6),
         Container(
-          height: 44,
+          height: widget.height,
           decoration: BoxDecoration(
             color: PilooColors.surface,
             borderRadius: BorderRadius.circular(PilooRadius.md),

@@ -29,6 +29,40 @@ class AuthApi {
 
   final Dio _dio;
 
+  /// POST /api/auth/sign-in/email — Better Auth.
+  Future<Session> signInEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/sign-in/email',
+        data: {'email': email, 'password': password},
+        options: Options(validateStatus: (s) => s != null),
+      );
+      if (response.statusCode != 200) {
+        throw _exceptionFromError(response.data, response.statusCode);
+      }
+      final body = response.data!;
+      final user = body['user'] as Map<String, dynamic>;
+      final token = response.headers.value('set-auth-token');
+      if (token == null || token.isEmpty) {
+        throw AuthApiException(
+          'missing_bearer',
+          'Réponse signin sans header set-auth-token (plugin bearer absent ?)',
+        );
+      }
+      return Session(
+        token: token,
+        userId: user['id'] as String,
+        email: user['email'] as String,
+        name: (user['name'] as String?) ?? '',
+      );
+    } on DioException catch (e) {
+      throw _exceptionFromDio(e);
+    }
+  }
+
   Future<Session> signUpEmail({
     required String email,
     required String password,
