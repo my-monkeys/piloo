@@ -3,3 +3,4 @@
 // schémas pour qu'ils apparaissent dans openapi.yaml.
 export * from './health.ts';
 export * from './officines.ts';
+export * from './boites.ts';
