@@ -58,12 +58,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1300));
       await tester.pumpAndSettle();
 
-      // Le placeholder Welcome affiche son titre dans l'AppBar et dans
-      // le body (`PlaceholderScreen` propre à chaque écran non encore
-      // implémenté). On accepte les deux occurrences — l'objectif ici
-      // est de vérifier que le redirect a eu lieu.
-      expect(find.text('Welcome'), findsAtLeastNWidgets(1));
-      // Le splash a disparu.
+      // Depuis #66, /welcome affiche WelcomeScreen avec une 1ère slide
+      // "Scanne, c'est tout". On vérifie ce marqueur + l'absence du
+      // splash pour confirmer le redirect.
+      expect(find.text("Scanne, c'est tout"), findsOneWidget);
       expect(find.byIcon(PhosphorIconsFill.firstAidKit), findsNothing);
     });
 

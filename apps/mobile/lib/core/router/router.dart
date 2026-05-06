@@ -22,6 +22,7 @@ import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
 import 'package:piloo/features/auth/presentation/verify_email_screen.dart';
+import 'package:piloo/features/auth/presentation/welcome_screen.dart';
 
 import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
@@ -57,8 +58,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.welcome,
         name: RouteName.welcome,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Welcome', subtitle: 'O1 (#66)'),
+        builder: (_, _) => const WelcomeScreen(),
       ),
       GoRoute(
         path: RoutePath.accountType,
