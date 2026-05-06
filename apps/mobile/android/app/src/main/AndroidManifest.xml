@@ -1,4 +1,18 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Permissions runtime demandées dans l'écran O3 Permissions (#68).
+         CAMERA      : scan DataMatrix des boîtes (mobile_scanner #80).
+         POST_NOTIFICATIONS : rappels de prise + alertes péremption
+                              (Android 13+, runtime).
+         READ_CONTACTS : invitation des proches (officines partagées). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
+
+    <!-- Caméra utilisée mais pas obligatoire pour installer l'app
+         (un user sans caméra peut quand même saisir manuellement). -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+
     <application
         android:label="piloo"
         android:name="${applicationName}"

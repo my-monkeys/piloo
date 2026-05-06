@@ -247,16 +247,19 @@ class _CameraCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final granted = status.isGranted;
+    // Border rouge 2px tant que non accordée (cohérent avec le badge),
+    // vert primary 1px sinon. Padding ajusté pour garder une largeur
+    // intérieure constante quand l'épaisseur du bord change.
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(granted ? 14 : 12),
+        padding: EdgeInsets.all(granted ? 14 : 13),
         decoration: BoxDecoration(
           color: PilooColors.surface,
           borderRadius: BorderRadius.circular(PilooRadius.lg),
           border: Border.all(
-            color: PilooColors.primary,
+            color: granted ? PilooColors.primary : PilooColors.accent,
             width: granted ? 1 : 2,
           ),
         ),
@@ -309,17 +312,21 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Tant que la caméra n'est pas accordée, badge rouge ($accent) avec
+    // icône warning : signal visuel fort que l'action est obligatoire.
+    // Une fois accordée, badge vert ($primary) avec check.
+    final color = granted ? PilooColors.primary : PilooColors.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: PilooColors.primary,
+        color: color,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            PhosphorIconsBold.check,
+            granted ? PhosphorIconsBold.check : PhosphorIconsBold.warning,
             size: 10,
             color: Colors.white,
           ),
