@@ -56,7 +56,7 @@ class _LegalScreenState extends State<LegalScreen> {
       backgroundColor: PilooColors.background,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
