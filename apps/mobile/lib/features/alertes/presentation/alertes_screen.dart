@@ -92,8 +92,10 @@ class AlertesScreen extends StatelessWidget {
           children: [
             _Header(),
             Expanded(
+              // Bottom padding 140 = tab bar (~105) + safe area home
+              // indicator (extendBody: true côté _MainShell).
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                 children: [
                   _Group(label: "AUJOURD'HUI", alerts: _today),
                   const SizedBox(height: 14),

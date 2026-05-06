@@ -117,8 +117,11 @@ class _TodayScreenState extends State<TodayScreen> {
               onNext: () => _shiftDay(1),
             ),
             Expanded(
+              // Bottom padding 140 = tab bar (~105) + safe area home
+              // indicator — sinon le dernier élément passe sous la
+              // tab bar (extendBody: true côté _MainShell).
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
