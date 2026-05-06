@@ -24,6 +24,7 @@ import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
 import 'package:piloo/features/inventory/presentation/boite_detail_screen.dart';
+import 'package:piloo/features/inventory/presentation/medicament_info_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
@@ -194,9 +195,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/medicaments/:cip13',
         name: RouteName.medicamentInfo,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Fiche médicament',
-          params: {'cip13': state.pathParameters['cip13'] ?? ''},
+        builder: (_, state) => MedicamentInfoScreen(
+          cip13: state.pathParameters['cip13'],
         ),
       ),
 
