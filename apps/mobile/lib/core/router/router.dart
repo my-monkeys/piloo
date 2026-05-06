@@ -20,6 +20,7 @@ import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
+import 'package:piloo/features/auth/presentation/verify_email_screen.dart';
 
 import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
@@ -82,8 +83,13 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.verifyEmail,
         name: RouteName.verifyEmail,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Vérification email', subtitle: 'A5 (#62)'),
+        // L'email est passé via state.extra (depuis SignUp ou SignIn).
+        // Default placeholder utilisé en review design.
+        builder: (_, state) {
+          final extra = state.extra;
+          final email = extra is String ? extra : 'votre@email.fr';
+          return VerifyEmailScreen(email: email);
+        },
       ),
       GoRoute(
         path: RoutePath.forgotPassword,
