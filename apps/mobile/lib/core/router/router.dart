@@ -25,6 +25,7 @@ import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
 import 'package:piloo/features/inventory/presentation/boite_detail_screen.dart';
 import 'package:piloo/features/inventory/presentation/medicament_info_screen.dart';
+import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
@@ -67,6 +68,12 @@ GoRouter buildRouter() {
         path: RoutePath.dev,
         name: RouteName.dev,
         builder: (_, _) => const DevHomeScreen(),
+      ),
+      // Routes dev pour reviewer des composants non rattachés à un
+      // écran principal (sheets, modales, etc.).
+      GoRoute(
+        path: '/_dev/quick-actions',
+        builder: (_, _) => const QuickActionsDemoScreen(),
       ),
       GoRoute(
         path: RoutePath.welcome,
