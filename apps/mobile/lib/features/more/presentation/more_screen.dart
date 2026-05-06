@@ -111,8 +111,13 @@ class MoreScreen extends StatelessWidget {
           children: [
             PilooScreenHeader(title: 'Plus', bellEnabled: false),
             Expanded(
+              // Bottom padding 140 = tab bar Pill5 (~105) + safe area
+              // home indicator (~34) — sinon le dernier élément se
+              // retrouve caché sous la tab bar (extendBody: true côté
+              // _MainShell pour laisser le $bg transparaître autour
+              // de la pilule).
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                 children: [
                   _ProfileCard(
                     initials: 'MD',

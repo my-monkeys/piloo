@@ -192,8 +192,10 @@ class _OfficineScreenState extends State<OfficineScreen> {
               ),
             ),
             Expanded(
+              // Bottom padding 140 = tab bar (~105) + safe area home
+              // indicator (extendBody: true côté _MainShell).
               child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 140),
                 itemCount: _filtered.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
                 itemBuilder: (_, i) => _BoiteCard(boite: _filtered[i]),
