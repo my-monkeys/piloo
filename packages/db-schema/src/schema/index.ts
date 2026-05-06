@@ -8,3 +8,4 @@ export * from './ordonnances.ts';
 export * from './prescriptions.ts';
 export * from './prises_planifiees.ts';
 export * from './alertes.ts';
+export * from './sync.ts';
