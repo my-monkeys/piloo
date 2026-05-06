@@ -58,6 +58,10 @@ class RouteName {
 
   // Vue pro
   static const proDashboard = 'pro-dashboard';
+
+  // Dev only — accessible via 5 taps sur le logo du splash. Reste
+  // présent en release mais sans entrée d'UI visible.
+  static const dev = 'dev';
 }
 
 /// Helpers typés pour construire les paths. Préférer ces fonctions à
@@ -116,4 +120,7 @@ class RoutePath {
 
   // Vue pro
   static const proDashboard = '/pro';
+
+  // Dev only.
+  static const dev = '/_dev';
 }

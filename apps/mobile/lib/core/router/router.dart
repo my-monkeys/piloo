@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
+import 'package:piloo/features/auth/presentation/splash_screen.dart';
 
 import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
@@ -31,8 +32,14 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.splash,
         name: RouteName.splash,
-        // Temporaire : DevHomeScreen (liste cliquable des 32 routes M1)
-        // tant que l'écran A1 Splash (#58) n'est pas implémenté.
+        builder: (_, _) => const SplashScreen(),
+      ),
+      // Route dev cachée : 5 taps sur le logo du splash y mènent.
+      // Permet à l'équipe design de naviguer entre les écrans M1 tant
+      // qu'ils ne sont pas tous implémentés.
+      GoRoute(
+        path: RoutePath.dev,
+        name: RouteName.dev,
         builder: (_, _) => const DevHomeScreen(),
       ),
       GoRoute(
