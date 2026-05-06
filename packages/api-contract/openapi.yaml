@@ -313,6 +313,199 @@ components:
             - string
             - "null"
           maxLength: 2000
+    SyncPushResponse:
+      type: object
+      properties:
+        acks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SyncAck"
+        server_time:
+          type: string
+          format: date-time
+      required:
+        - acks
+        - server_time
+    SyncAck:
+      type: object
+      properties:
+        operation_id:
+          type: string
+          format: uuid
+        entity_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum:
+            - applied
+            - conflict
+            - rejected
+        reason:
+          type: string
+        server_version:
+          $ref: "#/components/schemas/Boite"
+      required:
+        - operation_id
+        - entity_id
+        - status
+    SyncApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    SyncPushRequest:
+      type: object
+      properties:
+        client_id:
+          type: string
+          minLength: 1
+          maxLength: 120
+        operations:
+          type: array
+          items:
+            oneOf:
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                    enum:
+                      - create_boite
+                  entity_type:
+                    type: string
+                    enum:
+                      - boite
+                  entity_id:
+                    type: string
+                    format: uuid
+                  payload:
+                    allOf:
+                      - $ref: "#/components/schemas/CreateBoiteInput"
+                      - type: object
+                        properties:
+                          officine_id:
+                            type: string
+                            format: uuid
+                        required:
+                          - officine_id
+                  timestamp_local:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - entity_type
+                  - entity_id
+                  - payload
+                  - timestamp_local
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                    enum:
+                      - update_boite
+                  entity_type:
+                    type: string
+                    enum:
+                      - boite
+                  entity_id:
+                    type: string
+                    format: uuid
+                  payload:
+                    $ref: "#/components/schemas/UpdateBoiteInput"
+                  timestamp_local:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - entity_type
+                  - entity_id
+                  - payload
+                  - timestamp_local
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                    enum:
+                      - soft_delete_boite
+                  entity_type:
+                    type: string
+                    enum:
+                      - boite
+                  entity_id:
+                    type: string
+                    format: uuid
+                  payload:
+                    type: object
+                    properties: {}
+                    additionalProperties: false
+                  timestamp_local:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - entity_type
+                  - entity_id
+                  - payload
+                  - timestamp_local
+          minItems: 1
+          maxItems: 100
+      required:
+        - client_id
+        - operations
+    SyncPullResponse:
+      type: object
+      properties:
+        entities:
+          type: object
+          properties:
+            boites:
+              type: array
+              items:
+                $ref: "#/components/schemas/Boite"
+          required:
+            - boites
+        deleted:
+          type: object
+          properties:
+            boites:
+              type: array
+              items:
+                type: string
+                format: uuid
+          required:
+            - boites
+        server_time:
+          type: string
+          format: date-time
+      required:
+        - entities
+        - deleted
+        - server_time
   parameters: {}
 paths:
   /health:
@@ -698,4 +891,73 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BoiteApiError"
+  /v1/sync/push:
+    post:
+      summary: Pousse un batch d'opérations locales vers le serveur
+      description: Idempotent par operation_id. Maximum 100 opérations par requête. Renvoie un ack par opération (applied | conflict | rejected).
+      tags:
+        - sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SyncPushRequest"
+      responses:
+        "200":
+          description: Acks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncPushResponse"
+        "400":
+          description: Body invalide ou batch > 100
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncApiError"
+  /v1/sync/pull:
+    get:
+      summary: Récupère les entités modifiées depuis un timestamp
+      description: Renvoie toutes les entités accessibles à l'utilisateur dont updated_at > since. Les soft-deletes apparaissent dans `deleted[]` plutôt que dans `entities[]`.
+      tags:
+        - sync
+      parameters:
+        - schema:
+            type: string
+            format: date-time
+          required: false
+          name: since
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+          required: false
+          name: limit
+          in: query
+      responses:
+        "200":
+          description: Snapshot incremental
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncPullResponse"
+        "400":
+          description: Paramètres invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SyncApiError"
 webhooks: {}

@@ -54,6 +54,7 @@ export async function setupTestDb(): Promise<TestDb> {
 export async function truncateAll(handle: DbHandle): Promise<void> {
   await handle.client`
     TRUNCATE TABLE
+      sync_operations_log,
       alertes,
       prises_planifiees,
       prescriptions,
