@@ -9,6 +9,15 @@
 # packages, and plugins designed to encourage good coding practices.
 include: package:flutter_lints/flutter.yaml
 
+analyzer:
+  # Le client OpenAPI généré (`lib/gen/openapi/`) est un sous-package Dart
+  # avec son propre `pubspec.yaml` (built_value, dio, ...). Il est gitignoré
+  # et régénéré à la demande via `pnpm openapi:generate`. L'analyzer du
+  # projet parent ne doit pas tenter de le lire — ses imports pointent vers
+  # son propre arbre de dépendances.
+  exclude:
+    - lib/gen/**
+
 linter:
   # The lint rules applied to this project can be customized in the
   # section below to disable rules from the `package:flutter_lints/flutter.yaml`
