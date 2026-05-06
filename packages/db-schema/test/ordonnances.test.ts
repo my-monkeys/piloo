@@ -29,7 +29,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'T',
       prenom: 'U',
       typeCompte: 'particulier',
@@ -72,7 +72,9 @@ describe('ordonnances', () => {
         saisiePar: f.user.id,
         source: 'photo',
       }),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it('rejette une FK officine inconnue', async () => {
@@ -83,6 +85,6 @@ describe('ordonnances', () => {
         datePrescription: '2026-04-01',
         saisiePar: f.user.id,
       } satisfies NewOrdonnance),
-    ).rejects.toThrow(/foreign key|fk/);
+    ).rejects.toMatchObject({ cause: { message: expect.stringMatching(/foreign key|fk/) } });
   });
 });

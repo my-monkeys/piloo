@@ -19,7 +19,7 @@ beforeEach(async () => {
 
 const baseUser = (overrides: Partial<NewUser> = {}): NewUser => ({
   email: 'a@b.fr',
-  passwordHash: 'hash',
+  name: 'Test User',
   nom: 'Dupont',
   prenom: 'Marie',
   typeCompte: 'particulier',
@@ -40,14 +40,18 @@ describe('users', () => {
     await env.handle.db.insert(users).values(baseUser({ email: 'dup@b.fr' }));
     await expect(
       env.handle.db.insert(users).values(baseUser({ email: 'dup@b.fr' })),
-    ).rejects.toThrow(/duplicate key|users_email/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/duplicate key|users_email/) },
+    });
   });
 
   it('rejette un type_compte invalide (enum)', async () => {
     await expect(
       // @ts-expect-error type narrowed by enum, on teste runtime
       env.handle.db.insert(users).values(baseUser({ typeCompte: 'admin' })),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it('soft-delete : la ligne reste visible avec deletedAt non null', async () => {

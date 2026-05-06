@@ -1,9 +1,12 @@
 // packages/db-schema/src/schema/users.ts
 // Source : docs/data-model.md §"users". Compte de connexion + profil minimal.
-// Les préférences (notifs, langue, fuseau) vivent dans `preferences` JSONB
-// pour éviter de migrer la DB à chaque ajout de prefs.
+// Adapté pour Better Auth (ADR 0004) : `name`, `emailVerified`, `image` sont
+// requis par le contrat Better Auth ; le mot de passe vit dans la table
+// `account` (cf. schema/auth.ts), pas ici. `nom`/`prenom`/`typeCompte`/
+// `telephone`/`preferences` sont injectés au signup via additionalFields.
 import { sql } from 'drizzle-orm';
 import {
+  boolean,
   index,
   jsonb,
   pgEnum,
@@ -23,15 +26,19 @@ export const users = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     email: text().notNull(),
-    passwordHash: text().notNull(),
-    emailVerifiedAt: timestamp({ withTimezone: true }),
+    name: text().notNull(),
+    emailVerified: boolean().notNull().default(false),
+    image: text(),
     nom: text().notNull(),
     prenom: text().notNull(),
     typeCompte: typeCompteEnum().notNull(),
     telephone: text(),
     preferences: jsonb().notNull().default({}),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp({ withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
     deletedAt: timestamp({ withTimezone: true }),
     lastLoginAt: timestamp({ withTimezone: true }),
   },

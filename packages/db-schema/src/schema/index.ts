@@ -1,4 +1,5 @@
 export * from './users.ts';
+export * from './auth.ts';
 export * from './officines.ts';
 export * from './partages.ts';
 export * from './boites.ts';

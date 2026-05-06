@@ -49,9 +49,9 @@ describe('medicaments_bdpm', () => {
 
   it('rejette un CIS dupliqué (PK)', async () => {
     await env.handle.db.insert(medicamentsBdpm).values(baseRow());
-    await expect(env.handle.db.insert(medicamentsBdpm).values(baseRow())).rejects.toThrow(
-      /duplicate key|medicaments_bdpm_pkey/,
-    );
+    await expect(env.handle.db.insert(medicamentsBdpm).values(baseRow())).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/duplicate key|medicaments_bdpm_pkey/) },
+    });
   });
 
   it('autorise plusieurs lignes avec même cip13 (cas génériques + branding)', async () => {

@@ -15,6 +15,9 @@ export default defineConfig({
       '**/coverage/**',
       '**/generated/**',
       'apps/mobile/**',
+      // apps/web a son propre vitest.config.ts (alias @/) — laisser
+      // `turbo run test` les exécuter via le script local.
+      'apps/web/**',
       '.octogent/**',
       '.claude/**',
     ],

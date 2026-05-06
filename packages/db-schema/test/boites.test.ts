@@ -29,7 +29,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'T',
       prenom: 'U',
       typeCompte: 'particulier',
@@ -77,7 +77,11 @@ describe('boites', () => {
     await env.handle.db.insert(boites).values(baseBoite(f.officine.id, f.user.id));
     await expect(
       env.handle.db.insert(boites).values(baseBoite(f.officine.id, f.user.id)),
-    ).rejects.toThrow(/duplicate key|boites_officine_cip13_lot_serie_unique/);
+    ).rejects.toMatchObject({
+      cause: {
+        message: expect.stringMatching(/duplicate key|boites_officine_cip13_lot_serie_unique/),
+      },
+    });
   });
 
   it('autorise même (officine, cip13, lot) avec serie différente', async () => {
@@ -101,7 +105,9 @@ describe('boites', () => {
       env.handle.db
         .insert(boites)
         .values(baseBoite(f.officine.id, f.user.id, { numeroSerie: null })),
-    ).rejects.toThrow(/duplicate key|boites_officine_cip13_lot_unique/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/duplicate key|boites_officine_cip13_lot_unique/) },
+    });
   });
 
   it('autorise plusieurs boîtes identiques quand lot ET serie sont NULL', async () => {
@@ -133,7 +139,9 @@ describe('boites', () => {
         // @ts-expect-error enum runtime test
         baseBoite(f.officine.id, f.user.id, { statut: 'inconnu' }),
       ),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it('rejette une FK officine inconnue', async () => {
@@ -142,6 +150,6 @@ describe('boites', () => {
       env.handle.db
         .insert(boites)
         .values(baseBoite('00000000-0000-0000-0000-000000000000', f.user.id)),
-    ).rejects.toThrow(/foreign key|fk/);
+    ).rejects.toMatchObject({ cause: { message: expect.stringMatching(/foreign key|fk/) } });
   });
 });

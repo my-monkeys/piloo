@@ -29,7 +29,7 @@ async function fixture() {
     .insert(users)
     .values({
       email: `u${String(Math.random()).slice(2, 8)}@b.fr`,
-      passwordHash: 'h',
+      name: 'Test User',
       nom: 'T',
       prenom: 'U',
       typeCompte: 'particulier',
@@ -106,7 +106,9 @@ describe('prises_planifiees', () => {
         // @ts-expect-error enum runtime
         basePrise(f.prescription.id, f.officine.id, { statut: 'reportee' }),
       ),
-    ).rejects.toThrow(/invalid input value for enum/);
+    ).rejects.toMatchObject({
+      cause: { message: expect.stringMatching(/invalid input value for enum/) },
+    });
   });
 
   it('passe valide_par à NULL si user supprimé (ON DELETE SET NULL)', async () => {
@@ -115,7 +117,7 @@ describe('prises_planifiees', () => {
       .insert(users)
       .values({
         email: 'v@b.fr',
-        passwordHash: 'h',
+        name: 'Test User',
         nom: 'V',
         prenom: 'V',
         typeCompte: 'particulier',
