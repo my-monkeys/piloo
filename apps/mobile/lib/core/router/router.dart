@@ -22,6 +22,7 @@ import 'package:piloo/features/auth/presentation/legal_screen.dart';
 import 'package:piloo/features/auth/presentation/permissions_screen.dart';
 import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
+import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
@@ -180,8 +181,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.boiteAdd,
         name: RouteName.boiteAdd,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Nouvelle boîte', subtitle: 'Post-scan (#89)'),
+        builder: (_, _) => const BoiteAddScreen(),
       ),
       GoRoute(
         path: '/boites/:boiteId',
