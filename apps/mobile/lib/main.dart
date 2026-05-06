@@ -5,16 +5,22 @@ import 'app.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/data/session_storage.dart';
 import 'features/auth/presentation/session_provider.dart';
+import 'shared/db/db_provider.dart';
+import 'shared/db/local_db.dart';
 
 void main() {
   // Storage natif (Keychain iOS / EncryptedSharedPreferences Android).
   // En tests on override avec `InMemorySecureStorage` — voir
   // test/features/auth/session_provider_test.dart.
   final storage = SessionStorage(FlutterSecureStorageImpl());
+  final db = LocalDatabase();
 
   runApp(
     ProviderScope(
-      overrides: [sessionStorageProvider.overrideWithValue(storage)],
+      overrides: [
+        sessionStorageProvider.overrideWithValue(storage),
+        localDatabaseProvider.overrideWithValue(db),
+      ],
       child: const PilooApp(),
     ),
   );
