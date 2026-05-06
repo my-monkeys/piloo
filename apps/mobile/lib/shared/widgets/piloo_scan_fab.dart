@@ -11,60 +11,68 @@ class PilooScanFab extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  static const double size = 96;
+  static const double size = 108;
+  static const double circleSize = 74;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: size,
-      height: size,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            // Halo radial qui adoucit le passage de la pilule à la sphère
-            // accent (visible surtout au-dessus de la zone hors tab bar).
-            Container(
-              width: size,
-              height: size,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    PilooColors.accent.withValues(alpha: 0.18),
-                    PilooColors.accent.withValues(alpha: 0.0),
+    // Translate.y pour pousser le FAB plus bas (plus visuel "posé sur"
+    // la tab bar plutôt que flottant au-dessus). Coordonné avec un
+    // bottom padding négatif côté Scaffold (cf. router.dart).
+    return Transform.translate(
+      offset: const Offset(0, 28),
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onTap,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Halo radial qui adoucit le passage de la pilule à la
+              // sphère accent (visible surtout au-dessus de la zone
+              // hors tab bar).
+              Container(
+                width: size,
+                height: size,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      PilooColors.accent.withValues(alpha: 0.18),
+                      PilooColors.accent.withValues(alpha: 0.0),
+                    ],
+                  ),
+                ),
+              ),
+              Container(
+                width: circleSize,
+                height: circleSize,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: PilooColors.accent,
+                  border: Border.all(
+                    color: PilooColors.background,
+                    width: 5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: PilooColors.accent.withValues(alpha: 0.3),
+                      offset: const Offset(0, 6),
+                      blurRadius: 18,
+                    ),
                   ],
                 ),
-              ),
-            ),
-            Container(
-              width: 66,
-              height: 66,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: PilooColors.accent,
-                border: Border.all(
-                  color: PilooColors.background,
-                  width: 5,
+                alignment: Alignment.center,
+                child: const Icon(
+                  PhosphorIconsRegular.scan,
+                  size: 30,
+                  color: Colors.white,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: PilooColors.accent.withValues(alpha: 0.3),
-                    offset: const Offset(0, 6),
-                    blurRadius: 18,
-                  ),
-                ],
               ),
-              alignment: Alignment.center,
-              child: const Icon(
-                PhosphorIconsRegular.scan,
-                size: 28,
-                color: Colors.white,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

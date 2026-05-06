@@ -34,7 +34,7 @@ class PilooTabBar extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(21, 12, 21, 21),
       child: Container(
-        height: 62,
+        height: 72,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
           color: PilooColors.surface,
@@ -84,17 +84,17 @@ class _Tab extends StatelessWidget {
           color: selected ? PilooColors.primary : Colors.transparent,
           borderRadius: BorderRadius.circular(26),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(item.icon, size: 16, color: fg),
+            Icon(item.icon, size: 18, color: fg),
             const SizedBox(height: 4),
             Text(
               item.label,
               style: GoogleFonts.manrope(
-                fontSize: 9,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
                 color: fg,

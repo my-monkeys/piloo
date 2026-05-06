@@ -154,8 +154,11 @@ class _OfficineScreenState extends State<OfficineScreen> {
               padding: EdgeInsets.fromLTRB(20, 4, 20, 4),
               child: _SearchBox(),
             ),
+            // Hauteur 52 + padding vertical 8 = 36 px utiles pour les
+            // pilules (padding interne 6 + texte 12 line-height ≈ 32),
+            // sinon le texte se fait écraser verticalement.
             SizedBox(
-              height: 40,
+              height: 52,
               child: ListView(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
@@ -320,18 +323,22 @@ class _FilterChip extends StatelessWidget {
     final fg = selected
         ? PilooColors.textOnPrimary
         : (accent ?? PilooColors.textPrimary);
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? PilooColors.primary : PilooColors.surface,
-          borderRadius: BorderRadius.circular(999),
-          border:
-              selected ? null : Border.all(color: PilooColors.border),
-        ),
-        child: Center(
+    // Align.center pour ne pas étirer le chip en hauteur dans la
+    // ListView horizontale (sinon le texte se fait pousser et le
+    // padding visuel disparaît).
+    return Align(
+      alignment: Alignment.center,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? PilooColors.primary : PilooColors.surface,
+            borderRadius: BorderRadius.circular(999),
+            border:
+                selected ? null : Border.all(color: PilooColors.border),
+          ),
           child: Text(
             label,
             style: GoogleFonts.manrope(
