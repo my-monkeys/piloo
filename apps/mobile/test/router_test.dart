@@ -56,10 +56,16 @@ void main() {
       addTearDown(router.dispose);
 
       await tester.pumpWidget(_wrap(GoRouterApp(router)));
-      // Pas de pumpAndSettle : les loader dots du splash bouclent.
+      // On laisse passer le timer de redirect du splash (1200ms) pour
+      // éviter qu'il fire pendant l'itération et pollue la nav.
       await tester.pump(const Duration(milliseconds: 50));
+      router.go(RoutePath.welcome);
+      await tester.pump(const Duration(milliseconds: 1500));
 
-      // Routes simples (pas de paramètre)
+      // Routes simples (pas de paramètre). On exclut today/officine/
+      // alertes/more (ShellRoute, testés à part — naviguer entre
+      // shell et non-shell dans la même session de test crée des
+      // duplicate GlobalKey sur le StatefulNavigationShell).
       const flat = [
         RoutePath.welcome,
         RoutePath.accountType,
@@ -70,11 +76,7 @@ void main() {
         RoutePath.resetPassword,
         RoutePath.legal,
         RoutePath.permissions,
-        RoutePath.today,
-        RoutePath.officine,
-        RoutePath.more,
         RoutePath.scan,
-        RoutePath.alertes,
         RoutePath.boiteAdd,
         RoutePath.ordonnances,
         RoutePath.ordonnanceCreate,
@@ -90,7 +92,10 @@ void main() {
 
       for (final path in flat) {
         router.go(path);
-        await tester.pumpAndSettle();
+        // Pas de pumpAndSettle : certains écrans ont des animations
+        // infinies (scan line, splash dots). On laisse juste le temps
+        // au routeur de propager le changement.
+        await tester.pump(const Duration(milliseconds: 100));
         expect(
           router.routerDelegate.currentConfiguration.uri.path,
           path,

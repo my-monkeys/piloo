@@ -24,6 +24,7 @@ import 'package:piloo/features/alertes/presentation/alertes_screen.dart';
 import 'package:piloo/features/auth/presentation/sign_in_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
+import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
 import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
@@ -172,8 +173,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.scan,
         name: RouteName.scan,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Scan', subtitle: 'DataMatrix (#80)'),
+        builder: (_, _) => const ScanScreen(),
       ),
 
       // Boîtes
