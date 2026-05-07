@@ -7,3 +7,4 @@ export * from './boites.ts';
 export * from './sync.ts';
 export * from './alertes.ts';
 export * from './manque.ts';
+export * from './notif-prefs.ts';
