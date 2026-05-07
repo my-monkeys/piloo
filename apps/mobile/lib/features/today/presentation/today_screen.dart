@@ -18,6 +18,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/today/presentation/prise_actions_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_day_picker.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
@@ -247,7 +248,10 @@ class _PriseCard extends StatelessWidget {
     };
     final metaColor = missed ? PilooColors.warningOn : PilooColors.textSecondary;
 
-    return Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _openActions(context),
+      child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cardColor,
@@ -295,7 +299,22 @@ class _PriseCard extends StatelessWidget {
           ),
         ],
       ),
+      ),
     );
+  }
+
+  Future<void> _openActions(BuildContext context) async {
+    await showPriseActionsSheet(
+      context,
+      info: PriseActionsContext(
+        medicamentName: prise.name,
+        dose: prise.meta ?? '1 prise',
+        scheduledLabel: prise.status == PriseStatus.missed
+            ? '${prise.timeOrLabel} · oubliée'
+            : 'Prévue à ${prise.timeOrLabel}',
+      ),
+    );
+    // TODO #91 : convertir le PriseAction en pending_operations.
   }
 }
 
