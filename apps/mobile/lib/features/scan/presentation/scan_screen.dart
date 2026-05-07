@@ -20,7 +20,9 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/scan/data/camera_permission.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
+import 'package:piloo/features/scan/presentation/manual_cip_sheet.dart';
 import 'package:piloo/shared/gs1/gs1_parser.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -72,15 +74,48 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     final parsed = parseGs1(raw);
     final scanResult = ScanResult.fromGs1(parsed);
     if (scanResult == null) {
-      // GS1 illisible ou pas de CIP13 dedans — on laisse l'utilisateur
-      // utiliser la saisie manuelle. Toaster sera ajouté dans #85
-      // (cas d'erreur scan + fallback).
+      // GS1 illisible ou pas de CIP13 dedans (DataMatrix non-pharma,
+      // ex: code interne d'inventaire d'une grande surface). On
+      // toast une fois et on garde le scanner actif pour permettre
+      // un nouvel essai. AC #85 : "Messages d'erreur clairs".
+      _onNonPharmaCode();
       return;
     }
     _scanned = true;
     // Pousse le résultat dans le provider AVANT de naviguer pour que
     // l'écran cible puisse le lire dès son build initial.
     ref.read(scanResultProvider.notifier).set(scanResult);
+    if (!mounted) return;
+    context.pushReplacement(RoutePath.boiteAdd);
+  }
+
+  DateTime? _lastNonPharmaToast;
+
+  void _onNonPharmaCode() {
+    // Évite de spammer le toast quand la caméra capte plusieurs frames
+    // consécutifs du même mauvais code-barres.
+    final now = DateTime.now();
+    if (_lastNonPharmaToast != null &&
+        now.difference(_lastNonPharmaToast!) < const Duration(seconds: 3)) {
+      return;
+    }
+    _lastNonPharmaToast = now;
+    if (!mounted) return;
+    PilooToast.error(
+      context,
+      "Ce code-barres n'est pas une boîte de médicament. Saisis le CIP à la main.",
+    );
+  }
+
+  Future<void> _openManualCip() async {
+    final result = await showManualCipSheet(context);
+    if (!mounted) return;
+    if (result != null) {
+      ref.read(scanResultProvider.notifier).set(result);
+    }
+    // Que l'utilisateur ait saisi un CIP ou cliqué "Continuer sans CIP",
+    // on route vers /boites/add. Le screen lit le scan_result et tombe
+    // sur "Saisie manuelle" si null.
     if (!mounted) return;
     context.pushReplacement(RoutePath.boiteAdd);
   }
@@ -156,10 +191,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
                 Padding(
                   padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
                   child: Center(
-                    child: _ManualEntryButton(
-                      onTap: () =>
-                          context.pushReplacement(RoutePath.boiteAdd),
-                    ),
+                    child: _ManualEntryButton(onTap: _openManualCip),
                   ),
                 ),
               ],
