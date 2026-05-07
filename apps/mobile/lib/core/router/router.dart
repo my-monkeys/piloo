@@ -28,6 +28,7 @@ import 'package:piloo/features/inventory/presentation/medicament_info_screen.dar
 import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
+import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
@@ -241,10 +242,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.officinesList,
         name: RouteName.officinesList,
-        builder: (_, _) => PlaceholderScreen(
-          title: 'Mes officines',
-          subtitle: 'S1 (#72)',
-        ),
+        builder: (_, _) => const OfficinesListScreen(),
       ),
       GoRoute(
         path: '/officines/:officineId/settings',
