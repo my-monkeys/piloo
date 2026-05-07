@@ -1,49 +1,62 @@
-// Écran 05 Nouvelle boîte post-scan (#89).
+// Écran 05 Nouvelle boîte post-scan (#89 + #84 wire-up BDPM).
 // Maquette : `BRaE1` du fichier docs/design/piloo-mobile.pen.
 //
-// Form pré-rempli depuis le DataMatrix qu'on vient de scanner. Pour
-// le POC, données mockées (Doliprane 1000 mg, lot LOT42AB7, exp
-// 03/2028) — sera branché sur le résultat du parser GS1 (#81) et la
-// résolution BDPM (#83) plus tard.
+// Form pré-rempli depuis le DataMatrix qu'on vient de scanner :
+//   - Le `scanResultProvider` (#84) fournit cip13/lot/serial/expiry
+//     extraits par le parser GS1 (#81).
+//   - Le `bdpmDbProvider` résout cip13 → médicament reconnu (#83).
+//   - Si scan absent ou cip13 inconnu, fallback "Médicament non
+//    reconnu" (cas #85).
 //
-// Structure :
-//  - Header centré : back left, "Nouvelle boîte" Fraunces 20, ghost
-//    40 right pour équilibrer le layout
-//  - Card preview médicament ($primary-soft, radius 12) : tile blanc
-//    56 + icône pill-fill primary, nom Fraunces 18, DCI Manrope 12,
-//    forme + nb unités Manrope primary
-//  - Row péremption (éditable, icône pencil) + n° lot
-//  - Select officine cible (caret-down)
-//  - 5 chips niveau initial (Plein actif primary, autres outline)
-//  - Textarea notes (optionnel) hauteur 72
-//  - Spacer + 2 boutons Annuler (outline) / Ajouter (primary)
+// Structure visuelle inchangée vs #89 ; seul le contenu du preview
+// dépend maintenant des providers Riverpod.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/scan/data/scan_result.dart';
+import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 
 enum _StockLevel { plein, troisQuarts, moitie, unQuart, presqueVide }
 
-class BoiteAddScreen extends StatefulWidget {
+class BoiteAddScreen extends ConsumerStatefulWidget {
   const BoiteAddScreen({super.key});
 
   @override
-  State<BoiteAddScreen> createState() => _BoiteAddScreenState();
+  ConsumerState<BoiteAddScreen> createState() => _BoiteAddScreenState();
 }
 
-class _BoiteAddScreenState extends State<BoiteAddScreen> {
+class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   _StockLevel _stock = _StockLevel.plein;
   final _notesCtrl = TextEditingController();
-  final _lotCtrl = TextEditingController(text: 'LOT42AB7');
+  final _lotCtrl = TextEditingController();
   // Péremption : on stocke (mois, année) pour rester aligné avec ce
   // qu'on récupère du DataMatrix (AI 17 = YYMM).
   int _expMonth = 3;
-  int _expYear = 2028;
+  int _expYear = DateTime.now().year + 2;
   String _officine = 'Maison';
+
+  @override
+  void initState() {
+    super.initState();
+    // Pré-remplit lot et péremption depuis le scan le plus récent.
+    final scan = ref.read(scanResultProvider);
+    if (scan != null) {
+      if (scan.lot != null && scan.lot!.isNotEmpty) {
+        _lotCtrl.text = scan.lot!;
+      }
+      if (scan.expiry != null) {
+        _expMonth = scan.expiry!.month;
+        _expYear = scan.expiry!.year;
+      }
+    }
+  }
 
   static const _months = [
     'janvier',
@@ -126,7 +139,9 @@ class _BoiteAddScreenState extends State<BoiteAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _MedicamentPreview(),
+                    _MedicamentPreviewSection(
+                      cip13: ref.watch(scanResultProvider)?.cip13,
+                    ),
                     const SizedBox(height: 16),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,13 +271,91 @@ class _Header extends StatelessWidget {
   }
 }
 
+/// Wrapper qui résout le médicament BDPM depuis le cip13 (post-scan)
+/// et délègue le rendu à [_MedicamentPreview]. 3 cas :
+///   - cip13 + DB BDPM disponibles + match → preview rempli
+///   - cip13 + DB indisponible OU pas de match → preview "non reconnu"
+///   - pas de cip13 (saisie manuelle) → preview "saisie manuelle"
+class _MedicamentPreviewSection extends ConsumerWidget {
+  const _MedicamentPreviewSection({required this.cip13});
+
+  final String? cip13;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (cip13 == null) {
+      return const _MedicamentPreview(
+        title: 'Saisie manuelle',
+        subtitle: 'Renseigne les informations ci-dessous',
+        primary: 'Sans CIP scanné',
+      );
+    }
+    final dbAsync = ref.watch(bdpmDbProvider);
+    return dbAsync.when(
+      loading: () => const _MedicamentPreview(
+        title: 'Résolution…',
+        subtitle: 'Chargement de la base médicaments',
+        primary: '',
+      ),
+      error: (_, _) => _unknownPreview(cip13: cip13!),
+      data: (db) {
+        if (db == null) return _unknownPreview(cip13: cip13!);
+        final med = db.findByCip13(cip13!);
+        if (med == null) return _unknownPreview(cip13: cip13!);
+        return _MedicamentPreview(
+          title: med.denomination,
+          subtitle: _subtitleFor(med),
+          primary: _primaryLineFor(med),
+        );
+      },
+    );
+  }
+
+  static _MedicamentPreview _unknownPreview({required String cip13}) {
+    return _MedicamentPreview(
+      title: 'Médicament non reconnu',
+      subtitle: 'CIP $cip13',
+      primary: 'Tu peux quand même ajouter la boîte avec un nom manuel',
+      muted: true,
+    );
+  }
+
+  static String _subtitleFor(BdpmMedicament m) {
+    final titulaire = m.titulaire;
+    final dosage = m.dosage;
+    if (titulaire != null && dosage != null) return '$dosage · $titulaire';
+    return titulaire ?? dosage ?? '';
+  }
+
+  static String _primaryLineFor(BdpmMedicament m) {
+    final forme = m.forme;
+    final taux = m.tauxRemboursement;
+    final remb = taux != null ? 'Remboursé $taux%' : 'Non remboursé';
+    return forme != null ? '$forme · $remb' : remb;
+  }
+}
+
 class _MedicamentPreview extends StatelessWidget {
+  const _MedicamentPreview({
+    required this.title,
+    required this.subtitle,
+    required this.primary,
+    this.muted = false,
+  });
+
+  final String title;
+  final String subtitle;
+  final String primary;
+  final bool muted;
+
   @override
   Widget build(BuildContext context) {
+    final bg = muted ? PilooColors.surfaceSubtle : PilooColors.primarySoft;
+    final accent = muted ? PilooColors.textSecondary : PilooColors.primary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: PilooColors.primarySoft,
+        color: bg,
         borderRadius: BorderRadius.circular(PilooRadius.lg),
       ),
       child: Row(
@@ -276,10 +369,10 @@ class _MedicamentPreview extends StatelessWidget {
               borderRadius: BorderRadius.circular(PilooRadius.md),
             ),
             alignment: Alignment.center,
-            child: const Icon(
-              PhosphorIconsFill.pill,
+            child: Icon(
+              muted ? PhosphorIconsRegular.question : PhosphorIconsFill.pill,
               size: 28,
-              color: PilooColors.primary,
+              color: accent,
             ),
           ),
           const SizedBox(width: 14),
@@ -288,30 +381,34 @@ class _MedicamentPreview extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Doliprane 1000 mg',
+                  title,
                   style: GoogleFonts.fraunces(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,
                     color: PilooColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Paracétamol · Sanofi',
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    color: PilooColors.textSecondary,
+                if (subtitle.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: PilooColors.textSecondary,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Comprimé pelliculé · 8 unités',
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: PilooColors.primary,
+                ],
+                if (primary.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    primary,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: accent,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

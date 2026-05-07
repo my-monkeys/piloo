@@ -19,6 +19,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/scan/data/camera_permission.dart';
+import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/gs1/gs1_parser.dart';
 
 class ScanScreen extends ConsumerStatefulWidget {
@@ -69,16 +70,19 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     if (raw == null || raw.isEmpty) return;
 
     final parsed = parseGs1(raw);
-    final cip13 = parsed.cip13;
-    if (cip13 == null) {
+    final scanResult = ScanResult.fromGs1(parsed);
+    if (scanResult == null) {
       // GS1 illisible ou pas de CIP13 dedans — on laisse l'utilisateur
       // utiliser la saisie manuelle. Toaster sera ajouté dans #85
       // (cas d'erreur scan + fallback).
       return;
     }
     _scanned = true;
+    // Pousse le résultat dans le provider AVANT de naviguer pour que
+    // l'écran cible puisse le lire dès son build initial.
+    ref.read(scanResultProvider.notifier).set(scanResult);
     if (!mounted) return;
-    context.pushReplacement('${RoutePath.boiteAdd}?cip13=$cip13');
+    context.pushReplacement(RoutePath.boiteAdd);
   }
 
   Future<void> _toggleFlash() async {
