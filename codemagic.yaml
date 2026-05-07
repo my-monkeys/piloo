@@ -40,9 +40,10 @@ workflows:
       xcode: latest
       cocoapods: default
 
-      # Groupes de variables stockés dans le vault Codemagic (cf. docs/deploy-mobile-ios.md §Secrets).
+      # Les variables `APP_STORE_CONNECT_*` sont auto-injectées par
+      # l'intégration `app_store_connect` ci-dessous (cf. integrations).
+      # Pas besoin de doublonner via un groupe.
       groups:
-        - app_store_credentials # APP_STORE_CONNECT_KEY_IDENTIFIER, APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_PRIVATE_KEY
         - ios_signing # CERTIFICATE_PRIVATE_KEY (clé privée du distribution certificate)
 
       vars:
@@ -165,8 +166,7 @@ workflows:
       xcode: latest
       cocoapods: default
       groups:
-        - app_store_credentials
-        - ios_signing
+        - ios_signing # CERTIFICATE_PRIVATE_KEY (cf. ios-testflight pour la rationale)
       vars:
         BUNDLE_ID: "app.piloo.mobile"
         XCODE_WORKSPACE: "Runner.xcworkspace"
