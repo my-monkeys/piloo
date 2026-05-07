@@ -685,6 +685,115 @@ components:
         - stock_bas
         - partage
         - manque_signale
+    BdpmVersionResponse:
+      type: object
+      properties:
+        version:
+          type:
+            - string
+            - "null"
+          format: date
+        total_cis:
+          type: integer
+          minimum: 0
+      required:
+        - version
+        - total_cis
+    BdpmDiffResponse:
+      type: object
+      properties:
+        from:
+          type: string
+          format: date
+        current:
+          type:
+            - string
+            - "null"
+          format: date
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BdpmMedicament"
+      required:
+        - from
+        - current
+        - items
+    BdpmMedicament:
+      type: object
+      properties:
+        cis:
+          type: string
+        cip13:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{7,13}$
+        cip7:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{7,13}$
+        denomination:
+          type: string
+        forme:
+          type:
+            - string
+            - "null"
+        dosage:
+          type:
+            - string
+            - "null"
+        voie_administration:
+          type:
+            - string
+            - "null"
+        titulaire:
+          type:
+            - string
+            - "null"
+        statut_amm:
+          type:
+            - string
+            - "null"
+        taux_remboursement:
+          type:
+            - integer
+            - "null"
+          minimum: 0
+          maximum: 100
+        version_bdpm:
+          type: string
+          format: date
+      required:
+        - cis
+        - cip13
+        - cip7
+        - denomination
+        - forme
+        - dosage
+        - voie_administration
+        - titulaire
+        - statut_amm
+        - taux_remboursement
+        - version_bdpm
+    BdpmApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
   parameters: {}
 paths:
   /health:
@@ -1315,4 +1424,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotifPrefsApiError"
+  /v1/bdpm/version:
+    get:
+      summary: Version BDPM active sur le serveur
+      description: Retourne la `version` (date YYYY-MM-DD) la plus récente parmi les médicaments en base, ou `null` si la base n'a jamais été importée.
+      tags:
+        - bdpm
+      responses:
+        "200":
+          description: Version courante
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmVersionResponse"
+  /v1/bdpm/diff:
+    get:
+      summary: Médicaments ajoutés ou mis à jour depuis une date
+      description: Retourne les lignes dont `version_bdpm > from`. Ne couvre PAS les CIS retirés de la BDPM (cf. limite documentée).
+      tags:
+        - bdpm
+      parameters:
+        - schema:
+            type: string
+            format: date
+          required: true
+          name: from
+          in: query
+      responses:
+        "200":
+          description: Diff
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmDiffResponse"
+        "400":
+          description: Paramètre `from` invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmApiError"
 webhooks: {}
