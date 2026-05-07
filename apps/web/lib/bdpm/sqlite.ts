@@ -1,0 +1,142 @@
+// Génération du fichier SQLite mobile (#77).
+//
+// Le mobile (Drift) attache une DB séparée read-only contenant la BDPM.
+// Cette fonction la génère depuis Postgres : on lit toutes les lignes
+// de `medicaments_bdpm`, on crée un fichier SQLite local optimisé pour
+// les lookups par CIP13 (chemin critique post-scan) et la recherche par
+// dénomination.
+//
+// Format du fichier produit :
+//
+//   TABLE bdpm_metadata(key TEXT PRIMARY KEY, value TEXT)
+//     'version'      → date de la BDPM (YYYY-MM-DD)
+//     'total_cis'    → nombre de lignes inscrites
+//     'generated_at' → ISO timestamp de génération
+//
+//   TABLE medicaments(
+//     cis TEXT PRIMARY KEY,
+//     cip13 TEXT, cip7 TEXT,
+//     denomination TEXT NOT NULL,
+//     forme TEXT, dosage TEXT,
+//     voie_administration TEXT,
+//     titulaire TEXT,
+//     statut_amm TEXT,
+//     taux_remboursement INTEGER,
+//     version_bdpm TEXT NOT NULL
+//   )
+//
+//   INDEX idx_cip13       (lookup post-scan)
+//   INDEX idx_denomination (recherche fuzzy)
+//
+// Le fichier est VACUUMé en fin de génération pour compacter et
+// activer le mode `journal_mode=DELETE` (compatible read-only mobile).
+import { DatabaseSync } from 'node:sqlite';
+
+import { medicamentsBdpm, type Db } from '@piloo/db-schema';
+
+export interface GenerateBdpmSqliteResult {
+  outputPath: string;
+  totalCis: number;
+  version: string | null;
+  durationMs: number;
+}
+
+export async function generateBdpmSqlite(
+  db: Db,
+  outputPath: string,
+): Promise<GenerateBdpmSqliteResult> {
+  const t0 = Date.now();
+
+  // Lecture en streaming via select() ; le dataset complet (~14k lignes,
+  // ~3 Mo en mémoire) tient sans souci, donc on charge tout en mémoire
+  // pour ne pas avoir à gérer cursor + transaction Postgres.
+  const rows = await db.select().from(medicamentsBdpm).orderBy(medicamentsBdpm.cis);
+
+  const sqlite = new DatabaseSync(outputPath);
+  try {
+    // Pragmas pour un fichier mobile read-only optimisé.
+    sqlite.exec('PRAGMA journal_mode = DELETE');
+    sqlite.exec('PRAGMA synchronous = NORMAL');
+    sqlite.exec('PRAGMA page_size = 4096');
+
+    sqlite.exec(`
+      CREATE TABLE bdpm_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT
+      ) WITHOUT ROWID;
+
+      CREATE TABLE medicaments (
+        cis TEXT PRIMARY KEY,
+        cip13 TEXT,
+        cip7 TEXT,
+        denomination TEXT NOT NULL,
+        forme TEXT,
+        dosage TEXT,
+        voie_administration TEXT,
+        titulaire TEXT,
+        statut_amm TEXT,
+        taux_remboursement INTEGER,
+        version_bdpm TEXT NOT NULL
+      ) WITHOUT ROWID;
+
+      CREATE INDEX idx_cip13 ON medicaments(cip13) WHERE cip13 IS NOT NULL;
+      CREATE INDEX idx_denomination ON medicaments(denomination COLLATE NOCASE);
+    `);
+
+    // Insert batch dans une transaction pour ne pas fsync à chaque ligne.
+    const insert = sqlite.prepare(`
+      INSERT INTO medicaments (
+        cis, cip13, cip7, denomination, forme, dosage,
+        voie_administration, titulaire, statut_amm,
+        taux_remboursement, version_bdpm
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    sqlite.exec('BEGIN');
+    for (const r of rows) {
+      insert.run(
+        r.cis,
+        r.cip13,
+        r.cip7,
+        r.denomination,
+        r.forme,
+        r.dosage,
+        r.voieAdministration,
+        r.titulaire,
+        r.statutAmm,
+        r.tauxRemboursement,
+        r.versionBdpm,
+      );
+    }
+    sqlite.exec('COMMIT');
+
+    const version = rows.length > 0 ? maxVersion(rows.map((r) => r.versionBdpm)) : null;
+    const insertMeta = sqlite.prepare('INSERT INTO bdpm_metadata (key, value) VALUES (?, ?)');
+    insertMeta.run('version', version ?? '');
+    insertMeta.run('total_cis', String(rows.length));
+    insertMeta.run('generated_at', new Date().toISOString());
+
+    // VACUUM compacte le fichier (utile après bulk insert) et reconstruit
+    // les index pour qu'ils soient denses → meilleure compression à la
+    // distribution gzip/brotli sur CDN.
+    sqlite.exec('VACUUM');
+
+    return {
+      outputPath,
+      totalCis: rows.length,
+      version,
+      durationMs: Date.now() - t0,
+    };
+  } finally {
+    sqlite.close();
+  }
+}
+
+function maxVersion(versions: readonly string[]): string {
+  // Format YYYY-MM-DD → tri lexicographique = tri chronologique.
+  // Précondition : la fonction n'est appelée que si versions.length > 0.
+  let max = versions[0] ?? '';
+  for (const v of versions) {
+    if (v > max) max = v;
+  }
+  return max;
+}
