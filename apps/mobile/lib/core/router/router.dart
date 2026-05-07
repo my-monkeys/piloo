@@ -36,6 +36,7 @@ import 'package:piloo/features/partages/presentation/invite_screen.dart';
 import 'package:piloo/features/partages/presentation/partages_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/settings/presentation/horaires_screen.dart';
+import 'package:piloo/features/settings/presentation/notifications_screen.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
@@ -294,7 +295,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.settingsNotifications,
         name: RouteName.settingsNotifications,
-        builder: (_, _) => PlaceholderScreen(title: 'Notifications'),
+        builder: (_, _) => const NotificationsScreen(),
       ),
       GoRoute(
         path: RoutePath.settingsHoraires,
