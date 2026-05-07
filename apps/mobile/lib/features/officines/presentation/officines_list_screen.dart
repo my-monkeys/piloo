@@ -222,15 +222,33 @@ class _OfficineCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: officine.iconBg,
-                    borderRadius: BorderRadius.circular(PilooRadius.md),
-                  ),
-                  alignment: Alignment.center,
-                  child: Icon(officine.icon, size: 22, color: officine.iconColor),
+                // Tile icône + (éventuel) point d'alerte en overlay
+                // top-right : déplacé là pour ne pas être écrasé par
+                // le badge "Actif" qui apparaît à droite.
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: officine.iconBg,
+                        borderRadius: BorderRadius.circular(PilooRadius.md),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        officine.icon,
+                        size: 22,
+                        color: officine.iconColor,
+                      ),
+                    ),
+                    if (officine.alertCount != null)
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: _AlertDot(count: officine.alertCount!),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -257,10 +275,21 @@ class _OfficineCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                if (active)
-                  const _ActiveBadge()
-                else if (officine.alertCount != null)
-                  _AlertBadge(count: officine.alertCount!),
+                // Slot fixe pour le badge "Actif" : on réserve la
+                // largeur même quand inactif pour que le meta text
+                // ne se relayoute pas en passant active → inactive.
+                // 80px = check 10 + gap 4 + texte "Actif" + padding
+                // 10×2 + marge sécurité fonts (en tests, google_fonts
+                // tombe sur une fonte plus large).
+                SizedBox(
+                  width: 88,
+                  child: active
+                      ? const Align(
+                          alignment: Alignment.centerRight,
+                          child: _ActiveBadge(),
+                        )
+                      : null,
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -335,37 +364,33 @@ class _ActiveBadge extends StatelessWidget {
   }
 }
 
-class _AlertBadge extends StatelessWidget {
-  const _AlertBadge({required this.count});
+/// Pastille de notification overlay sur le coin haut-droit de la
+/// tile icône (style badge iOS). Bord blanc épais pour bien la
+/// détacher du tile derrière.
+class _AlertDot extends StatelessWidget {
+  const _AlertDot({required this.count});
 
   final int count;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
       decoration: BoxDecoration(
-        color: PilooColors.warning,
+        color: PilooColors.accent,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: PilooColors.surface, width: 2),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            PhosphorIconsFill.warning,
-            size: 10,
-            color: PilooColors.warningOn,
-          ),
-          const SizedBox(width: 3),
-          Text(
-            '$count',
-            style: GoogleFonts.manrope(
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              color: PilooColors.warningOn,
-            ),
-          ),
-        ],
+      alignment: Alignment.center,
+      child: Text(
+        '$count',
+        style: GoogleFonts.manrope(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: Colors.white,
+          height: 1.0,
+        ),
       ),
     );
   }
