@@ -564,4 +564,44 @@ describe('GET /api/v1/sync/pull', () => {
     const res = await pull.GET(new Request(`${BASE_URL}/api/v1/sync/pull`));
     expect(res.status).toBe(401);
   });
+
+  it('pagination cursor : suite limit=2 sur 5 boîtes → 3 pages', async () => {
+    const me = await signup('me@piloo.fr');
+    const officineId = await makeOfficine(me.userId);
+    await grant(me.userId, officineId, 'owner');
+
+    const ids: string[] = [];
+    for (let i = 0; i < 5; i++) {
+      const id = uuid();
+      ids.push(id);
+      await env.handle.db.insert(boites).values({
+        id,
+        officineId,
+        cip13: `34009${String(i).padStart(8, '0')}`,
+        peremption: '2027-01-01',
+        ajouteePar: me.userId,
+      });
+    }
+    // L'ordre serveur est par id ASC (cf. pull.ts) — pas par insertion.
+    const expected = [...ids].sort();
+
+    const { pull } = await importHandlers();
+    const collected: string[] = [];
+    let cursor: string | null = null;
+    let page = 0;
+    while (page < 10) {
+      const q = `?limit=2${cursor ? `&cursor=${cursor}` : ''}`;
+      const res = await pull.GET(pullReq(me.cookie, q));
+      const body = (await res.json()) as {
+        entities: { boites: { id: string }[] };
+        next_cursor: string | null;
+      };
+      collected.push(...body.entities.boites.map((b) => b.id));
+      cursor = body.next_cursor;
+      page++;
+      if (cursor === null) break;
+    }
+    expect(collected).toEqual(expected);
+    expect(page).toBe(3); // 2 + 2 + 1
+  });
 });
