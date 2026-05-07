@@ -58,15 +58,15 @@ Faire du build local manuel (un seul Mac dev) jusqu'à v1, puis trancher. **Reje
 
 Critères pondérés :
 
-| Critère | Poids | Codemagic | GHA + fastlane |
-|---|---|---|---|
-| Vélocité time-to-first-green-build | élevé | ✅ ~1 h | ❌ 1–3 jours |
-| Coût aux volumes MVP (≤ 500 min/mois) | élevé | ✅ gratuit | ⚠️ free tier serré (200 min macOS) |
-| Coût en cas de débordement (×2 volume) | moyen | ✅ ~20 $/mois | ❌ ~40 $/mois |
-| Simplicité signing iOS | élevé | ✅ intégré | ❌ `match` + secrets |
-| Cohérence avec backend/web (GHA) | moyen | ⚠️ plateforme à part | ✅ unifié |
-| Lock-in | faible | ⚠️ YAML propriétaire | ✅ portable |
-| Maintenance Ruby/fastlane | faible | ✅ aucune | ❌ Gemfile à suivre |
+| Critère                                | Poids  | Codemagic            | GHA + fastlane                     |
+| -------------------------------------- | ------ | -------------------- | ---------------------------------- |
+| Vélocité time-to-first-green-build     | élevé  | ✅ ~1 h              | ❌ 1–3 jours                       |
+| Coût aux volumes MVP (≤ 500 min/mois)  | élevé  | ✅ gratuit           | ⚠️ free tier serré (200 min macOS) |
+| Coût en cas de débordement (×2 volume) | moyen  | ✅ ~20 $/mois        | ❌ ~40 $/mois                      |
+| Simplicité signing iOS                 | élevé  | ✅ intégré           | ❌ `match` + secrets               |
+| Cohérence avec backend/web (GHA)       | moyen  | ⚠️ plateforme à part | ✅ unifié                          |
+| Lock-in                                | faible | ⚠️ YAML propriétaire | ✅ portable                        |
+| Maintenance Ruby/fastlane              | faible | ✅ aucune            | ❌ Gemfile à suivre                |
 
 Le facteur déterminant est la **vélocité** et le **coût en macOS minutes** au stade MVP. La cohérence GHA est un argument réel mais secondaire : les pipelines mobile et backend sont disjoints, donc avoir deux CI n'introduit pas de duplication ni de chaînage à maintenir.
 
@@ -75,7 +75,7 @@ Le facteur déterminant est la **vélocité** et le **coût en macOS minutes** a
 ### Immédiates
 
 - Création d'un compte Codemagic (org `piloo`), membres : dev principal + 1 agent service account.
-- `codemagic.yaml` versionné à la racine de `apps/mobile/` (ticket d'implémentation à part).
+- `codemagic.yaml` versionné à la **racine du repo** (Codemagic ne supporte pas un autre emplacement, cf. message UI "Save the codemagic.yaml file to the project root folder"). Les commandes Flutter utilisent `working_directory: apps/mobile`.
 - Secrets stockés dans le vault Codemagic : App Store Connect API key, Play Console service account JSON, keystore Android (base64). **Aucun secret mobile n'entre dans GitHub Secrets.**
 - GitHub Actions reste l'unique CI pour `apps/web`, `packages/*`, lint/typecheck monorepo.
 - Documentation : un README court dans `apps/mobile/` expliquant comment relancer un build et où trouver les artefacts.

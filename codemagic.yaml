@@ -1,7 +1,12 @@
-# Codemagic CI/CD — Piloo mobile (Flutter)
+# Codemagic CI/CD — Piloo (monorepo Turborepo).
 #
 # Décision : ADR docs/adr/0002-flutter-ci.md (Codemagic retenu pour M1/M2).
 # Doc opérateur : docs/deploy-mobile-ios.md (certs, secrets, runbook).
+#
+# IMPORTANT : Codemagic charge le yaml à la racine du repo. Les commandes
+# Flutter / Dart doivent donc s'exécuter via `working_directory: apps/mobile`
+# (le projet Flutter vit là-bas dans le monorepo). Idem pour les artefacts
+# qui utilisent des chemins absolus depuis la racine.
 #
 # Workflows définis :
 #   - ios-testflight       : build IPA + upload TestFlight, déclenché par tag `v*`
@@ -12,7 +17,6 @@
 #                            sans backend ni session, utile à la review interne.
 #   - ios-pr-check         : `flutter analyze` + `flutter test` sur PR (pas de signing).
 #   - android-release      : build AAB + APK signés, Play Console internal sur tag `v*`.
-#
 
 workflows:
   ios-testflight:
@@ -63,6 +67,7 @@ workflows:
       - name: Dériver la version Flutter depuis le tag git
         # Convention : tag v1.2.3 → pubspec version "1.2.3+<build_number>".
         # Le build_number Codemagic est monotone par projet → garantit l'unicité côté App Store.
+        working_directory: apps/mobile
         script: |
           set -euo pipefail
           VERSION_NAME="${CM_TAG#v}"
@@ -74,10 +79,12 @@ workflows:
           grep "^version:" pubspec.yaml
 
       - name: Installer les dépendances Flutter
+        working_directory: apps/mobile
         script: flutter pub get
 
       - name: Générer le code (freezed / json / openapi)
         # Tolérant si le projet n'a pas encore de code generation (M1 early).
+        working_directory: apps/mobile
         script: |
           if grep -q "build_runner" pubspec.yaml; then
             dart run build_runner build --delete-conflicting-outputs
@@ -86,9 +93,11 @@ workflows:
           fi
 
       - name: Analyse statique
+        working_directory: apps/mobile
         script: flutter analyze
 
       - name: Tests unitaires
+        working_directory: apps/mobile
         script: flutter test
 
       - name: Provisionner le certificat de distribution iOS
@@ -104,14 +113,14 @@ workflows:
           xcode-project use-profiles
 
       - name: Build IPA (release, signé)
+        working_directory: apps/mobile
         script: |
           flutter build ipa --release \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-      - flutter_drive.log
 
     publishing:
       app_store_connect:
@@ -180,6 +189,7 @@ workflows:
           echo "✅ Tag demo : ${CM_TAG}"
 
       - name: Dériver la version Flutter depuis le tag (sans suffixe -demo)
+        working_directory: apps/mobile
         script: |
           set -euo pipefail
           TAG_NO_PREFIX="${CM_TAG#v}"
@@ -191,9 +201,11 @@ workflows:
           grep "^version:" pubspec.yaml
 
       - name: Installer les dépendances Flutter
+        working_directory: apps/mobile
         script: flutter pub get
 
       - name: Générer le code (best-effort)
+        working_directory: apps/mobile
         script: |
           if grep -q "build_runner" pubspec.yaml; then
             dart run build_runner build --delete-conflicting-outputs
@@ -202,9 +214,11 @@ workflows:
           fi
 
       - name: Analyse statique
+        working_directory: apps/mobile
         script: flutter analyze
 
       - name: Tests unitaires
+        working_directory: apps/mobile
         script: flutter test
 
       - name: Provisionner le certificat de distribution iOS
@@ -217,13 +231,14 @@ workflows:
           xcode-project use-profiles
 
       - name: Build IPA (release, signé, boot sur /_dev)
+        working_directory: apps/mobile
         script: |
           flutter build ipa --release \
             --dart-define=PILOO_BOOT_ROUTE=${PILOO_BOOT_ROUTE} \
             --export-options-plist=/Users/builder/export_options.plist
 
     artifacts:
-      - build/ios/ipa/*.ipa
+      - apps/mobile/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
@@ -260,16 +275,21 @@ workflows:
 
     scripts:
       - name: Installer les dépendances
+        working_directory: apps/mobile
         script: flutter pub get
       - name: Générer le code (best-effort)
+        working_directory: apps/mobile
         script: |
           if grep -q "build_runner" pubspec.yaml; then
             dart run build_runner build --delete-conflicting-outputs
           fi
       - name: flutter analyze
+        working_directory: apps/mobile
         script: flutter analyze
       - name: flutter test
+        working_directory: apps/mobile
         script: flutter test
+
   android-release:
     name: Android Release (Play Console internal track)
     instance_type: mac_mini_m1
@@ -289,6 +309,8 @@ workflows:
       tag_patterns:
         - pattern: "v*"
           include: true
+        - pattern: "v*-demo"
+          include: false
     cache:
       cache_paths:
         - $HOME/.gradle/caches

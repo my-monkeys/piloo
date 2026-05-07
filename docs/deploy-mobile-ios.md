@@ -10,7 +10,7 @@ Doc opérateur du pipeline iOS de Piloo. Couvre le `codemagic.yaml`, les certifi
 
 ## Vue d'ensemble du pipeline
 
-Workflow `ios-testflight` défini dans `apps/mobile/codemagic.yaml` :
+Workflow `ios-testflight` défini dans `codemagic.yaml` (à la racine du repo — Codemagic n'accepte que cet emplacement, les commandes Flutter utilisent `working_directory: apps/mobile`) :
 
 1. **Trigger** — push d'un tag matchant `v*` sur le repo (ex. `git tag v0.3.1 && git push origin v0.3.1`).
 2. **Validation tag** — refus si le tag ne matche pas `^v[0-9]+\.[0-9]+\.[0-9]+$`.
@@ -192,7 +192,7 @@ git push origin v0.4.1
 ## Liens utiles
 
 - ADR Codemagic : `docs/adr/0002-flutter-ci.md`.
-- Pipeline : `apps/mobile/codemagic.yaml`.
+- Pipeline : `codemagic.yaml` (racine du repo).
 - Codemagic docs — code signing iOS : <https://docs.codemagic.io/yaml-code-signing/signing-ios/>.
 - Codemagic docs — App Store Connect publishing : <https://docs.codemagic.io/yaml-publishing/app-store-connect/>.
 - Apple — App Store Connect API : <https://developer.apple.com/documentation/appstoreconnectapi>.
