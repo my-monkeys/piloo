@@ -49,5 +49,12 @@
 	<string>Piloo utilise la caméra pour scanner le code DataMatrix de tes boîtes de médicaments.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Piloo accède à tes contacts pour t'aider à inviter tes proches plus facilement. Aucun contact n'est envoyé à nos serveurs.</string>
+	<!-- Déclaration export crypto : Piloo n'utilise que la crypto fournie par
+	     iOS (HTTPS via URLSession, Keychain via flutter_secure_storage), pas
+	     d'algorithmes propriétaires ni standards en plus. Voir
+	     https://developer.apple.com/documentation/security/complying_with_encryption_export_regulations
+	     Évite la question "Missing Compliance" à chaque build TestFlight. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>
