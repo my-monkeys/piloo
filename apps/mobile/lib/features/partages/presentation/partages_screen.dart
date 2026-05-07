@@ -327,11 +327,18 @@ class _Avatar extends StatelessWidget {
 }
 
 class _RoleBadge extends StatelessWidget {
-  const _RoleBadge({required this.role, required this.onChange});
+  const _RoleBadge({
+    required this.role,
+    required this.onChange,
+    this.bgOverride,
+  });
 
   final _Role role;
   // Si null → badge fixe (cas owner).
   final ValueChanged<_Role>? onChange;
+  // Override du fond pour contextes spéciaux (ex: card LES RÔLES en
+  // \$surface-subtle où le badge Lecteur disparaîtrait sinon).
+  final Color? bgOverride;
 
   ({Color bg, Color fg, String label}) get _style => switch (role) {
         _Role.proprietaire => (
@@ -357,7 +364,7 @@ class _RoleBadge extends StatelessWidget {
     final body = Container(
       padding: EdgeInsets.fromLTRB(10, 4, onChange == null ? 10 : 8, 4),
       decoration: BoxDecoration(
-        color: s.bg,
+        color: bgOverride ?? s.bg,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -471,6 +478,15 @@ class _RoleBadge extends StatelessWidget {
 }
 
 class _RolesHelp extends StatelessWidget {
+  // Une ligne par rôle, chaque rôle dans le même badge coloré que celui
+  // utilisé sur les rows membres pour que le mapping visuel soit
+  // immédiat.
+  static const _entries = [
+    (role: _Role.proprietaire, desc: 'tout, y compris gérer les partages'),
+    (role: _Role.editeur, desc: 'modifier boîtes & ordonnances'),
+    (role: _Role.lecteur, desc: 'consulter + signaler un manque'),
+  ];
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -491,18 +507,51 @@ class _RolesHelp extends StatelessWidget {
               color: PilooColors.textTertiary,
             ),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Propriétaire : tout · Éditeur : modifier boîtes & '
-            'ordonnances · Lecteur : consulter + signaler manque',
+          const SizedBox(height: 10),
+          ...List.generate(_entries.length * 2 - 1, (i) {
+            if (i.isOdd) return const SizedBox(height: 10);
+            final e = _entries[i ~/ 2];
+            return _RoleHelpRow(role: e.role, description: e.desc);
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoleHelpRow extends StatelessWidget {
+  const _RoleHelpRow({required this.role, required this.description});
+
+  final _Role role;
+  final String description;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Badge fixe (sans dropdown) — réutilise la même mécanique de
+        // style que les badges des rows membres. On force le bg blanc
+        // pour le Lecteur sinon il se confond avec la card help (qui
+        // est en \$surface-subtle, comme la couleur native du badge).
+        _RoleBadge(
+          role: role,
+          onChange: null,
+          bgOverride:
+              role == _Role.lecteur ? PilooColors.surface : null,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            description,
             style: GoogleFonts.manrope(
               fontSize: 12,
               color: PilooColors.textSecondary,
               height: 1.5,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
