@@ -59,11 +59,11 @@ Deux groupes de variables :
 
 Crée une **API key** dans App Store Connect → Users and Access → Keys → App Store Connect API.
 
-| Variable Codemagic | Source | Description |
-|---|---|---|
-| `APP_STORE_CONNECT_KEY_IDENTIFIER` | Onglet "Keys" → colonne "Key ID" | ID public de la clé (10 caractères, ex. `AB12CD34EF`). |
-| `APP_STORE_CONNECT_ISSUER_ID` | Haut de la page "Keys" | UUID issuer (ex. `69a6de70-...`). |
-| `APP_STORE_CONNECT_PRIVATE_KEY` | Bouton "Download API Key" → fichier `AuthKey_XXX.p8` | Contenu **brut** du `.p8` (lignes `-----BEGIN PRIVATE KEY-----` incluses). |
+| Variable Codemagic                 | Source                                               | Description                                                                |
+| ---------------------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------- |
+| `APP_STORE_CONNECT_KEY_IDENTIFIER` | Onglet "Keys" → colonne "Key ID"                     | ID public de la clé (10 caractères, ex. `AB12CD34EF`).                     |
+| `APP_STORE_CONNECT_ISSUER_ID`      | Haut de la page "Keys"                               | UUID issuer (ex. `69a6de70-...`).                                          |
+| `APP_STORE_CONNECT_PRIVATE_KEY`    | Bouton "Download API Key" → fichier `AuthKey_XXX.p8` | Contenu **brut** du `.p8` (lignes `-----BEGIN PRIVATE KEY-----` incluses). |
 
 Permissions requises sur la clé : **App Manager** minimum (Admin si on veut aussi auto-créer les bundle IDs).
 
@@ -73,8 +73,8 @@ Permissions requises sur la clé : **App Manager** minimum (Admin si on veut aus
 
 Codemagic peut auto-générer le distribution certificate si on lui fournit la clé privée associée.
 
-| Variable Codemagic | Source | Description |
-|---|---|---|
+| Variable Codemagic        | Source                                              | Description                                                                                                  |
+| ------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `CERTIFICATE_PRIVATE_KEY` | `openssl genrsa -out cert_key.pem 2048` puis upload | Clé RSA privée 2048 bits. Codemagic l'utilise pour générer/réutiliser le distribution certificate via l'API. |
 
 Procédure de génération initiale :
@@ -98,12 +98,12 @@ Côté UI Codemagic :
 
 ## Le `provisioning profile`, le `certificat`, qui fait quoi ?
 
-| Élément | À qui ça sert | Géré par |
-|---|---|---|
-| **API key App Store Connect** (`.p8`) | Authentifier la CI auprès d'Apple pour fetch certs/profiles, upload TestFlight. | Toi (one-time setup). |
-| **Distribution certificate** (`.cer` + clé privée) | Signer l'IPA. Valide ~1 an, renouvelé auto par Codemagic. | Codemagic via `CERTIFICATE_PRIVATE_KEY`. |
-| **Provisioning profile** (`.mobileprovision`) | Lier `certificate × bundle_id × entitlements × type=AppStore`. | Auto via `app-store-connect fetch-signing-files --create`. |
-| **App-Specific Password** | Non utilisé (Codemagic se passe de l'Apple ID password grâce à l'API key). | — |
+| Élément                                            | À qui ça sert                                                                   | Géré par                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| **API key App Store Connect** (`.p8`)              | Authentifier la CI auprès d'Apple pour fetch certs/profiles, upload TestFlight. | Toi (one-time setup).                                      |
+| **Distribution certificate** (`.cer` + clé privée) | Signer l'IPA. Valide ~1 an, renouvelé auto par Codemagic.                       | Codemagic via `CERTIFICATE_PRIVATE_KEY`.                   |
+| **Provisioning profile** (`.mobileprovision`)      | Lier `certificate × bundle_id × entitlements × type=AppStore`.                  | Auto via `app-store-connect fetch-signing-files --create`. |
+| **App-Specific Password**                          | Non utilisé (Codemagic se passe de l'Apple ID password grâce à l'API key).      | —                                                          |
 
 À retenir : avec l'API key, **on n'a JAMAIS à manipuler l'Apple ID + 2FA dans la CI**. C'est l'avantage majeur vs `fastlane match`.
 
@@ -131,15 +131,37 @@ git push origin v0.4.0
 #    Apple envoie un mail aux testeurs internes.
 ```
 
+### Release "demo navigator" (boot direct sur /\_dev)
+
+Variante du workflow standard qui produit un build dont l'app boote directement sur `DevHomeScreen` (la liste cliquable des 32 écrans M1). Utile pour faire tourner sur device / présenter le produit sans avoir besoin de backend, de session ou de compléter l'onboarding.
+
+```bash
+# 1. Idem release standard pour la propreté du repo.
+git checkout main && git pull --rebase
+
+# 2. Tag avec le suffixe `-demo`. Le format reste vX.Y.Z-demo.
+git tag v0.1.0-demo
+git push origin v0.1.0-demo
+```
+
+Différences avec le workflow `ios-testflight` :
+
+- Déclenché par `v*-demo` (les tags `v*` simples sont au contraire **exclus** de ce workflow et continuent d'être pris par `ios-testflight`).
+- Build avec `--dart-define=PILOO_BOOT_ROUTE=/_dev`. Au lancement, l'app contourne le splash et atterrit sur la liste des écrans.
+- Distribué au beta group **`Piloo Demos`** (pas `Piloo Internes`) pour ne pas envoyer un build navigateur aux testeurs habitués aux builds prod par erreur.
+- Versioning : on retire le suffixe `-demo` du tag avant de l'écrire dans `pubspec.yaml` (Apple n'accepte que des semver stricts). Le `build_number` Codemagic incrémente quand même → pas de collision avec les builds prod de la même version.
+
+Pré-requis Codemagic UI : créer le beta group **"Piloo Demos"** dans App Store Connect → TestFlight → Internal Testing **avant** de tagger, sinon `submit_to_testflight` échoue.
+
 ### En cas d'échec
 
-| Symptôme | Diagnostic |
-|---|---|
-| `❌ Tag invalide` au début du build | Tag mal formé (ex. `v0.4` au lieu de `v0.4.0`). Supprimer + retagger : `git tag -d v0.4 && git push origin :refs/tags/v0.4`. |
-| `app-store-connect: 401 Unauthorized` | API key révoquée / mauvais Issuer ID. Régénérer et mettre à jour `app_store_credentials`. |
-| `No matching provisioning profiles found` + impossible de créer | API key sans permission `App Manager` ou bundle ID inexistant côté Apple. |
-| Build OK mais TestFlight ne reçoit rien | Vérifier App Store Connect → TestFlight → onglet "Builds" : status `Invalid Binary` (ITMS-91056 et co.) → consulter le log Codemagic, corriger plist/entitlements, retagger. |
-| `submit_to_testflight: true` mais le beta group ne reçoit pas | Le nom du beta_groups dans le yaml ne matche pas exactement le nom dans App Store Connect. |
+| Symptôme                                                        | Diagnostic                                                                                                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `❌ Tag invalide` au début du build                             | Tag mal formé (ex. `v0.4` au lieu de `v0.4.0`). Supprimer + retagger : `git tag -d v0.4 && git push origin :refs/tags/v0.4`.                                                 |
+| `app-store-connect: 401 Unauthorized`                           | API key révoquée / mauvais Issuer ID. Régénérer et mettre à jour `app_store_credentials`.                                                                                    |
+| `No matching provisioning profiles found` + impossible de créer | API key sans permission `App Manager` ou bundle ID inexistant côté Apple.                                                                                                    |
+| Build OK mais TestFlight ne reçoit rien                         | Vérifier App Store Connect → TestFlight → onglet "Builds" : status `Invalid Binary` (ITMS-91056 et co.) → consulter le log Codemagic, corriger plist/entitlements, retagger. |
+| `submit_to_testflight: true` mais le beta group ne reçoit pas   | Le nom du beta_groups dans le yaml ne matche pas exactement le nom dans App Store Connect.                                                                                   |
 
 ### Rollback
 
@@ -156,12 +178,12 @@ git push origin v0.4.1
 
 ## Rotation & expiration
 
-| Item | Validité | Procédure de rotation |
-|---|---|---|
-| Distribution certificate iOS | 1 an | Codemagic le régénère auto si `CERTIFICATE_PRIVATE_KEY` est toujours valide. Si la clé doit changer (compromission) : générer une nouvelle clé, mettre à jour le secret, supprimer l'ancien cert dans Apple Developer. |
-| Provisioning profile App Store | 1 an | Auto-renouvelé à chaque build par `fetch-signing-files`. |
-| API key App Store Connect | Pas d'expiration auto, mais **rotation conseillée tous les 12 mois**. | Créer une nouvelle clé, mettre à jour les 3 variables `APP_STORE_CONNECT_*` côté Codemagic, vérifier qu'un build marche, puis révoquer l'ancienne. |
-| Apple Developer Program | 1 an | Renouveler côté Apple. Si expiré : tous les builds échouent + l'app peut être retirée de l'App Store. |
+| Item                           | Validité                                                              | Procédure de rotation                                                                                                                                                                                                  |
+| ------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Distribution certificate iOS   | 1 an                                                                  | Codemagic le régénère auto si `CERTIFICATE_PRIVATE_KEY` est toujours valide. Si la clé doit changer (compromission) : générer une nouvelle clé, mettre à jour le secret, supprimer l'ancien cert dans Apple Developer. |
+| Provisioning profile App Store | 1 an                                                                  | Auto-renouvelé à chaque build par `fetch-signing-files`.                                                                                                                                                               |
+| API key App Store Connect      | Pas d'expiration auto, mais **rotation conseillée tous les 12 mois**. | Créer une nouvelle clé, mettre à jour les 3 variables `APP_STORE_CONNECT_*` côté Codemagic, vérifier qu'un build marche, puis révoquer l'ancienne.                                                                     |
+| Apple Developer Program        | 1 an                                                                  | Renouveler côté Apple. Si expiré : tous les builds échouent + l'app peut être retirée de l'App Store.                                                                                                                  |
 
 > Inscrire ces dates dans le calendrier d'équipe. Une expiration silencieuse est le scénario d'échec n°1 sur les pipelines iOS.
 
