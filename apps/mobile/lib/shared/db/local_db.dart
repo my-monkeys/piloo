@@ -27,18 +27,28 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
+          await _createPendingOpsIndex(m);
         },
-        // Migrations futures : add `from(N -> N+1)` ici. Tant que
-        // `schemaVersion` est inchangé, onUpgrade n'est pas appelé.
         onUpgrade: (m, from, to) async {
-          // Espace réservé. Toute évolution doit s'accompagner d'un
-          // bump de `schemaVersion` + step explicite.
+          if (from < 2) {
+            // v2 (#90) : index sur pending_operations.statut pour le
+            // worker de sync (#91) — il interroge en boucle les ops
+            // `pending`, un scan full-table à chaque tick coûte cher.
+            await _createPendingOpsIndex(m);
+          }
         },
       );
+
+  Future<void> _createPendingOpsIndex(Migrator m) async {
+    await m.database.customStatement(
+      'CREATE INDEX IF NOT EXISTS idx_pending_ops_statut '
+      'ON pending_operations(statut)',
+    );
+  }
 }
