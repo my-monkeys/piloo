@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "audit:logs": "node scripts/audit-logs.mjs",
-    "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs"
+    "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs",
+    "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs"
   },
   "dependencies": {
     "@piloo/api-contract": "workspace:*",
