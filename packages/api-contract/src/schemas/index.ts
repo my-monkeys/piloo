@@ -6,3 +6,4 @@ export * from './officines.ts';
 export * from './boites.ts';
 export * from './sync.ts';
 export * from './alertes.ts';
+export * from './manque.ts';
