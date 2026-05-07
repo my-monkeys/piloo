@@ -47,6 +47,7 @@ class RouteName {
   static const officinesList = 'officines-list';
   static const officineSettings = 'officine-settings';
   static const partages = 'partages';
+  static const invite = 'invite';
   static const invitationAccept = 'invitation-accept';
 
   // Settings
@@ -109,6 +110,8 @@ class RoutePath {
       '/officines/$officineId/settings';
   static String partages(String officineId) =>
       '/officines/$officineId/partages';
+  static String invite(String officineId) =>
+      '/officines/$officineId/invite';
   static String invitationAccept(String token) => '/invitations/$token';
 
   // Settings

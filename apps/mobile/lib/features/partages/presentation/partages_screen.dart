@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -123,8 +124,9 @@ class _PartagesScreenState extends State<PartagesScreen> {
               child: PilooButton(
                 label: '+ Inviter quelqu\'un',
                 variant: PilooButtonVariant.primary,
-                // Push placeholder — S3 Inviter quelqu'un = #133.
-                onPressed: () {/* TODO push /officines/:id/invite */},
+                onPressed: () => Navigator.of(context).pushNamed(
+                  RoutePath.invite(widget.officineId ?? 'maison'),
+                ),
               ),
             ),
           ],
