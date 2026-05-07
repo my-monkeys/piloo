@@ -29,6 +29,7 @@ import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
+import 'package:piloo/features/partages/presentation/invitation_accept_screen.dart';
 import 'package:piloo/features/partages/presentation/invite_screen.dart';
 import 'package:piloo/features/partages/presentation/partages_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
@@ -271,9 +272,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/invitations/:token',
         name: RouteName.invitationAccept,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Invitation',
-          params: {'token': state.pathParameters['token'] ?? ''},
+        builder: (_, state) => InvitationAcceptScreen(
+          token: state.pathParameters['token'],
         ),
       ),
 
