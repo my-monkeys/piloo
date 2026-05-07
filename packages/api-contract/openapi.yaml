@@ -506,6 +506,77 @@ components:
         - entities
         - deleted
         - server_time
+    ListAlertesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Alerte"
+        next_cursor:
+          type:
+            - string
+            - "null"
+      required:
+        - items
+        - next_cursor
+    Alerte:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - peremption_30j
+            - peremption_7j
+            - stock_bas
+            - prise_oubliee
+            - manque_signale
+        payload:
+          type: object
+          additionalProperties: {}
+        lue_a:
+          type:
+            - string
+            - "null"
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - user_id
+        - type
+        - payload
+        - lue_a
+        - created_at
+    AlertesApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
   parameters: {}
 paths:
   /health:
@@ -960,4 +1031,89 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SyncApiError"
+  /v1/alertes:
+    get:
+      summary: Liste paginée des alertes de l'utilisateur
+      description: "Filtres optionnels par type et lues/non lues. Pagination cursor-based : passer `cursor` reçu dans `next_cursor` à la réponse précédente."
+      tags:
+        - alertes
+      parameters:
+        - schema:
+            type: string
+          required: false
+          name: cursor
+          in: query
+        - schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+          required: false
+          name: limit
+          in: query
+        - schema:
+            type: string
+            enum:
+              - peremption_30j
+              - peremption_7j
+              - stock_bas
+              - prise_oubliee
+              - manque_signale
+          required: false
+          name: type
+          in: query
+        - schema:
+            type: string
+            enum:
+              - "true"
+              - "false"
+          required: false
+          name: unread_only
+          in: query
+      responses:
+        "200":
+          description: Page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAlertesResponse"
+        "400":
+          description: Cursor ou paramètres invalides
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertesApiError"
+  /v1/alertes/{id}/read:
+    post:
+      summary: Marque une alerte comme lue
+      description: "Idempotent : si l'alerte est déjà marquée lue, on retourne 204 sans modifier."
+      tags:
+        - alertes
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Lue
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertesApiError"
+        "404":
+          description: Alerte inconnue ou non destinée à cet utilisateur
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AlertesApiError"
 webhooks: {}
