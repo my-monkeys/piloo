@@ -33,15 +33,17 @@ class OrdonnanceCreateScreen extends StatefulWidget {
 enum _Moment { matin, midi, soir, coucher }
 
 class _Prescription {
-  _Prescription({
-    this.medName = 'Ramipril 5 mg',
-    this.medForm = 'Comprimé',
-    this.unitsPerTake = 1,
-    this.takesPerDay = 2,
-    this.moments = const {_Moment.matin},
-    this.withMeal = true,
-    this.duration = 'À vie',
-  });
+  // Constructeur par défaut : pré-rempli pour la review (Ramipril
+  // = exemple de la maquette). En vrai, on partira d'un médoc choisi
+  // via scan ou recherche BDPM avant d'arriver sur la sheet.
+  _Prescription()
+      : medName = 'Ramipril 5 mg',
+        medForm = 'Comprimé',
+        unitsPerTake = 1,
+        takesPerDay = 2,
+        moments = {_Moment.matin},
+        withMeal = true,
+        duration = 'À vie';
 
   String medName;
   String medForm;
@@ -495,22 +497,59 @@ class _StepPrescriptions extends StatelessWidget {
   final VoidCallback onChanged;
   final VoidCallback onAdd;
 
+  Future<void> _edit(BuildContext context, _Prescription p) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetCtx) => _PrescriptionEditorSheet(
+        prescription: p,
+        onChanged: onChanged,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _SectionLabel('PRESCRIPTIONS · ${prescriptions.length}'),
+        const SizedBox(height: 8),
+        // Liste compacte : 1 row par prescription, tap → bottom sheet
+        // d'édition. Garde la liste visible et lisible quand il y a
+        // 5+ médocs.
         for (var i = 0; i < prescriptions.length; i++) ...[
-          if (i > 0) const SizedBox(height: 18),
-          _PrescriptionEditor(
+          if (i > 0) const SizedBox(height: 8),
+          _PrescriptionRow(
             prescription: prescriptions[i],
-            onChanged: onChanged,
+            onTap: () => _edit(context, prescriptions[i]),
+            onRemove: prescriptions.length > 1
+                ? () {
+                    prescriptions.removeAt(i);
+                    onChanged();
+                  }
+                : null,
           ),
         ],
         const SizedBox(height: 14),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: onAdd,
+          // Ajoute + ouvre directement la sheet d'édition pour
+          // configurer la nouvelle prescription dans la foulée.
+          onTap: () {
+            onAdd();
+            // Le widget rebuild après onAdd ; on attend un frame
+            // pour avoir la nouvelle prescription dans la liste.
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                _edit(context, prescriptions.last);
+              }
+            });
+          },
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
@@ -543,6 +582,267 @@ class _StepPrescriptions extends StatelessWidget {
   }
 }
 
+/// Ligne compacte affichée dans la liste de l'étape 2 : nom du
+/// médicament + posologie en phrase naturelle (avec nombres en primary
+/// gras pour mimer les pills de l'éditeur). Tap = ouvre la sheet
+/// d'édition. Bouton trash si > 1 prescription.
+class _PrescriptionRow extends StatelessWidget {
+  const _PrescriptionRow({
+    required this.prescription,
+    required this.onTap,
+    required this.onRemove,
+  });
+
+  final _Prescription prescription;
+  final VoidCallback onTap;
+  // null quand c'est la dernière prescription (au moins 1 obligatoire).
+  final VoidCallback? onRemove;
+
+  /// Ligne 1 : "1 comprimé pris 2 fois par jour" (avec nombres
+  /// primary gras).
+  List<TextSpan> _buildPosologieSpans(TextStyle base, TextStyle accent) {
+    final unit = prescription.medForm.toLowerCase();
+    final unitPlural =
+        prescription.unitsPerTake > 1 ? '${unit}s' : unit;
+    final spans = <TextSpan>[
+      TextSpan(text: '${prescription.unitsPerTake} ', style: accent),
+      TextSpan(text: unitPlural, style: base),
+    ];
+
+    if (prescription.takesPerDay > 1) {
+      spans.addAll([
+        TextSpan(text: ' pris ', style: base),
+        TextSpan(text: '${prescription.takesPerDay} ', style: accent),
+        TextSpan(text: 'fois par jour', style: base),
+      ]);
+    } else {
+      spans.add(TextSpan(text: ' une fois par jour', style: base));
+    }
+    return spans;
+  }
+
+  /// Ligne 2 : "matin et midi · à vie", ou juste la durée si aucun
+  /// moment sélectionné.
+  String _buildMomentsLine() {
+    final parts = <String>[];
+
+    if (prescription.moments.isNotEmpty) {
+      final order = [
+        _Moment.matin,
+        _Moment.midi,
+        _Moment.soir,
+        _Moment.coucher,
+      ];
+      final selected = order.where(prescription.moments.contains).toList();
+      final names = selected
+          .map((m) => switch (m) {
+                _Moment.matin => 'matin',
+                _Moment.midi => 'midi',
+                _Moment.soir => 'soir',
+                _Moment.coucher => 'au coucher',
+              })
+          .toList();
+      final String joined;
+      if (names.length == 1) {
+        joined = names.first;
+      } else {
+        joined = '${names.sublist(0, names.length - 1).join(', ')} '
+            'et ${names.last}';
+      }
+      parts.add(joined);
+    }
+
+    parts.add(prescription.duration);
+    return parts.join(' · ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final base = GoogleFonts.manrope(
+      fontSize: 12,
+      color: PilooColors.textSecondary,
+      height: 1.45,
+    );
+    final accent = GoogleFonts.manrope(
+      fontSize: 12,
+      fontWeight: FontWeight.w700,
+      color: PilooColors.primary,
+      height: 1.45,
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: PilooColors.primarySoft,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              alignment: Alignment.center,
+              child: const Icon(
+                PhosphorIconsFill.pill,
+                size: 18,
+                color: PilooColors.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prescription.medName,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: PilooColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  RichText(
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    text: TextSpan(
+                      children: _buildPosologieSpans(base, accent),
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    _buildMomentsLine(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      color: PilooColors.textTertiary,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (onRemove != null) ...[
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onRemove,
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(
+                    PhosphorIconsRegular.trash,
+                    size: 16,
+                    color: PilooColors.textTertiary,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
+            const Icon(
+              PhosphorIconsRegular.pencilSimple,
+              size: 16,
+              color: PilooColors.primary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet d'édition d'une prescription. Reprend tous les
+/// contrôles précédemment inline (médicament + posologie + moments
+/// + repas + durée), affichés un à la fois.
+class _PrescriptionEditorSheet extends StatefulWidget {
+  const _PrescriptionEditorSheet({
+    required this.prescription,
+    required this.onChanged,
+  });
+
+  final _Prescription prescription;
+  final VoidCallback onChanged;
+
+  @override
+  State<_PrescriptionEditorSheet> createState() =>
+      _PrescriptionEditorSheetState();
+}
+
+class _PrescriptionEditorSheetState extends State<_PrescriptionEditorSheet> {
+  void _bumpParent() {
+    widget.onChanged();
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.85,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, controller) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Center(
+                child: Text(
+                  widget.prescription.medName,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: PilooColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Expanded(
+                child: SingleChildScrollView(
+                  controller: controller,
+                  child: _PrescriptionEditor(
+                    prescription: widget.prescription,
+                    onChanged: _bumpParent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              PilooButton(
+                label: 'Terminé',
+                variant: PilooButtonVariant.primary,
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PrescriptionEditor extends StatelessWidget {
   const _PrescriptionEditor({
     required this.prescription,
@@ -568,16 +868,47 @@ class _PrescriptionEditor extends StatelessWidget {
           onChanged: onChanged,
         ),
         const SizedBox(height: 18),
-        _SectionLabel('MOMENTS DE PRISE'),
+        // Compteur (N/M) pour signaler à l'utilisateur qu'il doit
+        // sélectionner autant de moments que de prises par jour.
+        // Couleur primary quand complet, accent (rouge) quand
+        // incomplet pour attirer l'œil.
+        Builder(builder: (_) {
+          final total = prescription.takesPerDay;
+          final filled = prescription.moments.length;
+          final isComplete = filled == total;
+          return Row(
+            children: [
+              _SectionLabel('MOMENTS DE PRISE'),
+              const SizedBox(width: 6),
+              Text(
+                '($filled/$total)',
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: isComplete
+                      ? PilooColors.successOn
+                      : PilooColors.accent,
+                ),
+              ),
+            ],
+          );
+        }),
         const SizedBox(height: 8),
         _MomentsRow(
           selected: prescription.moments,
+          // Plafond = takesPerDay : on bloque la sélection au-delà
+          // pour rester cohérent ("2 fois par jour" ne peut pas avoir
+          // 3 moments).
+          maxSelected: prescription.takesPerDay,
           onToggle: (m) {
             if (prescription.moments.contains(m)) {
               prescription.moments = {...prescription.moments}..remove(m);
-            } else {
+            } else if (prescription.moments.length <
+                prescription.takesPerDay) {
               prescription.moments = {...prescription.moments, m};
             }
+            // Au-delà : no-op, le chip est rendu disabled visuellement.
             onChanged();
           },
         ),
@@ -596,7 +927,13 @@ class _PrescriptionEditor extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: _DurationRow(value: prescription.duration),
+              child: _DurationRow(
+                value: prescription.duration,
+                onChanged: (v) {
+                  prescription.duration = v;
+                  onChanged();
+                },
+              ),
             ),
           ],
         ),
@@ -736,6 +1073,23 @@ class _PosologieCard extends StatelessWidget {
                 value: prescription.takesPerDay,
                 onChanged: (v) {
                   prescription.takesPerDay = v;
+                  // Si on réduit takesPerDay sous le nombre de
+                  // moments sélectionnés, on coupe les surplus
+                  // pour rester cohérent (matin/midi/soir/coucher
+                  // dans cet ordre, on garde les premiers).
+                  if (prescription.moments.length > v) {
+                    const order = [
+                      _Moment.matin,
+                      _Moment.midi,
+                      _Moment.soir,
+                      _Moment.coucher,
+                    ];
+                    final keep = order
+                        .where(prescription.moments.contains)
+                        .take(v)
+                        .toSet();
+                    prescription.moments = keep;
+                  }
                   onChanged();
                 },
               ),
@@ -859,9 +1213,14 @@ class _NumberPill extends StatelessWidget {
 }
 
 class _MomentsRow extends StatelessWidget {
-  const _MomentsRow({required this.selected, required this.onToggle});
+  const _MomentsRow({
+    required this.selected,
+    required this.maxSelected,
+    required this.onToggle,
+  });
 
   final Set<_Moment> selected;
+  final int maxSelected;
   final ValueChanged<_Moment> onToggle;
 
   static const _items = [
@@ -873,6 +1232,7 @@ class _MomentsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final atCapacity = selected.length >= maxSelected;
     return Row(
       children: [
         for (var i = 0; i < _items.length; i++) ...[
@@ -881,6 +1241,11 @@ class _MomentsRow extends StatelessWidget {
             child: _MomentChip(
               label: _items[i].label,
               selected: selected.contains(_items[i].m),
+              // Disabled si on est au plafond ET que ce chip n'est
+              // pas déjà sélectionné (sinon on pourrait pas
+              // décocher les sélectionnés).
+              disabled:
+                  atCapacity && !selected.contains(_items[i].m),
               onTap: () => onToggle(_items[i].m),
             ),
           ),
@@ -894,49 +1259,60 @@ class _MomentChip extends StatelessWidget {
   const _MomentChip({
     required this.label,
     required this.selected,
+    required this.disabled,
     required this.onTap,
   });
 
   final String label;
   final bool selected;
+  final bool disabled;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onTap,
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color: selected ? PilooColors.primary : PilooColors.surface,
-          borderRadius: BorderRadius.circular(PilooRadius.md),
-          border: selected ? null : Border.all(color: PilooColors.border),
-        ),
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (selected) ...[
-              const Icon(PhosphorIconsBold.check, size: 12, color: Colors.white),
-              const SizedBox(width: 6),
-            ],
-            Flexible(
-              child: Text(
-                label,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.manrope(
-                  fontSize: label.length > 5 ? 11 : 12,
-                  fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                  color: selected
-                      ? PilooColors.textOnPrimary
-                      : PilooColors.textPrimary,
+    return Opacity(
+      opacity: disabled ? 0.45 : 1.0,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: disabled ? null : onTap,
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: selected ? PilooColors.primary : PilooColors.surface,
+            borderRadius: BorderRadius.circular(PilooRadius.md),
+            border:
+                selected ? null : Border.all(color: PilooColors.border),
+          ),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (selected) ...[
+                const Icon(
+                  PhosphorIconsBold.check,
+                  size: 12,
+                  color: Colors.white,
+                ),
+                const SizedBox(width: 6),
+              ],
+              Flexible(
+                child: Text(
+                  label,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
+                    fontSize: label.length > 5 ? 11 : 12,
+                    fontWeight:
+                        selected ? FontWeight.w600 : FontWeight.w500,
+                    color: selected
+                        ? PilooColors.textOnPrimary
+                        : PilooColors.textPrimary,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1008,42 +1384,243 @@ class _SwitchRow extends StatelessWidget {
 }
 
 class _DurationRow extends StatelessWidget {
-  const _DurationRow({required this.value});
+  const _DurationRow({required this.value, required this.onChanged});
 
   final String value;
+  final ValueChanged<String> onChanged;
+
+  static const _presets = [
+    'À vie',
+    '7 jours',
+    '14 jours',
+    '1 mois',
+    '3 mois',
+    '6 mois',
+  ];
+
+  Future<void> _open(BuildContext context) async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        // Si la valeur courante est custom (pas dans les presets),
+        // pré-remplir le champ texte avec elle pour que l'user voie
+        // sa saisie précédente.
+        final isCustom = !_presets.contains(value);
+        final customCtrl = TextEditingController(
+          text: isCustom ? value : '',
+        );
+
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              20,
+              12,
+              20,
+              MediaQuery.viewInsetsOf(context).bottom + 20,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: PilooColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Center(
+                  child: Text(
+                    'Durée du traitement',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
+                      color: PilooColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                for (final p in _presets) ...[
+                  _PresetTile(
+                    label: p,
+                    selected: value == p,
+                    onTap: () => Navigator.of(context).pop(p),
+                  ),
+                  const SizedBox(height: 8),
+                ],
+                const SizedBox(height: 8),
+                Text(
+                  'PERSONNALISÉE',
+                  style: GoogleFonts.manrope(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: PilooColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Container(
+                  height: 48,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  decoration: BoxDecoration(
+                    color: PilooColors.surface,
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                    border: Border.all(
+                      color: isCustom
+                          ? PilooColors.primary
+                          : PilooColors.border,
+                      width: isCustom ? 2 : 1,
+                    ),
+                  ),
+                  alignment: Alignment.centerLeft,
+                  child: TextField(
+                    controller: customCtrl,
+                    autofocus: false,
+                    onSubmitted: (v) {
+                      final t = v.trim();
+                      if (t.isNotEmpty) Navigator.of(context).pop(t);
+                    },
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: EdgeInsets.zero,
+                      filled: false,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                      hintText: 'ex: 10 jours, jusqu\'au 15 mai…',
+                      hintStyle: GoogleFonts.manrope(
+                        fontSize: 14,
+                        color: PilooColors.textTertiary,
+                      ),
+                    ),
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      color: PilooColors.textPrimary,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                PilooButton(
+                  label: 'Confirmer',
+                  variant: PilooButtonVariant.primary,
+                  onPressed: () {
+                    final t = customCtrl.text.trim();
+                    Navigator.of(context).pop(t.isEmpty ? value : t);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+    if (picked != null) onChanged(picked);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: PilooColors.surface,
-        borderRadius: BorderRadius.circular(PilooRadius.md),
-        border: Border.all(color: PilooColors.border),
-      ),
-      child: Row(
-        children: [
-          Text(
-            'Durée',
-            style: GoogleFonts.manrope(
-              fontSize: 13,
-              color: PilooColors.textSecondary,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _open(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Row(
+          children: [
+            Text(
+              'Durée',
               style: GoogleFonts.manrope(
                 fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: PilooColors.textPrimary,
+                color: PilooColors.textSecondary,
               ),
             ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            const Icon(
+              PhosphorIconsRegular.caretDown,
+              size: 12,
+              color: PilooColors.textTertiary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PresetTile extends StatelessWidget {
+  const _PresetTile({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(selected ? 13 : 14),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(
+            color: selected ? PilooColors.primary : PilooColors.border,
+            width: selected ? 2 : 1,
           ),
-        ],
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                PhosphorIconsBold.check,
+                size: 16,
+                color: PilooColors.primary,
+              ),
+          ],
+        ),
       ),
     );
   }
