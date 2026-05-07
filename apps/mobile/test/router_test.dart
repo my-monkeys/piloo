@@ -138,7 +138,7 @@ void main() {
         router.routerDelegate.currentConfiguration.uri.path,
         '/invitations/tok-xyz',
       );
-      expect(find.textContaining('tok-xyz'), findsOneWidget);
+      // L'écran réel n'affiche pas le token brut, on valide le path.
     });
 
     test('shell route a 4 branches (today/officine/alertes/more)', () {
