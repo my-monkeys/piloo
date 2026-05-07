@@ -22,6 +22,7 @@
     "db:migrate": "pnpm --filter @piloo/db-schema migrate",
     "db:seed": "pnpm --filter @piloo/db-schema seed",
     "db:reset": "pnpm --filter @piloo/db-schema reset",
+    "tokens:build": "pnpm --filter @piloo/design-tokens tokens:build",
     "clean": "turbo run clean && rm -rf node_modules .turbo",
     "prepare": "husky"
   },

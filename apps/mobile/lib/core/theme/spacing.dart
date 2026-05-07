@@ -1,3 +1,8 @@
+// GENERATED — do not edit.
+// Source: packages/design-tokens/tokens.json
+// Pour modifier les tokens : édite tokens.json puis lance
+// `pnpm tokens:build` (depuis la racine du repo).
+
 abstract class PilooSpacing {
   static const double xs = 4;
   static const double sm = 8;

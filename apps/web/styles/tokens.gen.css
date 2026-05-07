@@ -1,0 +1,40 @@
+/* GENERATED — do not edit.
+ * Source: packages/design-tokens/tokens.json
+ * Régénère avec `pnpm tokens:build` (depuis la racine).
+ */
+:root {
+  --piloo-color-background: #faf8f3;
+  --piloo-color-surface: #ffffff;
+  --piloo-color-surface-subtle: #f1ede2;
+  --piloo-color-border: #e5e0d3;
+  --piloo-color-primary: #4a6b64;
+  --piloo-color-primary-hover: #3d5a54;
+  --piloo-color-primary-soft: #dbe3e0;
+  --piloo-color-accent: #a8472e;
+  --piloo-color-accent-soft: #f3d9cd;
+  --piloo-color-text-primary: #252a30;
+  --piloo-color-text-secondary: #6b7280;
+  --piloo-color-text-tertiary: #9ca3af;
+  --piloo-color-text-on-primary: #ffffff;
+  --piloo-color-success: #d8e3d5;
+  --piloo-color-success-on: #355b3e;
+  --piloo-color-warning: #f5e4c3;
+  --piloo-color-warning-on: #7a541c;
+  --piloo-color-error: #eed0c5;
+  --piloo-color-error-on: #8a382a;
+  --piloo-color-info: #d8dfe6;
+  --piloo-color-info-on: #35475a;
+  --piloo-radius-sm: 6px;
+  --piloo-radius-md: 8px;
+  --piloo-radius-lg: 12px;
+  --piloo-radius-xl: 16px;
+  --piloo-radius-full: 9999px;
+  --piloo-spacing-xs: 4px;
+  --piloo-spacing-sm: 8px;
+  --piloo-spacing-md: 12px;
+  --piloo-spacing-lg: 16px;
+  --piloo-spacing-xl: 24px;
+  --piloo-spacing-xxl: 32px;
+  --piloo-spacing-xxxl: 48px;
+  --piloo-spacing-xxxxl: 64px;
+}
