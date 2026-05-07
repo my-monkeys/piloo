@@ -16,7 +16,15 @@
     <application
         android:label="piloo"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
+        <!-- allowBackup=false : interdit l'auto-backup Google Drive de la
+             SQLite locale Drift (boîtes, prises, ordonnances). Cohérent
+             avec la posture privacy-first (cf. CLAUDE.md §Sécurité). Le
+             user peut quand même utiliser l'export manuel RGPD (#158).
+             usesCleartextTraffic=false : HTTPS uniquement, redondant avec
+             le défaut Android 9+ mais explicite. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
