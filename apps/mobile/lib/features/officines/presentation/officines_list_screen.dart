@@ -189,7 +189,7 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
                     officine: o,
                     active: o.id == _activeId,
                     onTap: () => setState(() => _activeId = o.id),
-                    onLongPress: () => _showActions(context, o),
+                    onActions: () => _showActions(context, o),
                   );
                 },
               ),
@@ -255,13 +255,13 @@ class _OfficineCard extends StatelessWidget {
     required this.officine,
     required this.active,
     required this.onTap,
-    required this.onLongPress,
+    required this.onActions,
   });
 
   final _Officine officine;
   final bool active;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
+  final VoidCallback onActions;
 
   ({Color bg, Color fg, String label}) get _roleStyle => switch (officine.role) {
         _OfficineRole.proprietaire => (
@@ -287,7 +287,6 @@ class _OfficineCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      onLongPress: onLongPress,
       child: Container(
         // Padding compensé : 13 quand bord 2px, 14 quand bord 1px.
         padding: EdgeInsets.all(active ? 13 : 14),
@@ -303,7 +302,7 @@ class _OfficineCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Tile icône + (éventuel) point d'alerte en overlay
                 // top-right : déplacé là pour ne pas être écrasé par
@@ -358,21 +357,9 @@ class _OfficineCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Slot fixe pour le badge "Actif" : on réserve la
-                // largeur même quand inactif pour que le meta text
-                // ne se relayoute pas en passant active → inactive.
-                // 80px = check 10 + gap 4 + texte "Actif" + padding
-                // 10×2 + marge sécurité fonts (en tests, google_fonts
-                // tombe sur une fonte plus large).
-                SizedBox(
-                  width: 88,
-                  child: active
-                      ? const Align(
-                          alignment: Alignment.centerRight,
-                          child: _ActiveBadge(),
-                        )
-                      : null,
-                ),
+                // Bouton actions (molette) : toujours visible pour
+                // remplacer le long-press qui n'était pas découvrable.
+                _ActionsButton(onTap: onActions),
               ],
             ),
             const SizedBox(height: 12),
@@ -406,6 +393,10 @@ class _OfficineCard extends StatelessWidget {
                       ),
                     ),
                   ),
+                ],
+                if (active) ...[
+                  const SizedBox(width: 8),
+                  const _ActiveBadge(),
                 ],
               ],
             ),
@@ -442,6 +433,29 @@ class _ActiveBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ActionsButton extends StatelessWidget {
+  const _ActionsButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: const SizedBox(
+        width: 32,
+        height: 32,
+        child: Icon(
+          PhosphorIconsRegular.gear,
+          size: 20,
+          color: PilooColors.textSecondary,
+        ),
       ),
     );
   }
