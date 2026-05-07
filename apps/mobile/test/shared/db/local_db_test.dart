@@ -1,7 +1,8 @@
-// Tests Drift LocalDatabase (#47).
+// Tests Drift LocalDatabase (#47, #90).
 // Couverture : la migration v1 crée bien les 3 tables, on peut insérer
 // puis re-lire un enregistrement dans chacune, le soft delete est
-// observable, l'index implicite (PK) rejette les doublons d'id.
+// observable, l'index implicite (PK) rejette les doublons d'id, et
+// l'index v2 sur pending_operations.statut existe (#90).
 // Conflit de nom : `isNull` existe à la fois dans drift (matcher SQL) et
 // dans matcher (matcher de test). On `hide` côté drift puisque dans le
 // fichier on utilise les deux : drift's via la callback `(b) => ...`
@@ -20,10 +21,25 @@ LocalDatabase makeDb() {
 }
 
 void main() {
-  group('LocalDatabase v1', () {
-    test('schemaVersion vaut 1', () {
+  group('LocalDatabase v2', () {
+    test('schemaVersion vaut 2', () {
       final db = makeDb();
-      expect(db.schemaVersion, 1);
+      expect(db.schemaVersion, 2);
+    });
+
+    test('index idx_pending_ops_statut existe après migration', () async {
+      final db = makeDb();
+      // Force open + migration onCreate.
+      await db.customSelect('SELECT 1').get();
+
+      final indexes = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master "
+            "WHERE type='index' AND tbl_name='pending_operations'",
+          )
+          .get();
+      final names = indexes.map((r) => r.read<String>('name')).toList();
+      expect(names, contains('idx_pending_ops_statut'));
     });
 
     test('migration v1 crée les 3 tables attendues', () async {
