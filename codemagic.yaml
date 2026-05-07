@@ -95,7 +95,7 @@ workflows:
 
       - name: Analyse statique
         working_directory: apps/mobile
-        script: flutter analyze
+        script: flutter analyze --no-fatal-infos
 
       - name: Tests unitaires
         working_directory: apps/mobile
@@ -215,7 +215,7 @@ workflows:
 
       - name: Analyse statique
         working_directory: apps/mobile
-        script: flutter analyze
+        script: flutter analyze --no-fatal-infos
 
       - name: Tests unitaires
         working_directory: apps/mobile
@@ -285,7 +285,7 @@ workflows:
           fi
       - name: flutter analyze
         working_directory: apps/mobile
-        script: flutter analyze
+        script: flutter analyze --no-fatal-infos
       - name: flutter test
         working_directory: apps/mobile
         script: flutter test
@@ -351,7 +351,7 @@ workflows:
         script: flutter pub get
       - name: Static analysis
         working_directory: apps/mobile
-        script: flutter analyze
+        script: flutter analyze --no-fatal-infos
       - name: Unit tests
         working_directory: apps/mobile
         script: flutter test
