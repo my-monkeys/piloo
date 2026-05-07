@@ -577,6 +577,45 @@ components:
             - message
       required:
         - error
+    SignalerManqueResponse:
+      type: object
+      properties:
+        alertes_creees:
+          type: integer
+          minimum: 0
+      required:
+        - alertes_creees
+    ManqueApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    SignalerManqueInput:
+      type: object
+      properties:
+        cip13:
+          type: string
+          pattern: ^\d{13}$
+        libelle:
+          type: string
+          minLength: 1
+          maxLength: 200
+        message:
+          type: string
+          maxLength: 500
   parameters: {}
 paths:
   /health:
@@ -1116,4 +1155,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AlertesApiError"
+  /v1/officines/{officineId}/signaler-manque:
+    post:
+      summary: Signale un manque de médicament dans une officine
+      description: Tout membre (owner/editor/viewer) de l'officine peut signaler. Crée une alerte `manque_signale` pour chaque owner/editor (le signaleur exclu).
+      tags:
+        - alertes
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignalerManqueInput"
+      responses:
+        "201":
+          description: Manque signalé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SignalerManqueResponse"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManqueApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManqueApiError"
+        "404":
+          description: Officine introuvable ou non partagée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManqueApiError"
 webhooks: {}
