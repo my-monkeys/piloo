@@ -27,15 +27,18 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officine/data/grouping_pref.dart';
+import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
 enum _Filter { tout, actif, perime, stockBas }
 
 enum _BoiteState { ok, stockBas, perime }
 
-class _Boite {
+class _Boite implements GroupableBoite {
   const _Boite({
     required this.name,
+    required this.dci,
     required this.meta,
     required this.icon,
     required this.count,
@@ -43,7 +46,10 @@ class _Boite {
     this.state = _BoiteState.ok,
   });
 
+  @override
   final String name;
+  @override
+  final String dci;
   final String meta;
   final IconData icon;
   final int count;
@@ -60,11 +66,31 @@ class OfficineScreen extends StatefulWidget {
 
 class _OfficineScreenState extends State<OfficineScreen> {
   _Filter _filter = _Filter.tout;
+  BoiteGrouping _grouping = BoiteGrouping.medicament;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadGrouping();
+  }
+
+  Future<void> _loadGrouping() async {
+    final saved = await readBoiteGrouping();
+    if (!mounted) return;
+    setState(() => _grouping = saved);
+  }
+
+  void _changeGrouping(BoiteGrouping mode) {
+    setState(() => _grouping = mode);
+    // Persistence best-effort, on ne bloque pas l'UI dessus.
+    writeBoiteGrouping(mode);
+  }
 
   // Mock — le branchement Drift arrivera avec l'epic Inventory.
   static const _all = [
     _Boite(
       name: 'Doliprane 1000 mg',
+      dci: 'Paracétamol',
       meta: 'Paracétamol · comprimé',
       icon: PhosphorIconsFill.pill,
       count: 3,
@@ -72,6 +98,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
     ),
     _Boite(
       name: 'Kardegic 75 mg',
+      dci: 'Acide acétylsalicylique',
       meta: 'Acide acétylsalicylique · sachet',
       icon: PhosphorIconsFill.pill,
       count: 2,
@@ -80,6 +107,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
     ),
     _Boite(
       name: 'Metformine 500 mg',
+      dci: 'Metformine',
       meta: 'Metformine · comprimé',
       icon: PhosphorIconsFill.pill,
       count: 1,
@@ -87,6 +115,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
     ),
     _Boite(
       name: 'Amoxicilline 500 mg',
+      dci: 'Amoxicilline',
       meta: 'Périmée depuis 14 jours · à jeter',
       icon: PhosphorIconsFill.warningOctagon,
       count: 1,
@@ -94,10 +123,19 @@ class _OfficineScreenState extends State<OfficineScreen> {
     ),
     _Boite(
       name: 'Humex rhume',
+      dci: 'Paracétamol + chlorphénamine',
       meta: 'Paracétamol + chlorphénamine · sirop',
       icon: PhosphorIconsFill.drop,
       count: 1,
       exp: 'exp. 11/2025',
+    ),
+    _Boite(
+      name: 'Dafalgan 500 mg',
+      dci: 'Paracétamol',
+      meta: 'Paracétamol · gélule',
+      icon: PhosphorIconsFill.pill,
+      count: 2,
+      exp: 'exp. 03/2027',
     ),
   ];
 
@@ -154,6 +192,13 @@ class _OfficineScreenState extends State<OfficineScreen> {
               padding: EdgeInsets.fromLTRB(20, 4, 20, 4),
               child: _SearchBox(),
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: _GroupingToggle(
+                value: _grouping,
+                onChanged: _changeGrouping,
+              ),
+            ),
             // Hauteur 52 + padding vertical 8 = 36 px utiles pour les
             // pilules (padding interne 6 + texte 12 line-height ≈ 32),
             // sinon le texte se fait écraser verticalement.
@@ -194,11 +239,8 @@ class _OfficineScreenState extends State<OfficineScreen> {
             Expanded(
               // Bottom padding 140 = tab bar (~105) + safe area home
               // indicator (extendBody: true côté _MainShell).
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 140),
-                itemCount: _filtered.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _BoiteCard(boite: _filtered[i]),
+              child: _GroupedList(
+                sections: groupBoites(_filtered, _grouping),
               ),
             ),
           ],
@@ -350,6 +392,120 @@ class _FilterChip extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _GroupingToggle extends StatelessWidget {
+  const _GroupingToggle({required this.value, required this.onChanged});
+
+  final BoiteGrouping value;
+  final ValueChanged<BoiteGrouping> onChanged;
+
+  static const _options = [
+    (mode: BoiteGrouping.medicament, label: 'Médicament'),
+    (mode: BoiteGrouping.molecule, label: 'Molécule'),
+    (mode: BoiteGrouping.plat, label: 'Toutes'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: PilooColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          for (final opt in _options)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(opt.mode),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  decoration: BoxDecoration(
+                    color: value == opt.mode
+                        ? PilooColors.surface
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(999),
+                    boxShadow: value == opt.mode
+                        ? [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.04),
+                              blurRadius: 4,
+                              offset: const Offset(0, 1),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    opt.label,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: value == opt.mode
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      color: value == opt.mode
+                          ? PilooColors.textPrimary
+                          : PilooColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupedList extends StatelessWidget {
+  const _GroupedList({required this.sections});
+
+  final List<BoiteSection<_Boite>> sections;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <Widget>[];
+    for (var s = 0; s < sections.length; s++) {
+      final section = sections[s];
+      if (section.header != null) {
+        if (s > 0) items.add(const SizedBox(height: 8));
+        items.add(_SectionHeader(label: section.header!));
+        items.add(const SizedBox(height: 8));
+      } else if (s > 0) {
+        items.add(const SizedBox(height: 10));
+      }
+      for (var i = 0; i < section.boites.length; i++) {
+        if (i > 0) items.add(const SizedBox(height: 10));
+        items.add(_BoiteCard(boite: section.boites[i]));
+      }
+    }
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+      children: items,
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: GoogleFonts.manrope(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.6,
+        color: PilooColors.textTertiary,
       ),
     );
   }

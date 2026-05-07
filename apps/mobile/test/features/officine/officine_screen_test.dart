@@ -26,7 +26,7 @@ void main() {
       // Filtres avec compteurs (skipOffstage:false car la rangée est
       // une ListView horizontale, certains chips peuvent être hors
       // viewport).
-      expect(find.text('Tout · 5'), findsOneWidget);
+      expect(find.text('Tout · 6'), findsOneWidget);
       expect(find.text('Actif'), findsOneWidget);
       expect(find.text('Périmé · 1', skipOffstage: false), findsOneWidget);
       expect(find.text('Stock bas · 1', skipOffstage: false), findsOneWidget);
