@@ -38,6 +38,7 @@ import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/settings/presentation/horaires_screen.dart';
 import 'package:piloo/features/settings/presentation/notifications_screen.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
+import 'package:piloo/features/settings/presentation/security_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
 import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
@@ -305,8 +306,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.settingsSecurity,
         name: RouteName.settingsSecurity,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Sécurité', subtitle: '2FA (#157)'),
+        builder: (_, _) => const SecurityScreen(),
       ),
 
       // Vue pro
