@@ -10,7 +10,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "audit:logs": "node scripts/audit-logs.mjs"
+    "audit:logs": "node scripts/audit-logs.mjs",
+    "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs"
   },
   "dependencies": {
     "@piloo/api-contract": "workspace:*",
