@@ -5,3 +5,4 @@ export * from './health.ts';
 export * from './officines.ts';
 export * from './boites.ts';
 export * from './sync.ts';
+export * from './alertes.ts';
