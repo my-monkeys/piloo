@@ -15,7 +15,9 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/presentation/officine_edit_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _OfficineRole { proprietaire, editeur, lecteur }
 
@@ -55,6 +57,75 @@ class OfficinesListScreen extends StatefulWidget {
 
 class _OfficinesListScreenState extends State<OfficinesListScreen> {
   String _activeId = 'maison';
+
+  Future<void> _showActions(BuildContext context, _Officine officine) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              _SheetAction(
+                icon: PhosphorIconsRegular.pencilSimple,
+                label: 'Renommer',
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final updated = await showOfficineEditSheet(
+                    context,
+                    initial: OfficineDraft(name: officine.name),
+                  );
+                  if (updated != null && context.mounted) {
+                    PilooToast.success(
+                      context,
+                      'Renommée en "${updated.name}".',
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              _SheetAction(
+                icon: PhosphorIconsRegular.archive,
+                label: 'Archiver',
+                destructive: true,
+                onTap: () async {
+                  Navigator.of(ctx).pop();
+                  final ok = await confirmArchiveOfficine(
+                    context,
+                    officineName: officine.name,
+                  );
+                  if (ok && context.mounted) {
+                    PilooToast.info(
+                      context,
+                      '"${officine.name}" archivée.',
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   static const _officines = [
     _Officine(
@@ -98,7 +169,15 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(onAdd: () {/* TODO #71 form création officine */}),
+            _Header(onAdd: () async {
+              final draft = await showOfficineEditSheet(context);
+              if (draft != null && context.mounted) {
+                PilooToast.success(
+                  context,
+                  'Officine "${draft.name}" créée.',
+                );
+              }
+            }),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -110,6 +189,7 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
                     officine: o,
                     active: o.id == _activeId,
                     onTap: () => setState(() => _activeId = o.id),
+                    onLongPress: () => _showActions(context, o),
                   );
                 },
               ),
@@ -175,11 +255,13 @@ class _OfficineCard extends StatelessWidget {
     required this.officine,
     required this.active,
     required this.onTap,
+    required this.onLongPress,
   });
 
   final _Officine officine;
   final bool active;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   ({Color bg, Color fg, String label}) get _roleStyle => switch (officine.role) {
         _OfficineRole.proprietaire => (
@@ -205,6 +287,7 @@ class _OfficineCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
         // Padding compensé : 13 quand bord 2px, 14 quand bord 1px.
         padding: EdgeInsets.all(active ? 13 : 14),
@@ -359,6 +442,53 @@ class _ActiveBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SheetAction extends StatelessWidget {
+  const _SheetAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = destructive ? PilooColors.errorOn : PilooColors.textPrimary;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: fg),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: fg,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
