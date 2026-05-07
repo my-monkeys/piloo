@@ -36,7 +36,7 @@ Un workflow secondaire `ios-pr-check` exécute `flutter analyze` + `flutter test
 ### 2. App Store Connect — création de l'app
 
 - App déclarée dans App Store Connect avec :
-  - **Bundle ID** : `app.piloo.mobile` (doit matcher `BUNDLE_ID` dans `codemagic.yaml` et `apps/mobile/ios/Runner.xcodeproj/project.pbxproj`).
+  - **Bundle ID** : `fr.mymonkey.piloo` (doit matcher `BUNDLE_ID` dans `codemagic.yaml` et `apps/mobile/ios/Runner.xcodeproj/project.pbxproj`).
   - **SKU** : `piloo-mobile-ios`.
   - **Plateforme** : iOS.
 - Le bundle ID doit aussi exister côté **Certificates, Identifiers & Profiles** (auto-créé via App Store Connect API si absent — cf. `--create` dans le script de signing).

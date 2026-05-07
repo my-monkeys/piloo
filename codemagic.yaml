@@ -47,7 +47,7 @@ workflows:
         - ios_signing # CERTIFICATE_PRIVATE_KEY (clé privée du distribution certificate)
 
       vars:
-        BUNDLE_ID: "app.piloo.mobile"
+        BUNDLE_ID: "fr.mymonkey.piloo"
         XCODE_WORKSPACE: "Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
 
@@ -168,7 +168,7 @@ workflows:
       groups:
         - ios_signing # CERTIFICATE_PRIVATE_KEY (cf. ios-testflight pour la rationale)
       vars:
-        BUNDLE_ID: "app.piloo.mobile"
+        BUNDLE_ID: "fr.mymonkey.piloo"
         XCODE_WORKSPACE: "Runner.xcworkspace"
         XCODE_SCHEME: "Runner"
         # Override boot route lu par lib/core/router/router.dart au build.
