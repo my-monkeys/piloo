@@ -1,39 +1,39 @@
-// Écran 04 Scan viewfinder (#82).
-// Maquette : `EkaH0` du fichier docs/design/piloo-mobile.pen.
+// Écran 04 Scan viewfinder (#82) + intégration `mobile_scanner` (#80).
 //
-// Ce ticket couvre l'UI seule. L'intégration `mobile_scanner` +
-// permission caméra runtime arrive avec #80. Pour l'instant le
-// viewfinder est purement décoratif (la zone derrière reste noire).
+// 3 états visuels gérés par `cameraPermissionProvider` :
+//   - granted     → MobileScanner actif derrière le viewfinder, scan
+//                   GS1 DataMatrix puis route vers /boites/add?cip13=…
+//   - denied      → message + bouton "Activer la caméra"
+//   - restricted  → message + bouton "Ouvrir les réglages"
 //
-// Composants :
-//  - Fond `#111111`
-//  - Top bar : close (push pop) + flash toggle (no-op tant que pas
-//    de caméra)
-//  - Eyebrow "SCANNER UNE BOÎTE" Manrope 11 700 1.5LS, blanc 50%
-//  - Viewfinder 260×260 : 4 brackets accent 3px round-cap + scan line
-//    accent 2px qui descend en boucle (1.4s)
-//  - Helper text "Cadre le DataMatrix au dos de la boîte"
-//  - Bouton "Saisie manuelle" en bas — pill blanc15 + bord blanc30
-//    + icône keyboard. Tap → /boites/add (pour l'instant, c'est
-//    placeholder)
+// Le flash bouton est câblé sur `MobileScannerController.toggleTorch()`.
+// Le post-scan (lookup BDPM, branchement nouvelle vs connue) arrive
+// avec #84.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
+import 'package:piloo/features/scan/data/camera_permission.dart';
+import 'package:piloo/shared/gs1/gs1_parser.dart';
 
-class ScanScreen extends StatefulWidget {
+class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
 
   @override
-  State<ScanScreen> createState() => _ScanScreenState();
+  ConsumerState<ScanScreen> createState() => _ScanScreenState();
 }
 
-class _ScanScreenState extends State<ScanScreen>
+class _ScanScreenState extends ConsumerState<ScanScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _scan;
+  late final MobileScannerController _scanner;
   bool _flash = false;
+  bool _scanned = false;
 
   @override
   void initState() {
@@ -42,75 +42,284 @@ class _ScanScreenState extends State<ScanScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     )..repeat();
+    _scanner = MobileScannerController(
+      formats: const [BarcodeFormat.dataMatrix],
+      detectionSpeed: DetectionSpeed.noDuplicates,
+    );
+    // Lance le check permission post-frame pour ne pas builder pendant
+    // un setState.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _ensurePermission();
+    });
+  }
+
+  Future<void> _ensurePermission() async {
+    final ctrl = ref.read(cameraPermissionProvider.notifier);
+    await ctrl.refresh();
+    final status = ref.read(cameraPermissionProvider);
+    if (status == CameraPermissionStatus.unknown ||
+        status == CameraPermissionStatus.denied) {
+      await ctrl.request();
+    }
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_scanned) return; // évite double-fire
+    final raw = capture.barcodes.firstOrNull?.rawValue;
+    if (raw == null || raw.isEmpty) return;
+
+    final parsed = parseGs1(raw);
+    final cip13 = parsed.cip13;
+    if (cip13 == null) {
+      // GS1 illisible ou pas de CIP13 dedans — on laisse l'utilisateur
+      // utiliser la saisie manuelle. Toaster sera ajouté dans #85
+      // (cas d'erreur scan + fallback).
+      return;
+    }
+    _scanned = true;
+    if (!mounted) return;
+    context.pushReplacement('${RoutePath.boiteAdd}?cip13=$cip13');
+  }
+
+  Future<void> _toggleFlash() async {
+    setState(() => _flash = !_flash);
+    await _scanner.toggleTorch();
   }
 
   @override
   void dispose() {
     _scan.dispose();
+    _scanner.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final permission = ref.watch(cameraPermissionProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF111111),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _TopBar(
-              onClose: () => Navigator.of(context).maybePop(),
-              flashOn: _flash,
-              onToggleFlash: () => setState(() => _flash = !_flash),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Caméra en arrière-plan plein écran (couvre toute la
+          // surface ; le viewfinder est posé par-dessus). N'apparaît
+          // qu'avec la permission.
+          if (permission == CameraPermissionStatus.granted)
+            MobileScanner(
+              controller: _scanner,
+              onDetect: _onDetect,
+              fit: BoxFit.cover,
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'SCANNER UNE BOÎTE',
-                      style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.5,
-                        color: Colors.white.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    _Viewfinder(scan: _scan),
-                    const SizedBox(height: 28),
-                    Text(
-                      'Cadre le DataMatrix au dos de la boîte',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+          // Voile sombre quand la permission n'est pas encore donnée :
+          // évite un flash blanc avant l'init caméra.
+          if (permission != CameraPermissionStatus.granted)
+            const ColoredBox(color: Color(0xFF111111)),
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _TopBar(
+                  onClose: () => Navigator.of(context).maybePop(),
+                  flashOn: _flash,
+                  onToggleFlash: _toggleFlash,
+                  flashEnabled:
+                      permission == CameraPermissionStatus.granted,
                 ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-              child: Center(
-                child: _ManualEntryButton(
-                  onTap: () {
-                    // Placeholder — quand le scan sera réel, "saisie
-                    // manuelle" pré-remplit la boîte sans CIP. Pour
-                    // l'instant on push le placeholder de #89.
-                    Navigator.of(context).pushReplacementNamed(
-                      RoutePath.boiteAdd,
-                    );
-                  },
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Center(
+                      child: switch (permission) {
+                        CameraPermissionStatus.granted =>
+                          _ScannerHud(scan: _scan),
+                        CameraPermissionStatus.unknown =>
+                          const _PermissionLoading(),
+                        CameraPermissionStatus.denied => _PermissionDenied(
+                            onRetry: () => ref
+                                .read(cameraPermissionProvider.notifier)
+                                .request(),
+                          ),
+                        CameraPermissionStatus.restricted =>
+                          _PermissionRestricted(
+                            onOpenSettings: () => ref
+                                .read(cameraPermissionProvider.notifier)
+                                .openAppSystemSettings(),
+                          ),
+                      },
+                    ),
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                  child: Center(
+                    child: _ManualEntryButton(
+                      onTap: () =>
+                          context.pushReplacement(RoutePath.boiteAdd),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
+    );
+  }
+}
+
+// --- États permission ---------------------------------------------
+
+class _PermissionLoading extends StatelessWidget {
+  const _PermissionLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 32,
+      height: 32,
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        color: Colors.white,
+      ),
+    );
+  }
+}
+
+class _PermissionDenied extends StatelessWidget {
+  const _PermissionDenied({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PermissionMessage(
+      icon: PhosphorIconsRegular.cameraSlash,
+      title: 'Caméra non autorisée',
+      body:
+          'Piloo a besoin de la caméra pour scanner le DataMatrix au dos des boîtes de médicaments.',
+      actionLabel: 'Activer la caméra',
+      onAction: onRetry,
+    );
+  }
+}
+
+class _PermissionRestricted extends StatelessWidget {
+  const _PermissionRestricted({required this.onOpenSettings});
+
+  final VoidCallback onOpenSettings;
+
+  @override
+  Widget build(BuildContext context) {
+    return _PermissionMessage(
+      icon: PhosphorIconsRegular.gear,
+      title: 'Caméra bloquée',
+      body:
+          'Active la caméra dans les réglages système pour pouvoir scanner les boîtes.',
+      actionLabel: 'Ouvrir les réglages',
+      onAction: onOpenSettings,
+    );
+  }
+}
+
+class _PermissionMessage extends StatelessWidget {
+  const _PermissionMessage({
+    required this.icon,
+    required this.title,
+    required this.body,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String body;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 48, color: Colors.white),
+        const SizedBox(height: 16),
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.fraunces(
+            fontSize: 20,
+            fontWeight: FontWeight.w500,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          body,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            color: Colors.white.withValues(alpha: 0.75),
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 20),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onAction,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: PilooColors.accent,
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              actionLabel,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// --- HUD scanner --------------------------------------------------
+
+class _ScannerHud extends StatelessWidget {
+  const _ScannerHud({required this.scan});
+
+  final Animation<double> scan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(
+          'SCANNER UNE BOÎTE',
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+            color: Colors.white.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: 28),
+        _Viewfinder(scan: scan),
+        const SizedBox(height: 28),
+        Text(
+          'Cadre le DataMatrix au dos de la boîte',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -120,11 +329,13 @@ class _TopBar extends StatelessWidget {
     required this.onClose,
     required this.flashOn,
     required this.onToggleFlash,
+    required this.flashEnabled,
   });
 
   final VoidCallback onClose;
   final bool flashOn;
   final VoidCallback onToggleFlash;
+  final bool flashEnabled;
 
   @override
   Widget build(BuildContext context) {
@@ -141,8 +352,9 @@ class _TopBar extends StatelessWidget {
             icon: flashOn
                 ? PhosphorIconsFill.lightning
                 : PhosphorIconsRegular.lightning,
-            onTap: onToggleFlash,
+            onTap: flashEnabled ? onToggleFlash : () {},
             highlighted: flashOn,
+            disabled: !flashEnabled,
           ),
         ],
       ),
@@ -155,17 +367,19 @@ class _GlassButton extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.highlighted = false,
+    this.disabled = false,
   });
 
   final IconData icon;
   final VoidCallback onTap;
   final bool highlighted;
+  final bool disabled;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: onTap,
+      onTap: disabled ? null : onTap,
       child: Container(
         width: 40,
         height: 40,
@@ -173,10 +387,14 @@ class _GlassButton extends StatelessWidget {
           shape: BoxShape.circle,
           color: highlighted
               ? PilooColors.accent
-              : Colors.white.withValues(alpha: 0.12),
+              : Colors.white.withValues(alpha: disabled ? 0.04 : 0.12),
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 20, color: Colors.white),
+        child: Icon(
+          icon,
+          size: 20,
+          color: Colors.white.withValues(alpha: disabled ? 0.4 : 1),
+        ),
       ),
     );
   }
@@ -197,7 +415,6 @@ class _Viewfinder extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // 4 brackets aux coins.
           const Positioned(
             top: 0,
             left: 0,
@@ -218,11 +435,9 @@ class _Viewfinder extends StatelessWidget {
             right: 0,
             child: _Bracket(corner: _Corner.bottomRight),
           ),
-          // Scan line accent qui descend en boucle.
           AnimatedBuilder(
             animation: scan,
             builder: (_, _) {
-              // Va de y=8 (juste sous le bracket haut) à y=_size-10
               final y = 8 + (_size - 18) * scan.value;
               return Positioned(
                 top: y,
