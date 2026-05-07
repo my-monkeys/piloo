@@ -29,6 +29,7 @@ import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
+import 'package:piloo/features/ordonnances/presentation/ordonnance_create_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnances_list_screen.dart';
 import 'package:piloo/features/partages/presentation/invitation_accept_screen.dart';
 import 'package:piloo/features/partages/presentation/invite_screen.dart';
@@ -221,8 +222,7 @@ GoRouter buildRouter() {
       GoRoute(
         path: RoutePath.ordonnanceCreate,
         name: RouteName.ordonnanceCreate,
-        builder: (_, _) =>
-            PlaceholderScreen(title: 'Nouvelle ordonnance', subtitle: 'Saisie'),
+        builder: (_, _) => const OrdonnanceCreateScreen(),
       ),
       GoRoute(
         path: RoutePath.ordonnanceOcr,
