@@ -18,8 +18,10 @@
 #   - ios-pr-check         : `flutter analyze` + `flutter test` sur PR (pas de signing).
 #   - android-release      : build AAB + APK signés, Play Console internal sur tag `v*`
 #                            (exclu pour les tags `v*-demo`).
-#   - android-demo-release : mirroir Android d'ios-demo-testflight, build AAB
-#                            signé qui boote sur `/_dev`. Déclenché par tag `v*-demo`.
+#
+# NB : pour les builds Android demo (boot sur /_dev) on n'utilise PAS Codemagic
+# mais GitHub Actions (`.github/workflows/android-demo-release.yml`) qui publie
+# l'APK signé directement sur GitHub Releases — pas besoin de Play Console.
 
 workflows:
   ios-testflight:
@@ -375,92 +377,8 @@ workflows:
         submit_as_draft: true
         in_app_update_priority: 0
 
-  android-demo-release:
-    # Mirroir Android du workflow ios-demo-testflight : build AAB signé qui
-    # boote sur /_dev (DevHomeScreen). Distribué sur le track "internal"
-    # de la Play Console — équivalent du beta group "Piloo Demos" iOS.
-    # Déclenché par tag `v*-demo`.
-    name: Android — Demo Navigator (boot sur /_dev)
-    instance_type: mac_mini_m1
-    max_build_duration: 60
-    environment:
-      flutter: stable
-      groups:
-        - android_keystore
-        - google_play
-      vars:
-        PACKAGE_NAME: "fr.mymonkey.piloo"
-        PILOO_BOOT_ROUTE: "/_dev"
-    triggering:
-      events:
-        - tag
-      tag_patterns:
-        - pattern: "v*-demo"
-          include: true
-    cache:
-      cache_paths:
-        - $HOME/.gradle/caches
-        - $HOME/.pub-cache
-    scripts:
-      - name: Vérifier le format du tag (vX.Y.Z-demo)
-        script: |
-          set -euo pipefail
-          if [[ ! "${CM_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-demo$ ]]; then
-            echo "❌ Tag invalide : '${CM_TAG}' (attendu vX.Y.Z-demo)" >&2
-            exit 1
-          fi
-          echo "✅ Tag demo : ${CM_TAG}"
-      - name: Decode keystore from CI secret
-        script: |
-          set -eu
-          mkdir -p apps/mobile/android/app
-          echo "$KEYSTORE_FILE" | base64 --decode > apps/mobile/android/app/keystore.jks
-          test -s apps/mobile/android/app/keystore.jks
-      - name: Write key.properties
-        script: |
-          set -eu
-          cat <<EOF > apps/mobile/android/key.properties
-          storePassword=$KEYSTORE_PASSWORD
-          keyPassword=$KEY_PASSWORD
-          keyAlias=$KEY_ALIAS
-          storeFile=keystore.jks
-          EOF
-      - name: Dériver la version Flutter depuis le tag (sans suffixe -demo)
-        script: |
-          set -eu
-          TAG_NO_PREFIX="${CM_TAG#v}"
-          VERSION="${TAG_NO_PREFIX%-demo}"
-          BUILD_NUMBER="$(git rev-list --count HEAD)"
-          cd apps/mobile
-          sed -i.bak -E "s/^version: .*/version: ${VERSION}+${BUILD_NUMBER}/" pubspec.yaml
-          rm -f pubspec.yaml.bak
-          grep "^version: " pubspec.yaml
-      - name: Resolve Flutter packages
-        working_directory: apps/mobile
-        script: flutter pub get
-      - name: Static analysis
-        working_directory: apps/mobile
-        script: flutter analyze --no-fatal-infos
-      - name: Unit tests
-        working_directory: apps/mobile
-        script: flutter test
-      - name: Build signed AAB (release, boot sur /_dev)
-        working_directory: apps/mobile
-        script: |
-          flutter build appbundle --release \
-            --dart-define=PILOO_BOOT_ROUTE=${PILOO_BOOT_ROUTE}
-      - name: Build signed APK (release, boot sur /_dev)
-        working_directory: apps/mobile
-        script: |
-          flutter build apk --release \
-            --dart-define=PILOO_BOOT_ROUTE=${PILOO_BOOT_ROUTE}
-    artifacts:
-      - apps/mobile/build/**/outputs/**/*.aab
-      - apps/mobile/build/**/outputs/**/*.apk
-      - apps/mobile/build/**/outputs/**/mapping.txt
-    publishing:
-      google_play:
-        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
-        track: internal
-        submit_as_draft: false
-        in_app_update_priority: 0
+  # NB : pas d'`android-demo-release` ici. Le build APK demo Android est
+  # géré par GitHub Actions (`.github/workflows/android-demo-release.yml`)
+  # qui publie l'APK signé directement sur GitHub Releases. Permet de
+  # bypass Play Console / Service Account et de partager le lien APK
+  # avec les testeurs Android sans signup Google Play.
