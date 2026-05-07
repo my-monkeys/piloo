@@ -29,6 +29,7 @@ import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
+import 'package:piloo/features/partages/presentation/invite_screen.dart';
 import 'package:piloo/features/partages/presentation/partages_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
@@ -257,6 +258,13 @@ GoRouter buildRouter() {
         path: '/officines/:officineId/partages',
         name: RouteName.partages,
         builder: (_, state) => PartagesScreen(
+          officineId: state.pathParameters['officineId'],
+        ),
+      ),
+      GoRoute(
+        path: '/officines/:officineId/invite',
+        name: RouteName.invite,
+        builder: (_, state) => InviteScreen(
           officineId: state.pathParameters['officineId'],
         ),
       ),
