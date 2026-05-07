@@ -616,6 +616,75 @@ components:
         message:
           type: string
           maxLength: 500
+    NotifPreferencesResponse:
+      type: object
+      properties:
+        rappel_prise:
+          $ref: "#/components/schemas/NotifChannels"
+        peremption:
+          $ref: "#/components/schemas/NotifChannels"
+        stock_bas:
+          $ref: "#/components/schemas/NotifChannels"
+        partage:
+          $ref: "#/components/schemas/NotifChannels"
+        manque_signale:
+          $ref: "#/components/schemas/NotifChannels"
+      required:
+        - rappel_prise
+        - peremption
+        - stock_bas
+        - partage
+        - manque_signale
+    NotifChannels:
+      type: object
+      properties:
+        push:
+          type: boolean
+        email:
+          type: boolean
+        sms:
+          type: boolean
+      required:
+        - push
+        - email
+        - sms
+    NotifPrefsApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    UpdateNotifPreferencesInput:
+      type: object
+      properties:
+        rappel_prise:
+          $ref: "#/components/schemas/NotifChannels"
+        peremption:
+          $ref: "#/components/schemas/NotifChannels"
+        stock_bas:
+          $ref: "#/components/schemas/NotifChannels"
+        partage:
+          $ref: "#/components/schemas/NotifChannels"
+        manque_signale:
+          $ref: "#/components/schemas/NotifChannels"
+      required:
+        - rappel_prise
+        - peremption
+        - stock_bas
+        - partage
+        - manque_signale
   parameters: {}
 paths:
   /health:
@@ -1198,4 +1267,52 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ManqueApiError"
+  /v1/me/preferences/notifications:
+    get:
+      summary: Préférences notifications de l'utilisateur courant
+      description: Renvoie les préférences persistées, fusionnées avec les défauts produit pour les types absents.
+      tags:
+        - preferences
+      responses:
+        "200":
+          description: Préférences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifPreferencesResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifPrefsApiError"
+    put:
+      summary: Met à jour les préférences notifications
+      description: Remplacement complet (PUT). Le client envoie les 5 types × 3 canaux.
+      tags:
+        - preferences
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNotifPreferencesInput"
+      responses:
+        "200":
+          description: Préférences mises à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifPreferencesResponse"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifPrefsApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotifPrefsApiError"
 webhooks: {}
