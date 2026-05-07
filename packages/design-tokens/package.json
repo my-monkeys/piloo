@@ -1,0 +1,14 @@
+{
+  "name": "@piloo/design-tokens",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Tokens de design partagés (couleurs, espacement, radius, typo) — source de vérité JSON, génère Dart + CSS",
+  "type": "module",
+  "main": "./tokens.json",
+  "exports": {
+    ".": "./tokens.json"
+  },
+  "scripts": {
+    "tokens:build": "node scripts/generate.mjs"
+  }
+}
