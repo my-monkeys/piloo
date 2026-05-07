@@ -4,11 +4,15 @@
 # Doc opérateur : docs/deploy-mobile-ios.md (certs, secrets, runbook).
 #
 # Workflows définis :
-#   - ios-testflight : build IPA + upload TestFlight, déclenché par tag `v*`.
-#   - ios-pr-check   : `flutter analyze` + `flutter test` sur PR (rapide, pas de signing).
-#   - android-release : build AAB + APK signés, upload Play Console internal track sur tag `v*`.
+#   - ios-testflight       : build IPA + upload TestFlight, déclenché par tag `v*`
+#                            (et exclu pour les tags `v*-demo`).
+#   - ios-demo-testflight  : build "navigateur d'écrans" qui boote directement
+#                            sur la route `/_dev` (DevHomeScreen). Déclenché
+#                            par tag `v*-demo`. Pour faire tourner sur device
+#                            sans backend ni session, utile à la review interne.
+#   - ios-pr-check         : `flutter analyze` + `flutter test` sur PR (pas de signing).
+#   - android-release      : build AAB + APK signés, Play Console internal sur tag `v*`.
 #
-
 
 workflows:
   ios-testflight:
@@ -21,8 +25,11 @@ workflows:
       events:
         - tag
       tag_patterns:
+        # Tags `v*` SAUF `v*-demo` (réservés au workflow demo, voir plus bas).
         - pattern: "v*"
           include: true
+        - pattern: "v*-demo"
+          include: false
 
     environment:
       flutter: stable
@@ -124,6 +131,117 @@ workflows:
           success: true
           failure: true
 
+  ios-demo-testflight:
+    # Variante du workflow ios-testflight qui produit un build "demo
+    # navigator" : l'app boote directement sur l'écran /_dev (liste
+    # cliquable des 32 écrans), permettant de présenter le produit
+    # sur device sans backend/session/onboarding.
+    #
+    # Distribué sur le même TestFlight (groupe "Piloo Demos") — Apple
+    # incrémente le build_number, donc on peut alterner builds prod
+    # et builds demo sans collision.
+    name: iOS — Demo Navigator (boot sur /_dev)
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    triggering:
+      events:
+        - tag
+      tag_patterns:
+        - pattern: "v*-demo"
+          include: true
+
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      groups:
+        - app_store_credentials
+        - ios_signing
+      vars:
+        BUNDLE_ID: "app.piloo.mobile"
+        XCODE_WORKSPACE: "Runner.xcworkspace"
+        XCODE_SCHEME: "Runner"
+        # Override boot route lu par lib/core/router/router.dart au build.
+        # Le DevHomeScreen liste tous les écrans M1, idéal pour démo.
+        PILOO_BOOT_ROUTE: "/_dev"
+
+    integrations:
+      app_store_connect: piloo_appstore_api_key
+
+    scripts:
+      - name: Vérifier le format du tag (vX.Y.Z-demo)
+        script: |
+          set -euo pipefail
+          if [[ ! "${CM_TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-demo$ ]]; then
+            echo "❌ Tag invalide : '${CM_TAG}' (attendu vX.Y.Z-demo)" >&2
+            exit 1
+          fi
+          echo "✅ Tag demo : ${CM_TAG}"
+
+      - name: Dériver la version Flutter depuis le tag (sans suffixe -demo)
+        script: |
+          set -euo pipefail
+          TAG_NO_PREFIX="${CM_TAG#v}"
+          VERSION_NAME="${TAG_NO_PREFIX%-demo}"
+          BUILD_NUMBER="${BUILD_NUMBER:-${PROJECT_BUILD_NUMBER:-1}}"
+          echo "VERSION_NAME=${VERSION_NAME}"
+          echo "BUILD_NUMBER=${BUILD_NUMBER}"
+          sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
+          grep "^version:" pubspec.yaml
+
+      - name: Installer les dépendances Flutter
+        script: flutter pub get
+
+      - name: Générer le code (best-effort)
+        script: |
+          if grep -q "build_runner" pubspec.yaml; then
+            dart run build_runner build --delete-conflicting-outputs
+          else
+            echo "build_runner non configuré — skip"
+          fi
+
+      - name: Analyse statique
+        script: flutter analyze
+
+      - name: Tests unitaires
+        script: flutter test
+
+      - name: Provisionner le certificat de distribution iOS
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "${BUNDLE_ID}" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Build IPA (release, signé, boot sur /_dev)
+        script: |
+          flutter build ipa --release \
+            --dart-define=PILOO_BOOT_ROUTE=${PILOO_BOOT_ROUTE} \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Groupe distinct des builds prod pour éviter d'envoyer un
+        # build demo aux testeurs habituels par erreur.
+        beta_groups:
+          - "Piloo Demos"
+
+      email:
+        recipients:
+          - dev@piloo.app
+        notify:
+          success: true
+          failure: true
+
   ios-pr-check:
     name: iOS — PR check (analyze + test)
     instance_type: mac_mini_m2
@@ -164,12 +282,12 @@ workflows:
         # GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (JSON contents)
         - google_play
       vars:
-        PACKAGE_NAME: 'fr.mymonkey.piloo'
+        PACKAGE_NAME: "fr.mymonkey.piloo"
     triggering:
       events:
         - tag
       tag_patterns:
-        - pattern: 'v*'
+        - pattern: "v*"
           include: true
     cache:
       cache_paths:
