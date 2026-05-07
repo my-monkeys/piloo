@@ -267,6 +267,130 @@ describe('POST /api/v1/sync/push', () => {
     expect(row?.unitesRestantes).toBe(16);
   });
 
+  it('LWW 2 devices : device-1 push update récent, device-2 push update plus ancien → conflict', async () => {
+    // Scénario : un utilisateur a 2 devices. Device-1 modifie une
+    // boîte en ligne ; device-2 (offline depuis hier) modifie la même
+    // boîte avec une valeur différente puis se reconnecte. La règle
+    // LWW + soft delete dit : la version la plus récente l'emporte,
+    // device-2 reçoit `conflict` avec le `server_version` à mettre
+    // à jour localement.
+    const me = await signup('me@piloo.fr');
+    const officineId = await makeOfficine(me.userId);
+    await grant(me.userId, officineId, 'owner');
+
+    const boiteId = uuid();
+    await env.handle.db.insert(boites).values({
+      id: boiteId,
+      officineId,
+      cip13: '3400930000019',
+      peremption: '2027-01-01',
+      ajouteePar: me.userId,
+      unitesRestantes: 16,
+    });
+
+    const { push } = await importHandlers();
+
+    // Device-1 push une mise à jour récente : applied (avance updated_at
+    // sur l'horloge serveur via `new Date()`).
+    const tDevice1 = Date.now();
+    const res1 = await push.POST(
+      pushReq(me.cookie, {
+        client_id: 'device-1',
+        operations: [
+          {
+            id: uuid(),
+            type: 'update_boite',
+            entity_type: 'boite',
+            entity_id: boiteId,
+            payload: { unites_restantes: 8 },
+            timestamp_local: tDevice1,
+          },
+        ],
+      }),
+    );
+    expect(res1.status).toBe(200);
+    const body1 = (await res1.json()) as { acks: { status: string }[] };
+    expect(body1.acks[0]?.status).toBe('applied');
+
+    // Device-2 (offline depuis la veille) push une op avec un
+    // timestamp_local antérieur à `now` (donc antérieur à l'updated_at
+    // serveur fixé par device-1). LWW → conflict.
+    const tDevice2 = Date.now() - 24 * 60 * 60 * 1000;
+    const res2 = await push.POST(
+      pushReq(me.cookie, {
+        client_id: 'device-2',
+        operations: [
+          {
+            id: uuid(),
+            type: 'update_boite',
+            entity_type: 'boite',
+            entity_id: boiteId,
+            payload: { unites_restantes: 0 },
+            timestamp_local: tDevice2,
+          },
+        ],
+      }),
+    );
+    expect(res2.status).toBe(200);
+    const body2 = (await res2.json()) as {
+      acks: { status: string; server_version?: { unites_restantes: number } }[];
+    };
+    expect(body2.acks[0]?.status).toBe('conflict');
+    // Le server_version contient la valeur écrite par device-1 que le
+    // device-2 doit refléter localement.
+    expect(body2.acks[0]?.server_version?.unites_restantes).toBe(8);
+
+    // La DB n'a PAS été modifiée par device-2.
+    const [row] = await env.handle.db.select().from(boites).where(eq(boites.id, boiteId));
+    expect(row?.unitesRestantes).toBe(8);
+  });
+
+  it('soft_delete : la ligne est conservée en DB avec deletedAt non null (pas de DELETE physique)', async () => {
+    const me = await signup('me@piloo.fr');
+    const officineId = await makeOfficine(me.userId);
+    await grant(me.userId, officineId, 'owner');
+
+    const boiteId = uuid();
+    await env.handle.db.insert(boites).values({
+      id: boiteId,
+      officineId,
+      cip13: '3400930000019',
+      peremption: '2027-01-01',
+      ajouteePar: me.userId,
+      unitesRestantes: 16,
+    });
+
+    const { push } = await importHandlers();
+    const res = await push.POST(
+      pushReq(me.cookie, {
+        client_id: 'device-1',
+        operations: [
+          {
+            id: uuid(),
+            type: 'soft_delete_boite',
+            entity_type: 'boite',
+            entity_id: boiteId,
+            payload: {},
+            timestamp_local: Date.now() + 5000,
+          },
+        ],
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    // La ligne existe encore en base avec deletedAt set.
+    const rows = await env.handle.db.select().from(boites).where(eq(boites.id, boiteId));
+    expect(rows.length).toBe(1);
+    expect(rows[0]?.deletedAt).not.toBeNull();
+    // Le sync_operations_log a bien archivé l'op (audit trail).
+    const logs = await env.handle.db
+      .select()
+      .from(syncOperationsLog)
+      .where(eq(syncOperationsLog.entityId, boiteId));
+    expect(logs.length).toBe(1);
+    expect(logs[0]?.status).toBe('applied');
+  });
+
   it('AuthZ : viewer rejected, stranger forbidden', async () => {
     const owner = await signup('owner@piloo.fr');
     const viewer = await signup('viewer@piloo.fr');
