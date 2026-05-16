@@ -1,0 +1,27 @@
+/* Stylesheet root de l'app web Piloo (#56).
+ *
+ * Pipeline :
+ *   1. Tokens Piloo (`--piloo-color-*`) importés au layout via
+ *      `styles/tokens.gen.css` — source de vérité pour les couleurs.
+ *   2. Tailwind directives below génèrent les utilities.
+ *   3. shadcn variables (`--background`, `--primary`, etc.) ne sont PAS
+ *      définies séparément : `tailwind.config.ts` mappe directement les
+ *      noms sémantiques shadcn sur les vars Piloo. Pas de duplication.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Body resets — Tailwind preflight gère le reste. */
+@layer base {
+  body {
+    background-color: var(--piloo-color-background);
+    color: var(--piloo-color-text-primary);
+    font-family:
+      'Manrope',
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
