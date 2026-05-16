@@ -894,6 +894,84 @@ components:
             - message
       required:
         - error
+    ListDevicesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Device"
+      required:
+        - items
+    Device:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        platform:
+          type: string
+          enum:
+            - ios
+            - android
+            - web
+        app_version:
+          type:
+            - string
+            - "null"
+        created_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - platform
+        - app_version
+        - created_at
+        - last_seen_at
+    DevicesApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    RegisterDeviceInput:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 16
+          maxLength: 4096
+        platform:
+          type: string
+          enum:
+            - ios
+            - android
+            - web
+        app_version:
+          type: string
+          maxLength: 64
+      required:
+        - token
+        - platform
   parameters: {}
 paths:
   /health:
@@ -1657,4 +1735,85 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PrisesApiError"
+  /v1/devices:
+    get:
+      summary: Liste les devices enregistrés de l'utilisateur courant
+      tags:
+        - devices
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListDevicesResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesApiError"
+    post:
+      summary: Enregistre ou rafraîchit un device pour les push notifications
+      description: "Idempotent sur le couple (user, token) : si le token existe déjà pour l'utilisateur, `last_seen_at` est mis à jour ; la même row est renvoyée. Sinon, une nouvelle row est créée."
+      tags:
+        - devices
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterDeviceInput"
+      responses:
+        "200":
+          description: Device mis à jour (existait déjà)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "201":
+          description: Device créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesApiError"
+  /v1/devices/{id}:
+    delete:
+      summary: Supprime (soft-delete) un device — typiquement à la déconnexion
+      description: Réservé au user propriétaire du device. Le device n'est pas supprimé physiquement (soft-delete) pour pouvoir tracer les invalidations futures côté FCM.
+      tags:
+        - devices
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimé
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesApiError"
+        "404":
+          description: Device inconnu ou pas au user courant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DevicesApiError"
 webhooks: {}

@@ -10,3 +10,4 @@ export * from './manque.ts';
 export * from './notif-prefs.ts';
 export * from './bdpm.ts';
 export * from './prises.ts';
+export * from './devices.ts';
