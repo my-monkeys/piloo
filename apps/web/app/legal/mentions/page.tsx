@@ -12,7 +12,7 @@ const VERSION = '2026-05-01';
 export default function MentionsPage() {
   return (
     <article>
-      <p style={{ fontSize: 12, color: '#666' }}>Version : {VERSION}</p>
+      <p className="legal-version">Version : {VERSION}</p>
       <h1>Mentions légales</h1>
 
       <h2>Éditeur</h2>
