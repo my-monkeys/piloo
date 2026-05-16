@@ -70,8 +70,9 @@ class SocialSignInService {
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
-        // Apple signe l'id_token avec ce nonce hashé — Better Auth attend
-        // le nonce *brut* côté serveur pour vérifier l'égalité après re-hash.
+        // Apple signe l'id_token avec ce nonce hashé. Better Auth compare
+        // par égalité stricte (pas de re-hash côté serveur), donc on
+        // forwarde la valeur hashée — pas le nonce brut.
         nonce: hashedNonce,
       );
       final idToken = credential.identityToken;
@@ -81,7 +82,7 @@ class SocialSignInService {
       return await _authApi.signInSocial(
         provider: 'apple',
         idToken: idToken,
-        nonce: rawNonce,
+        nonce: hashedNonce,
       );
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) {

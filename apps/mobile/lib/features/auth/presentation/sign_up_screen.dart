@@ -17,6 +17,7 @@
 // défaulter à 'particulier'.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -81,10 +82,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       if (!mounted) return;
       // Atterrissage sur l'écran principal après inscription.
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        RoutePath.today,
-        (_) => false,
-      );
+      context.go(RoutePath.today);
     } on AuthApiException catch (e) {
       if (mounted) PilooToast.error(context, e.message);
     } finally {
@@ -112,7 +110,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       final session = await doSignIn();
       await ref.read(sessionProvider.notifier).signIn(session);
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil(RoutePath.today, (_) => false);
+      context.go(RoutePath.today);
     } on SocialSignInCancelled {
       // Annulation utilisateur : silencieux.
     } on SocialSignInFailure catch (e) {
@@ -353,7 +351,7 @@ class _BottomSignInLink extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(RoutePath.signIn),
+            onTap: () => context.push(RoutePath.signIn),
             child: Text(
               'Se connecter',
               style: GoogleFonts.manrope(

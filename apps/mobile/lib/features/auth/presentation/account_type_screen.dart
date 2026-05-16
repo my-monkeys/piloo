@@ -11,6 +11,7 @@
 //  - Bouton "Continuer" en bas, qui pousse `/sign-up` avec
 //    `extra: typeCompte` (le SignUpScreen lit déjà state.extra).
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -35,7 +36,7 @@ class _AccountTypeScreenState extends State<AccountTypeScreen> {
   void _select(String value) => setState(() => _selected = value);
 
   void _onContinue() {
-    Navigator.of(context).pushNamed(RoutePath.signUp, arguments: _selected);
+    context.push(RoutePath.signUp, extra: _selected);
   }
 
   @override

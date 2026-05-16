@@ -21,6 +21,7 @@
 //  - "Suivant" en bas (primaire) : avance d'une slide. Sur la dernière
 //    slide, label devient "Commencer" et push /account-type.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -80,7 +81,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool get _isLast => _currentIndex >= _slides.length - 1;
 
   void _onSkip() {
-    Navigator.of(context).pushReplacementNamed(RoutePath.accountType);
+    context.push(RoutePath.accountType);
   }
 
   void _onNext() {

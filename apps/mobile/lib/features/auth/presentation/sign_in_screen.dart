@@ -12,6 +12,7 @@
 //  - Lien bas "Pas encore de compte ? S'inscrire"
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -63,10 +64,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       await ref.read(sessionProvider.notifier).signIn(session);
 
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        RoutePath.today,
-        (_) => false,
-      );
+      context.go(RoutePath.today);
     } on AuthApiException catch (e) {
       if (mounted) PilooToast.error(context, e.message);
     } finally {
@@ -80,7 +78,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       final session = await doSignIn();
       await ref.read(sessionProvider.notifier).signIn(session);
       if (!mounted) return;
-      Navigator.of(context).pushNamedAndRemoveUntil(RoutePath.today, (_) => false);
+      context.go(RoutePath.today);
     } on SocialSignInCancelled {
       // Annulation par l'utilisateur : aucun toast — comportement attendu.
     } on SocialSignInFailure catch (e) {
@@ -243,7 +241,7 @@ class _ForgotPasswordRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         GestureDetector(
-          onTap: () => Navigator.of(context).pushNamed(RoutePath.forgotPassword),
+          onTap: () => context.push(RoutePath.forgotPassword),
           child: Text(
             'Mot de passe oublié ?',
             style: GoogleFonts.manrope(
@@ -273,7 +271,7 @@ class _BottomSignUpLink extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(RoutePath.signUp),
+            onTap: () => context.push(RoutePath.signUp),
             child: Text(
               "S'inscrire",
               style: GoogleFonts.manrope(

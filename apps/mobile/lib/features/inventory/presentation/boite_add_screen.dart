@@ -12,8 +12,11 @@
 // dépend maintenant des providers Riverpod.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+
+import 'package:piloo/core/router/routes.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
@@ -132,7 +135,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(onBack: () => Navigator.of(context).maybePop()),
+            _Header(onBack: () => context.canPop() ? context.pop() : context.go(RoutePath.today)),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
@@ -212,7 +215,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                     child: PilooButton(
                       label: 'Annuler',
                       variant: PilooButtonVariant.outline,
-                      onPressed: () => Navigator.of(context).maybePop(),
+                      onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -223,7 +226,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                       // No-op tant que la persistance Drift n'est pas
                       // câblée (#90 / #91). Le tap fera un push vers
                       // /today.
-                      onPressed: () => Navigator.of(context).maybePop(),
+                      onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
                     ),
                   ),
                 ],

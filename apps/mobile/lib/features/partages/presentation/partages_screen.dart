@@ -11,6 +11,7 @@
 // L'owner ne peut pas se révoquer (pas de dropdown sur son badge).
 // Pour la review on accepte juste les changements de rôle en local.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -124,7 +125,7 @@ class _PartagesScreenState extends State<PartagesScreen> {
               child: PilooButton(
                 label: '+ Inviter quelqu\'un',
                 variant: PilooButtonVariant.primary,
-                onPressed: () => Navigator.of(context).pushNamed(
+                onPressed: () => context.push(
                   RoutePath.invite(widget.officineId ?? 'maison'),
                 ),
               ),

@@ -158,7 +158,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _TopBar(
-                  onClose: () => Navigator.of(context).maybePop(),
+                  onClose: () => context.canPop()
+                      ? context.pop()
+                      : context.go(RoutePath.today),
                   flashOn: _flash,
                   onToggleFlash: _toggleFlash,
                   flashEnabled:

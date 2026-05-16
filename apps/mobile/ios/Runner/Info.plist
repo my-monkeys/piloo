@@ -45,6 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- Google Sign-In iOS (#65) — le SDK natif Google lit GIDClientID
+	     directement dans Info.plist au moment de l'init. C'est le Client ID
+	     iOS (PAS le Web client utilisé côté serveur). -->
+	<key>GIDClientID</key>
+	<string>325543119788-0r54du6ksvllbub2adruo63goqc6snus.apps.googleusercontent.com</string>
 	<!-- URL Schemes : nécessaire pour Google Sign-In (#65). Le scheme est
 	     le "reverse client ID" du Client iOS dans Google Cloud Console
 	     (projet `piloo-495714`, client `Piloo iOS`). -->
@@ -70,5 +75,15 @@
 	     Évite la question "Missing Compliance" à chaque build TestFlight. -->
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<!-- DEV ONLY : autorise HTTP vers IPs locales (192.168.x, etc.) pour
+	     smoke-tester l'API Next.js (localhost ou LAN IP) sans HTTPS.
+	     ATS bloque HTTP par défaut ; cette clé est plus chirurgicale que
+	     NSAllowsArbitraryLoads (n'affecte QUE le réseau local).
+	     À retirer avant soumission App Store. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

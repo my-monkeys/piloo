@@ -136,7 +136,7 @@ interface Action {
 }
 
 async function itemOfficineHandler() {
-  return import('@/app/api/v1/officines/[id]/route');
+  return import('@/app/api/v1/officines/[officineId]/route');
 }
 
 async function listBoitesHandler() {
@@ -158,7 +158,7 @@ const ACTIONS: readonly Action[] = [
         new Request(`${BASE_URL}/api/v1/officines/${fx.officineId}`, {
           headers: { cookie: u.cookie },
         }),
-        { params: Promise.resolve({ id: fx.officineId }) },
+        { params: Promise.resolve({ officineId: fx.officineId }) },
       );
     },
   },
@@ -174,7 +174,7 @@ const ACTIONS: readonly Action[] = [
           headers: { cookie: u.cookie, 'Content-Type': 'application/json' },
           body: JSON.stringify({ nom: 'Renommée' }),
         }),
-        { params: Promise.resolve({ id: fx.officineId }) },
+        { params: Promise.resolve({ officineId: fx.officineId }) },
       );
     },
   },
@@ -189,7 +189,7 @@ const ACTIONS: readonly Action[] = [
           method: 'DELETE',
           headers: { cookie: u.cookie },
         }),
-        { params: Promise.resolve({ id: fx.officineId }) },
+        { params: Promise.resolve({ officineId: fx.officineId }) },
       );
     },
   },

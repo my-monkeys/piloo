@@ -11,7 +11,7 @@
 // frais — Vercel rebuild bien plus souvent.
 import { readFile } from 'node:fs/promises';
 
-import { importPKCS8, SignJWT } from 'jose';
+import { createRemoteJWKSet, decodeProtectedHeader, importPKCS8, jwtVerify, SignJWT } from 'jose';
 
 // Champs additionnels requis par notre table `users` (cf. additionalFields
 // dans server.ts) : nom, prenom, typeCompte. Apple ne fournit pas le nom
@@ -36,6 +36,7 @@ export interface GoogleProviderConfig {
   clientId: string;
   clientSecret: string;
   mapProfileToUser: (profile: GoogleProfile) => SocialProfileMapping;
+  verifyIdToken: (token: string) => Promise<boolean>;
 }
 
 // Champs lus dans l'id_token décodé par Better Auth.
@@ -103,7 +104,32 @@ export function loadGoogleConfig(): GoogleProviderConfig | undefined {
   if (!clientId || !clientSecret) {
     return undefined;
   }
-  return { clientId, clientSecret, mapProfileToUser: mapGoogleProfile };
+  // google_sign_in 7.x sur iOS issue l'id_token pour le client *iOS*
+  // (GIDClientID dans Info.plist), pas pour le client Web même quand
+  // `serverClientId` est passé à initialize() — bug/quirk du plugin.
+  // On accepte donc les deux audiences. Bonus : on remplace la valid'
+  // par défaut de Better Auth (qui ne prend qu'un seul `clientId`).
+  const acceptedAudiences = [clientId];
+  const iosClientId = process.env['GOOGLE_IOS_CLIENT_ID'];
+  if (iosClientId) acceptedAudiences.push(iosClientId);
+
+  const verifyIdToken = async (token: string): Promise<boolean> => {
+    try {
+      const { kid, alg } = decodeProtectedHeader(token);
+      if (!kid || !alg) return false;
+      const jwks = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+      await jwtVerify(token, jwks, {
+        algorithms: [alg],
+        issuer: ['https://accounts.google.com', 'accounts.google.com'],
+        audience: acceptedAudiences,
+        maxTokenAge: '1h',
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+  return { clientId, clientSecret, mapProfileToUser: mapGoogleProfile, verifyIdToken };
 }
 
 async function readApplePrivateKey(): Promise<string | undefined> {

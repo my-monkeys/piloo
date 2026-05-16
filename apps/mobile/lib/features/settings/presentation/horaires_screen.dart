@@ -6,9 +6,11 @@
 // que changer les horaires régénère les prises planifiées affectées
 // (logique côté worker sync, pas dans cet écran).
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -45,7 +47,9 @@ class _HorairesScreenState extends State<HorairesScreen> {
   void _save() {
     PilooToast.success(context, 'Horaires mis à jour.');
     Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted) {
+        context.canPop() ? context.pop() : context.go(RoutePath.more);
+      }
     });
   }
 
