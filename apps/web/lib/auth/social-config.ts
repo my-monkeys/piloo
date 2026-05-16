@@ -13,15 +13,59 @@ import { readFile } from 'node:fs/promises';
 
 import { importPKCS8, SignJWT } from 'jose';
 
+// Champs additionnels requis par notre table `users` (cf. additionalFields
+// dans server.ts) : nom, prenom, typeCompte. Apple ne fournit pas le nom
+// dans son id_token (seulement à la 1ère connexion, via la "credential"
+// retournée côté natif iOS), donc on accepte de stocker des valeurs vides
+// au signup social — un écran de complétion de profil (#TODO) demandera
+// ces champs ensuite.
+interface SocialProfileMapping {
+  nom: string;
+  prenom: string;
+  typeCompte: 'particulier';
+}
+
 export interface AppleProviderConfig {
   clientId: string;
   clientSecret: string;
   appBundleIdentifier: string;
+  mapProfileToUser: (profile: AppleProfile) => SocialProfileMapping;
 }
 
 export interface GoogleProviderConfig {
   clientId: string;
   clientSecret: string;
+  mapProfileToUser: (profile: GoogleProfile) => SocialProfileMapping;
+}
+
+// Champs lus dans l'id_token décodé par Better Auth.
+interface AppleProfile {
+  email?: string;
+  // Apple ne renvoie PAS name/given_name dans le JWT.
+  name?: string;
+}
+
+interface GoogleProfile {
+  email?: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+}
+
+function mapAppleProfile(profile: AppleProfile): SocialProfileMapping {
+  return {
+    nom: '',
+    prenom: profile.name ?? '',
+    typeCompte: 'particulier',
+  };
+}
+
+function mapGoogleProfile(profile: GoogleProfile): SocialProfileMapping {
+  return {
+    nom: profile.family_name ?? '',
+    prenom: profile.given_name ?? '',
+    typeCompte: 'particulier',
+  };
 }
 
 // 6 mois — durée max acceptée par Apple pour `client_secret`.
@@ -45,7 +89,12 @@ export async function loadAppleConfig(): Promise<AppleProviderConfig | undefined
     privateKey,
   });
 
-  return { clientId, clientSecret, appBundleIdentifier: bundleId };
+  return {
+    clientId,
+    clientSecret,
+    appBundleIdentifier: bundleId,
+    mapProfileToUser: mapAppleProfile,
+  };
 }
 
 export function loadGoogleConfig(): GoogleProviderConfig | undefined {
@@ -54,7 +103,7 @@ export function loadGoogleConfig(): GoogleProviderConfig | undefined {
   if (!clientId || !clientSecret) {
     return undefined;
   }
-  return { clientId, clientSecret };
+  return { clientId, clientSecret, mapProfileToUser: mapGoogleProfile };
 }
 
 async function readApplePrivateKey(): Promise<string | undefined> {

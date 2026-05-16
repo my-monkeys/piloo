@@ -19,6 +19,8 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/auth/data/auth_api.dart';
 import 'package:piloo/features/auth/data/auth_api_provider.dart';
+import 'package:piloo/features/auth/data/session.dart';
+import 'package:piloo/features/auth/data/social_sign_in_service.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
@@ -72,6 +74,24 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
   }
 
+  Future<void> _onSocial(Future<Session> Function() doSignIn) async {
+    setState(() => _submitting = true);
+    try {
+      final session = await doSignIn();
+      await ref.read(sessionProvider.notifier).signIn(session);
+      if (!mounted) return;
+      Navigator.of(context).pushNamedAndRemoveUntil(RoutePath.today, (_) => false);
+    } on SocialSignInCancelled {
+      // Annulation par l'utilisateur : aucun toast — comportement attendu.
+    } on SocialSignInFailure catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } on AuthApiException catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   String? _localValidationError() {
     if (!_email.text.contains('@')) return 'Email invalide.';
     if (_password.text.isEmpty) return 'Mot de passe requis.';
@@ -101,13 +121,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     PilooButton(
                       label: 'Continuer avec Apple',
                       variant: PilooButtonVariant.apple,
-                      onPressed: _submitting ? null : () {/* #64 */},
+                      onPressed: _submitting
+                          ? null
+                          : () => _onSocial(
+                                ref.read(socialSignInProvider).signInWithApple,
+                              ),
                     ),
                     const SizedBox(height: 20),
                     PilooButton(
                       label: 'Continuer avec Google',
                       variant: PilooButtonVariant.google,
-                      onPressed: _submitting ? null : () {/* #65 */},
+                      onPressed: _submitting
+                          ? null
+                          : () => _onSocial(
+                                ref.read(socialSignInProvider).signInWithGoogle,
+                              ),
                     ),
                     const SizedBox(height: 20),
                     const _OrDivider(),

@@ -9,6 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo/core/config/api_config.dart';
 
 import 'auth_api.dart';
+import 'social_sign_in_service.dart';
 
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
@@ -24,4 +25,8 @@ final dioProvider = Provider<Dio>((ref) {
 
 final authApiProvider = Provider<AuthApi>((ref) {
   return AuthApi(ref.watch(dioProvider));
+});
+
+final socialSignInProvider = Provider<SocialSignInService>((ref) {
+  return SocialSignInService(ref.watch(authApiProvider));
 });

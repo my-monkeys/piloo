@@ -45,6 +45,20 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- URL Schemes : nécessaire pour Google Sign-In (#65). Le scheme est
+	     le "reverse client ID" du Client iOS dans Google Cloud Console
+	     (projet `piloo-495714`, client `Piloo iOS`). -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.325543119788-0r54du6ksvllbub2adruo63goqc6snus</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSCameraUsageDescription</key>
 	<string>Piloo utilise la caméra pour scanner le code DataMatrix de tes boîtes de médicaments.</string>
 	<key>NSContactsUsageDescription</key>
