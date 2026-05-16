@@ -42,6 +42,7 @@ import 'package:piloo/features/settings/presentation/security_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
 import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
+import 'package:piloo/shared/widgets/sync_pending_badge.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/features/auth/presentation/sign_up_screen.dart';
 import 'package:piloo/features/auth/presentation/splash_screen.dart';
@@ -341,7 +342,14 @@ class _MainShell extends StatelessWidget {
       // extendBody pour que la zone derrière la pilule soit transparente
       // (sinon le scroll content est coupé sous la tab bar).
       extendBody: true,
-      body: shell,
+      // Badge sync au top — `SizedBox.shrink()` quand pending = 0, donc
+      // n'affecte pas le layout normal (#95).
+      body: Column(
+        children: [
+          const SyncPendingBadge(),
+          Expanded(child: shell),
+        ],
+      ),
       bottomNavigationBar: PilooTabBar(
         items: _tabs,
         currentIndex: shell.currentIndex,
