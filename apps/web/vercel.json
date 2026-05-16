@@ -18,6 +18,10 @@
     {
       "path": "/api/cron/import-bdpm",
       "schedule": "0 3 5 * *"
+    },
+    {
+      "path": "/api/v1/cron/prise-oubliee",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
