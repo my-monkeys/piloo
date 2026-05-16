@@ -21,8 +21,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
-
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/auth/data/session.dart';
@@ -155,17 +153,14 @@ class _LogoBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Squircle 120×120 affichant l'icône d'app (#50). Le PNG est le master
+    // 1024×1024 utilisé aussi par flutter_launcher_icons pour générer les
+    // résolutions natives iOS + Android.
     return Container(
       width: 120,
       height: 120,
       decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          // 135° en CSS = top-left → bottom-right.
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [PilooColors.primarySoft, PilooColors.accentSoft],
-        ),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFF252A30).withValues(alpha: 0.08),
@@ -174,20 +169,10 @@ class _LogoBadge extends StatelessWidget {
           ),
         ],
       ),
-      alignment: Alignment.center,
-      child: Container(
-        width: 84,
-        height: 84,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: PilooColors.surface,
-        ),
-        alignment: Alignment.center,
-        child: const Icon(
-          PhosphorIconsFill.firstAidKit,
-          size: 44,
-          color: PilooColors.primary,
-        ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.asset(
+        'assets/branding/app-icon.png',
+        fit: BoxFit.cover,
       ),
     );
   }
