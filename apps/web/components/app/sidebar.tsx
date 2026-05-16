@@ -17,7 +17,23 @@ import { usePathname } from 'next/navigation';
 import { useActiveOfficine } from '@/lib/officines/active-officine';
 import { cn } from '@/lib/utils';
 
-const NAV = [{ href: '/settings/officines', label: 'Officines' }];
+const NAV_TOP = [{ href: '/dashboard', label: 'Tableau de bord' }];
+const NAV_SETTINGS = [{ href: '/settings/officines', label: 'Officines' }];
+
+function NavLink({ item, pathname }: { item: { href: string; label: string }; pathname: string }) {
+  const active = pathname.startsWith(item.href);
+  return (
+    <Link
+      href={item.href}
+      className={cn(
+        'block px-2 py-1.5 rounded-md text-sm transition-colors',
+        active ? 'bg-piloo-primary-soft text-piloo-primary font-medium' : 'hover:bg-muted',
+      )}
+    >
+      {item.label}
+    </Link>
+  );
+}
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -74,24 +90,15 @@ export function Sidebar() {
       </section>
 
       <nav className="space-y-1">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+        {NAV_TOP.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-4 mb-2">
           Réglages
         </h2>
-        {NAV.map((item) => {
-          const active = pathname.startsWith(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'block px-2 py-1.5 rounded-md text-sm transition-colors',
-                active ? 'bg-piloo-primary-soft text-piloo-primary font-medium' : 'hover:bg-muted',
-              )}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
+        {NAV_SETTINGS.map((item) => (
+          <NavLink key={item.href} item={item} pathname={pathname} />
+        ))}
       </nav>
     </aside>
   );
