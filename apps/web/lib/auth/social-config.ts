@@ -40,10 +40,13 @@ export interface GoogleProviderConfig {
 }
 
 // Champs lus dans l'id_token décodé par Better Auth.
+// Apple ne renvoie PAS name/given_name dans le JWT — uniquement `email`
+// (et `sub` géré par Better Auth en interne). Le nom complet n'est
+// disponible que dans la `ASAuthorizationAppleIDCredential` côté natif iOS
+// à la 1ère connexion, et devrait être forwardé via un endpoint dédié
+// dans un follow-up.
 interface AppleProfile {
   email?: string;
-  // Apple ne renvoie PAS name/given_name dans le JWT.
-  name?: string;
 }
 
 interface GoogleProfile {
@@ -53,12 +56,11 @@ interface GoogleProfile {
   family_name?: string;
 }
 
-function mapAppleProfile(profile: AppleProfile): SocialProfileMapping {
-  return {
-    nom: '',
-    prenom: profile.name ?? '',
-    typeCompte: 'particulier',
-  };
+function mapAppleProfile(_profile: AppleProfile): SocialProfileMapping {
+  // nom/prenom vides au signup Apple — un écran de complétion de profil
+  // est prévu en follow-up pour les récupérer (Apple ne les expose que
+  // via la credential native, pas dans l'id_token).
+  return { nom: '', prenom: '', typeCompte: 'particulier' };
 }
 
 function mapGoogleProfile(profile: GoogleProfile): SocialProfileMapping {
@@ -98,6 +100,10 @@ export async function loadAppleConfig(): Promise<AppleProviderConfig | undefined
   };
 }
 
+// JWKS Google — instancié une fois pour profiter du cache jose intégré
+// (sinon chaque verify déclenche un fetch de https://.../oauth2/v3/certs).
+const googleJWKS = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
+
 export function loadGoogleConfig(): GoogleProviderConfig | undefined {
   const clientId = process.env['GOOGLE_CLIENT_ID'];
   const clientSecret = process.env['GOOGLE_CLIENT_SECRET'];
@@ -106,9 +112,9 @@ export function loadGoogleConfig(): GoogleProviderConfig | undefined {
   }
   // google_sign_in 7.x sur iOS issue l'id_token pour le client *iOS*
   // (GIDClientID dans Info.plist), pas pour le client Web même quand
-  // `serverClientId` est passé à initialize() — bug/quirk du plugin.
-  // On accepte donc les deux audiences. Bonus : on remplace la valid'
-  // par défaut de Better Auth (qui ne prend qu'un seul `clientId`).
+  // `serverClientId` est passé à initialize() — quirk du plugin. On
+  // accepte donc les deux audiences. La valid' par défaut de Better
+  // Auth ne prend qu'un seul `clientId` ; ce custom verifier la remplace.
   const acceptedAudiences = [clientId];
   const iosClientId = process.env['GOOGLE_IOS_CLIENT_ID'];
   if (iosClientId) acceptedAudiences.push(iosClientId);
@@ -117,13 +123,20 @@ export function loadGoogleConfig(): GoogleProviderConfig | undefined {
     try {
       const { kid, alg } = decodeProtectedHeader(token);
       if (!kid || !alg) return false;
-      const jwks = createRemoteJWKSet(new URL('https://www.googleapis.com/oauth2/v3/certs'));
-      await jwtVerify(token, jwks, {
+      const { payload } = await jwtVerify(token, googleJWKS, {
         algorithms: [alg],
         issuer: ['https://accounts.google.com', 'accounts.google.com'],
         audience: acceptedAudiences,
         maxTokenAge: '1h',
       });
+      // Défense en profondeur : quand on accepte plusieurs audiences, la
+      // spec OIDC §3.1.3.7 demande de vérifier `azp` (authorized party)
+      // contre la liste autorisée — sinon un token émis pour un autre
+      // de NOS clients pourrait être rejoué.
+      const azp = payload['azp'];
+      if (typeof azp === 'string' && !acceptedAudiences.includes(azp)) {
+        return false;
+      }
       return true;
     } catch {
       return false;

@@ -4,10 +4,11 @@
 // Côté Better Auth, /api/auth/sign-in/social accepte `idToken: { token, nonce }`
 // et vérifie la signature + l'audience contre :
 //   - Apple : `appBundleIdentifier` (fr.mymonkey.piloo)
-//   - Google : le Web client ID (variable `GOOGLE_CLIENT_ID` côté serveur)
-//
-// Pour Google, c'est `serverClientId` côté natif (= Web client ID) qui
-// détermine le `aud` du token retourné — surtout PAS le clientId iOS/Android.
+//   - Google : `GOOGLE_CLIENT_ID` (Web client) ET `GOOGLE_IOS_CLIENT_ID` —
+//     google_sign_in 7.x sur iOS émet l'id_token pour le client iOS
+//     (GIDClientID dans Info.plist) malgré `serverClientId` passé à
+//     initialize() ; le backend accepte donc les deux audiences via
+//     un custom `verifyIdToken` (cf. social-config.ts).
 import 'dart:convert';
 import 'dart:math';
 
