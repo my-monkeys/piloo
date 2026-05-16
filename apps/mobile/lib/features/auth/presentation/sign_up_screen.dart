@@ -17,6 +17,7 @@
 // défaulter à 'particulier'.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -24,6 +25,8 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/auth/data/auth_api.dart';
 import 'package:piloo/features/auth/data/auth_api_provider.dart';
+import 'package:piloo/features/auth/data/session.dart';
+import 'package:piloo/features/auth/data/social_sign_in_service.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_checkbox.dart';
@@ -79,10 +82,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       if (!mounted) return;
       // Atterrissage sur l'écran principal après inscription.
-      Navigator.of(context).pushNamedAndRemoveUntil(
-        RoutePath.today,
-        (_) => false,
-      );
+      context.go(RoutePath.today);
     } on AuthApiException catch (e) {
       if (mounted) PilooToast.error(context, e.message);
     } finally {
@@ -97,6 +97,29 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     if (_password.text.length < 8) return 'Mot de passe : 8 caractères minimum.';
     if (!_cguAccepted) return 'Tu dois accepter les conditions.';
     return null;
+  }
+
+  Future<void> _onSocial(Future<Session> Function() doSignIn) async {
+    // CGU obligatoires aussi pour le signup social.
+    if (!_cguAccepted) {
+      PilooToast.error(context, 'Tu dois accepter les conditions.');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      final session = await doSignIn();
+      await ref.read(sessionProvider.notifier).signIn(session);
+      if (!mounted) return;
+      context.go(RoutePath.today);
+    } on SocialSignInCancelled {
+      // Annulation utilisateur : silencieux.
+    } on SocialSignInFailure catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } on AuthApiException catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -126,13 +149,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     PilooButton(
                       label: 'Continuer avec Apple',
                       variant: PilooButtonVariant.apple,
-                      onPressed: _submitting ? null : () {/* #64 */},
+                      onPressed: _submitting
+                          ? null
+                          : () => _onSocial(
+                                ref.read(socialSignInProvider).signInWithApple,
+                              ),
                     ),
                     const SizedBox(height: 20),
                     PilooButton(
                       label: 'Continuer avec Google',
                       variant: PilooButtonVariant.google,
-                      onPressed: _submitting ? null : () {/* #65 */},
+                      onPressed: _submitting
+                          ? null
+                          : () => _onSocial(
+                                ref.read(socialSignInProvider).signInWithGoogle,
+                              ),
                     ),
                     const SizedBox(height: 20),
                     const _OrDivider(),
@@ -320,7 +351,7 @@ class _BottomSignInLink extends StatelessWidget {
             ),
           ),
           GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed(RoutePath.signIn),
+            onTap: () => context.push(RoutePath.signIn),
             child: Text(
               'Se connecter',
               style: GoogleFonts.manrope(

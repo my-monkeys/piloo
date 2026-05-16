@@ -19,6 +19,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -75,10 +76,7 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   void _onVerified() {
     // Scope POC : on simule. Quand Brevo + magic link seront branchés,
     // ici on appellera AuthApi.getSession() et on lira user.emailVerified.
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      RoutePath.today,
-      (_) => false,
-    );
+    context.go(RoutePath.today);
   }
 
   void _onResend() {

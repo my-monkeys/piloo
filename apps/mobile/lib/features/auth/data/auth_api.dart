@@ -63,6 +63,58 @@ class AuthApi {
     }
   }
 
+  /// POST /api/auth/sign-in/social — Better Auth (flow id-token natif, #64/#65).
+  ///
+  /// Le client natif (sign_in_with_apple / google_sign_in) récupère l'id_token
+  /// auprès du provider ; on le forwarde au backend qui le vérifie (signature,
+  /// audience = clientId/appBundleIdentifier) et crée ou retrouve l'user.
+  /// Le header `set-auth-token` (plugin bearer) est posé comme pour le signin
+  /// email.
+  Future<Session> signInSocial({
+    required String provider,
+    required String idToken,
+    String? nonce,
+    String? accessToken,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/sign-in/social',
+        data: {
+          'provider': provider,
+          'idToken': {
+            'token': idToken,
+            if (nonce != null && nonce.isNotEmpty) 'nonce': nonce,
+            if (accessToken != null && accessToken.isNotEmpty) 'accessToken': accessToken,
+          },
+          // Pas de redirection : on est en flow natif, callbackURL ignoré
+          // par Better Auth quand l'id_token est passé.
+          'disableRedirect': true,
+        },
+        options: Options(validateStatus: (s) => s != null),
+      );
+      if (response.statusCode != 200) {
+        throw _exceptionFromError(response.data, response.statusCode);
+      }
+      final body = response.data!;
+      final user = body['user'] as Map<String, dynamic>;
+      final token = response.headers.value('set-auth-token');
+      if (token == null || token.isEmpty) {
+        throw AuthApiException(
+          'missing_bearer',
+          'Réponse sign-in/social sans header set-auth-token (plugin bearer absent ?)',
+        );
+      }
+      return Session(
+        token: token,
+        userId: user['id'] as String,
+        email: user['email'] as String,
+        name: (user['name'] as String?) ?? '',
+      );
+    } on DioException catch (e) {
+      throw _exceptionFromDio(e);
+    }
+  }
+
   Future<Session> signUpEmail({
     required String email,
     required String password,

@@ -15,9 +15,11 @@
 // serveur (transaction unique) sera câblée avec le client OpenAPI
 // quand il sera généré.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -73,7 +75,7 @@ class _OrdonnanceCreateScreenState extends State<OrdonnanceCreateScreen> {
       setState(() => _step++);
     } else {
       // Terminer : POST /ordonnances + ses prescriptions en 1 tx.
-      Navigator.of(context).maybePop();
+      context.canPop() ? context.pop() : context.go(RoutePath.ordonnances);
     }
   }
 
@@ -81,7 +83,7 @@ class _OrdonnanceCreateScreenState extends State<OrdonnanceCreateScreen> {
     if (_step > 1) {
       setState(() => _step--);
     } else {
-      Navigator.of(context).maybePop();
+      context.canPop() ? context.pop() : context.go(RoutePath.ordonnances);
     }
   }
 
@@ -93,7 +95,7 @@ class _OrdonnanceCreateScreenState extends State<OrdonnanceCreateScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(onClose: () => Navigator.of(context).maybePop()),
+            _Header(onClose: () => context.canPop() ? context.pop() : context.go(RoutePath.ordonnances)),
             _Stepper(currentStep: _step),
             Expanded(
               child: SingleChildScrollView(

@@ -10,9 +10,11 @@
 // L'envoi appellera POST /officines/:id/invitations (à câbler avec
 // le client OpenAPI). Pour l'instant on push pop avec un faux succès.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -50,7 +52,7 @@ class _InviteScreenState extends State<InviteScreen> {
     }
     PilooToast.success(context, "Invitation envoyée à $email.");
     Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted) context.canPop() ? context.pop() : context.go(RoutePath.today);
     });
   }
 
@@ -62,7 +64,7 @@ class _InviteScreenState extends State<InviteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(onClose: () => Navigator.of(context).maybePop()),
+            _Header(onClose: () => context.canPop() ? context.pop() : context.go(RoutePath.today)),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),

@@ -10,13 +10,13 @@ import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';
 
 export const dynamic = 'force-dynamic';
 
-const ParamsSchema = z.object({ id: z.uuid() });
+const ParamsSchema = z.object({ officineId: z.uuid() });
 
 interface RouteContext {
-  params: Promise<{ id: string }>;
+  params: Promise<{ officineId: string }>;
 }
 
-async function parseParams(context: RouteContext): Promise<{ id: string } | Response> {
+async function parseParams(context: RouteContext): Promise<{ officineId: string } | Response> {
   const raw = await context.params;
   const parsed = ParamsSchema.safeParse(raw);
   if (!parsed.success) {
@@ -34,10 +34,15 @@ export async function GET(request: Request, context: RouteContext): Promise<Resp
 
   const db = getDb();
   // Lecture autorisée pour les 3 rôles (viewer inclus).
-  const partage = await requireRole(auth.user.id, params.id, ['owner', 'editor', 'viewer'], { db });
+  const partage = await requireRole(
+    auth.user.id,
+    params.officineId,
+    ['owner', 'editor', 'viewer'],
+    { db },
+  );
   if (partage instanceof Response) return partage;
 
-  const officine = await findOfficineById(db, params.id);
+  const officine = await findOfficineById(db, params.officineId);
   if (!officine) {
     return apiErrorResponse('not_found', 'Officine introuvable.');
   }
@@ -66,10 +71,10 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
 
   const db = getDb();
   // Update autorisé aux owner et editor (cf. docs/spec.md §"Partages").
-  const partage = await requireRole(auth.user.id, params.id, ['owner', 'editor'], { db });
+  const partage = await requireRole(auth.user.id, params.officineId, ['owner', 'editor'], { db });
   if (partage instanceof Response) return partage;
 
-  const updated = await updateOfficine(db, params.id, {
+  const updated = await updateOfficine(db, params.officineId, {
     ...(parsed.data.nom !== undefined && { nom: parsed.data.nom }),
     ...(parsed.data.date_naissance !== undefined && {
       dateNaissance: parsed.data.date_naissance,
@@ -94,10 +99,10 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
 
   const db = getDb();
   // Suppression réservée au propriétaire (cf. docs/spec.md §"Partages").
-  const partage = await requireRole(auth.user.id, params.id, ['owner'], { db });
+  const partage = await requireRole(auth.user.id, params.officineId, ['owner'], { db });
   if (partage instanceof Response) return partage;
 
-  const deleted = await softDeleteOfficine(db, params.id);
+  const deleted = await softDeleteOfficine(db, params.officineId);
   if (!deleted) {
     return apiErrorResponse('not_found', 'Officine introuvable.');
   }

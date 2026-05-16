@@ -16,6 +16,7 @@
 // /verify-email avec l'email passé en extra. Quand Brevo arrivera, on
 // branchera AuthApi.forgetPassword() qui appelle Better Auth.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -55,10 +56,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     if (!mounted) return;
     setState(() => _submitting = false);
     PilooToast.info(context, 'Lien envoyé.');
-    Navigator.of(context).pushReplacementNamed(
-      RoutePath.verifyEmail,
-      arguments: _email.text.trim(),
-    );
+    context.go(RoutePath.verifyEmail, extra: _email.text.trim());
   }
 
   @override
@@ -168,7 +166,7 @@ class _BackToSignInLink extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pop(),
+      onTap: () => context.canPop() ? context.pop() : context.go(RoutePath.signIn),
       child: Text(
         'Retour à la connexion',
         textAlign: TextAlign.center,

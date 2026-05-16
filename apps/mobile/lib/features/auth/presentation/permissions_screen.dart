@@ -23,6 +23,7 @@
 // `Permission.notification` couvrent les deux. Les manifestes Android
 // seront enrichis quand on commencera les tests sur ce target (#?).
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -119,10 +120,7 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
   void _finish() {
     // /today appartient à la ShellRoute : pushReplacement pour ne pas
     // empiler la coquille au-dessus de l'onboarding.
-    Navigator.of(context).pushNamedAndRemoveUntil(
-      RoutePath.today,
-      (_) => false,
-    );
+    context.go(RoutePath.today);
   }
 
   @override

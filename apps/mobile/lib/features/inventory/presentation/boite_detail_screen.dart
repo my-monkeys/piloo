@@ -17,6 +17,7 @@
 // Le branchement Drift + provider Riverpod arrive avec l'epic
 // Inventory (#11) ; ce ticket couvre l'UI seule.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -52,7 +53,7 @@ class BoiteDetailScreen extends StatelessWidget {
                     _InfoGrid(),
                     const SizedBox(height: 12),
                     _MedicamentLink(
-                      onTap: () => Navigator.of(context).pushNamed(
+                      onTap: () => context.push(
                         RoutePath.medicamentInfo('3400930000019'),
                       ),
                     ),

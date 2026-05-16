@@ -22,6 +22,7 @@
 // l'endpoint existera, ajouter un POST /consent avec la version des
 // CGU + horodatage avant de naviguer.
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -47,7 +48,7 @@ class _LegalScreenState extends State<LegalScreen> {
 
   void _onContinue() {
     if (!_canContinue) return;
-    Navigator.of(context).pushReplacementNamed(RoutePath.permissions);
+    context.go(RoutePath.permissions);
   }
 
   @override

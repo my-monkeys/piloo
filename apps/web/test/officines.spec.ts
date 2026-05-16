@@ -85,7 +85,7 @@ async function importHandlers() {
   // s'appliquent qu'aux modules importés APRÈS leur déclaration).
   return {
     list: await import('@/app/api/v1/officines/route'),
-    item: await import('@/app/api/v1/officines/[id]/route'),
+    item: await import('@/app/api/v1/officines/[officineId]/route'),
   };
 }
 
@@ -236,7 +236,7 @@ describe('GET /api/v1/officines/:id', () => {
         new Request(`${BASE_URL}/api/v1/officines/${officineId}`, {
           headers: { cookie: u.cookie },
         }),
-        { params: Promise.resolve({ id: officineId }) },
+        { params: Promise.resolve({ officineId }) },
       );
       expect(res.status).toBe(200);
       const body = (await res.json()) as { role: string };
@@ -254,7 +254,7 @@ describe('GET /api/v1/officines/:id', () => {
       new Request(`${BASE_URL}/api/v1/officines/${officineId}`, {
         headers: { cookie: stranger.cookie },
       }),
-      { params: Promise.resolve({ id: officineId }) },
+      { params: Promise.resolve({ officineId }) },
     );
     expect(res.status).toBe(404);
   });
@@ -266,7 +266,7 @@ describe('GET /api/v1/officines/:id', () => {
       new Request(`${BASE_URL}/api/v1/officines/not-a-uuid`, {
         headers: { cookie: me.cookie },
       }),
-      { params: Promise.resolve({ id: 'not-a-uuid' }) },
+      { params: Promise.resolve({ officineId: 'not-a-uuid' }) },
     );
     expect(res.status).toBe(400);
   });
@@ -285,7 +285,7 @@ describe('PATCH /api/v1/officines/:id', () => {
         headers: { 'Content-Type': 'application/json', cookie: me.cookie },
         body: JSON.stringify({ nom: 'Renommée' }),
       }),
-      { params: Promise.resolve({ id: officineId }) },
+      { params: Promise.resolve({ officineId }) },
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as { nom: string };
@@ -305,7 +305,7 @@ describe('PATCH /api/v1/officines/:id', () => {
         headers: { 'Content-Type': 'application/json', cookie: viewer.cookie },
         body: JSON.stringify({ nom: 'Hacked' }),
       }),
-      { params: Promise.resolve({ id: officineId }) },
+      { params: Promise.resolve({ officineId }) },
     );
     expect(res.status).toBe(403);
   });
@@ -323,7 +323,7 @@ describe('DELETE /api/v1/officines/:id', () => {
         method: 'DELETE',
         headers: { cookie: me.cookie },
       }),
-      { params: Promise.resolve({ id: officineId }) },
+      { params: Promise.resolve({ officineId }) },
     );
     expect(res.status).toBe(204);
 
@@ -346,7 +346,7 @@ describe('DELETE /api/v1/officines/:id', () => {
         method: 'DELETE',
         headers: { cookie: editor.cookie },
       }),
-      { params: Promise.resolve({ id: officineId }) },
+      { params: Promise.resolve({ officineId }) },
     );
     expect(res.status).toBe(403);
   });

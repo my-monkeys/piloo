@@ -19,12 +19,15 @@
 //    $error-on
 //  - Footer version "Piloo v0.1.0 · BDPM 2026-04"
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
 class _Row {
@@ -45,7 +48,7 @@ class _Row {
   final String? routeName;
 }
 
-class MoreScreen extends StatelessWidget {
+class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   static const _monApp = [
@@ -101,7 +104,7 @@ class MoreScreen extends StatelessWidget {
   ];
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -123,8 +126,7 @@ class MoreScreen extends StatelessWidget {
                     initials: 'MD',
                     name: 'Maxime Durand',
                     email: 'maxime@exemple.fr',
-                    onTap: () =>
-                        Navigator.of(context).pushNamed(RoutePath.settingsProfile),
+                    onTap: () => context.push(RoutePath.settingsProfile),
                   ),
                   const SizedBox(height: 18),
                   _Section(label: 'MON APP', rows: _monApp),
@@ -133,7 +135,10 @@ class MoreScreen extends StatelessWidget {
                   const SizedBox(height: 18),
                   _Section(label: 'AIDE & LÉGAL', rows: _help),
                   const SizedBox(height: 18),
-                  _LogoutButton(onTap: () {/* hook signOut quand auth wired */}),
+                  _LogoutButton(onTap: () async {
+                    await ref.read(sessionProvider.notifier).signOut();
+                    if (context.mounted) context.go(RoutePath.welcome);
+                  }),
                   const SizedBox(height: 14),
                   Text(
                     'Piloo v0.1.0 · BDPM 2026-04',
@@ -288,7 +293,7 @@ class _RowItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: () {
         if (row.routeName != null) {
-          Navigator.of(context).pushNamed('/${row.routeName!}');
+          context.push('/${row.routeName!}');
         }
       },
       child: Padding(

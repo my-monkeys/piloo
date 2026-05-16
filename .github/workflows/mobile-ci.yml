@@ -4,8 +4,8 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'apps/mobile/**'
-      - '.github/workflows/mobile-ci.yml'
+      - "apps/mobile/**"
+      - ".github/workflows/mobile-ci.yml"
 
 concurrency:
   group: mobile-ci-${{ github.ref }}
@@ -35,7 +35,10 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        # `--no-fatal-infos` : les déprécations transitives (Flutter SDK,
+        # test_api, etc.) sont info-level et ne doivent pas bloquer le CI.
+        # Aligné avec le workflow web (qui faisait déjà ce choix).
+        run: flutter analyze --no-fatal-infos
 
       - name: Test
         run: flutter test

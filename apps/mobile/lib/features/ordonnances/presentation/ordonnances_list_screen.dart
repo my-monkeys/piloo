@@ -9,6 +9,7 @@
 //
 // Tap sur une card → push /ordonnances/:id (#10 epic).
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
@@ -130,9 +131,8 @@ class _OrdonnancesListScreenState extends State<OrdonnancesListScreen> {
                   final o = _filtered[i];
                   return _OrdoCard(
                     ordonnance: o,
-                    onTap: () => Navigator.of(context).pushNamed(
-                      RoutePath.ordonnanceDetail(o.id),
-                    ),
+                    onTap: () =>
+                        context.push(RoutePath.ordonnanceDetail(o.id)),
                   );
                 },
               ),
