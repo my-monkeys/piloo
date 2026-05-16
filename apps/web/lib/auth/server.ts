@@ -1,6 +1,7 @@
 // Better Auth — instance serveur (ADR 0004). Email/password + bearer pour
-// le mobile (#40). Apple/Google/2FA/magic link sont laissés à leurs
-// tickets dédiés (#62/#64/#65/#157).
+// le mobile (#40). Apple (#64) et Google (#65) ajoutés via `socialProviders`
+// — la config est pré-calculée au module-load (top-level await) car
+// générer le `client_secret` Apple nécessite jose/ES256.
 //
 // Initialisation paresseuse pour ne pas exiger DATABASE_URL au build :
 // Next.js compile les modules sans avoir nécessairement les variables d'env
@@ -13,17 +14,33 @@ import { bearer } from 'better-auth/plugins';
 import { getDb } from '@/lib/db';
 
 import { createPersonalOfficineFor } from './hooks.ts';
+import {
+  loadAppleConfig,
+  loadGoogleConfig,
+  type AppleProviderConfig,
+  type GoogleProviderConfig,
+} from './social-config.ts';
 
 interface BuildAuthOptions {
   db: Db;
   secret: string;
   baseURL: string;
+  apple?: AppleProviderConfig;
+  google?: GoogleProviderConfig;
 }
 
-function buildAuth({ db, secret, baseURL }: BuildAuthOptions) {
+function buildAuth({ db, secret, baseURL, apple, google }: BuildAuthOptions) {
+  const socialProviders: Record<string, unknown> = {};
+  if (apple) socialProviders['apple'] = apple;
+  if (google) socialProviders['google'] = google;
+
   return betterAuth({
     secret,
     baseURL,
+    // Apple requiert que appleid.apple.com soit autorisé pour le flow web ;
+    // sans effet sur le flow id-token natif, mais inoffensif.
+    trustedOrigins: apple ? ['https://appleid.apple.com'] : undefined,
+    socialProviders,
     database: drizzleAdapter(db, {
       provider: 'pg',
       // Les clés correspondent aux `modelName` configurés ci-dessous (pluriel
@@ -91,6 +108,12 @@ export function createAuth(options: BuildAuthOptions): AuthInstance {
   return buildAuth(options);
 }
 
+// Pré-calculé au module-load : le JWT Apple nécessite jose/ES256 (async).
+// Si les env vars OAuth sont absentes (cas test/dev sans Apple/Google),
+// les providers sont simplement omis.
+const APPLE_CONFIG = await loadAppleConfig();
+const GOOGLE_CONFIG = loadGoogleConfig();
+
 let cached: AuthInstance | undefined;
 
 export function getAuth(): AuthInstance {
@@ -98,6 +121,8 @@ export function getAuth(): AuthInstance {
     db: getDb(),
     secret: getRequiredSecret(),
     baseURL: process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3000',
+    apple: APPLE_CONFIG,
+    google: GOOGLE_CONFIG,
   });
   return cached;
 }
