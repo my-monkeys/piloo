@@ -1123,6 +1123,161 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prises/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prises planifiées pour aujourd'hui (timeline)
+         * @description Renvoie les prises de l'officine demandée pour la date courante (fuseau serveur). Le statut + la prescription jointe sont inclus pour rendre la timeline sans roundtrip.
+         */
+        get: {
+            parameters: {
+                query: {
+                    officine_id: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste des prises du jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListPrisesResponse"];
+                    };
+                };
+                /** @description Query invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Pas d'accès à cette officine */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Officine inconnue */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prises": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prises planifiées pour une date précise
+         * @description Variante de /v1/prises/today qui prend une date explicite (YYYY-MM-DD). Utilisé par le navigateur de calendrier du mobile.
+         */
+        get: {
+            parameters: {
+                query: {
+                    officine_id: string;
+                    date: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste des prises de la date */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListPrisesResponse"];
+                    };
+                };
+                /** @description Query invalide (date manquante / mal formée) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Pas d'accès à cette officine */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Officine inconnue */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1415,6 +1570,47 @@ export interface components {
             version_bdpm: string;
         };
         BdpmApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        ListPrisesResponse: {
+            /** Format: date */
+            date: string;
+            items: components["schemas"]["PriseTimelineItem"][];
+        };
+        PriseTimelineItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            officine_id: string;
+            /** Format: date-time */
+            datetime_prevue: string;
+            /** Format: date-time */
+            datetime_validation: string | null;
+            /** @enum {string} */
+            statut: "prevue" | "prise" | "sautee" | "oubliee";
+            notes: string | null;
+            prescription: components["schemas"]["PriseTimelinePrescription"];
+        };
+        PriseTimelinePrescription: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ordonnance_id: string;
+            nom_texte: string;
+            cip13: string | null;
+            indication: string | null;
+            posologie: components["schemas"]["Posologie"];
+        };
+        Posologie: {
+            [key: string]: unknown;
+        };
+        PrisesApiError: {
             error: {
                 code: string;
                 message: string;
