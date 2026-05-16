@@ -55,11 +55,12 @@ pnpm-debug.log*
 # Coverage
 coverage/
 
-# OpenAPI generated artifacts (regenerated)
-# Le openapi.yaml lui-même est commité (source du contrat) ; les clients
-# dérivés (TS pour apps/web, Dart pour apps/mobile) sont régénérés.
+# OpenAPI generated artifacts
+# Le openapi.yaml est la source de vérité (commité). Le client TS
+# `@piloo/api-client/src/generated/types.ts` est COMMITÉ pour que `tsc`
+# tourne sans codegen et que les diffs de contrat soient reviewables.
+# Le client Dart à apps/mobile/lib/gen/openapi/ est gitignored — c'est
+# un package Dart autonome avec ses propres tests, régénéré localement.
 packages/api-contract/generated/
-apps/web/lib/api/types.ts
-apps/web/lib/api/generated/
 apps/mobile/lib/generated/
 apps/mobile/lib/gen/openapi/

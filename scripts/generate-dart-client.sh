@@ -41,4 +41,20 @@ mkdir -p "${OUTPUT_DIR}"
   --additional-properties=pubName="${PACKAGE_NAME}",pubLibrary="${PACKAGE_NAME}.api",nullableFields=true
 
 echo "→ Dart client written to ${OUTPUT_DIR}"
-echo "→ next: cd apps/mobile && dart run build_runner build --delete-conflicting-outputs"
+
+# Build_runner : génère les .g.dart immutables (built_value + json_serializable)
+# pour les modèles. Étape obligatoire — sans ça les imports du package échouent.
+# `--delete-conflicting-outputs` peut surfaicher un warning dans les versions
+# récentes de build_runner — non bloquant.
+echo "→ running build_runner inside the generated package"
+(
+  cd "${OUTPUT_DIR}"
+  if command -v flutter >/dev/null 2>&1; then
+    flutter pub get
+    dart run build_runner build --delete-conflicting-outputs
+  else
+    dart pub get
+    dart run build_runner build --delete-conflicting-outputs
+  fi
+)
+echo "✓ Dart client ready (models + .g.dart built)"
