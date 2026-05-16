@@ -43,6 +43,13 @@
       "when": 1778095927812,
       "tag": "0005_peaceful_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1778958690302,
+      "tag": "0006_abnormal_amazoness",
+      "breakpoints": true
     }
   ]
 }
