@@ -1,27 +1,12 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalDependencies": [
-    "**/.env.*local",
-    ".env",
-    ".env.example",
-    "tsconfig.base.json"
-  ],
-  "globalEnv": [
-    "NODE_ENV",
-    "CI",
-    "VERCEL",
-    "VERCEL_ENV"
-  ],
+  "globalDependencies": ["**/.env.*local", ".env", ".env.example", "tsconfig.base.json"],
+  "globalEnv": ["NODE_ENV", "CI", "VERCEL", "VERCEL_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "openapi:generate"],
-      "outputs": [
-        ".next/**",
-        "!.next/cache/**",
-        "dist/**",
-        "build/**"
-      ]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", "build/**"]
     },
     "lint": {
       "dependsOn": ["^build"],
@@ -38,11 +23,7 @@
     "openapi:generate": {
       "dependsOn": ["^openapi:generate"],
       "inputs": ["src/**/*.ts", "schemas/**/*.ts", "scripts/**/*.ts"],
-      "outputs": [
-        "openapi.yaml",
-        "generated/**",
-        "src/generated/**"
-      ]
+      "outputs": ["openapi.yaml", "generated/**", "src/generated/**"]
     },
     "//#openapi:generate-ts-client": {
       "inputs": [
@@ -50,10 +31,7 @@
         "scripts/generate-ts-client.sh",
         "packages/api-contract/openapi.yaml"
       ],
-      "outputs": [
-        "apps/web/lib/api/types.ts",
-        "apps/web/lib/api/generated/**"
-      ]
+      "outputs": ["packages/api-client/src/generated/**"]
     },
     "//#openapi:generate-dart-client": {
       "inputs": [
@@ -61,15 +39,10 @@
         "scripts/generate-dart-client.sh",
         "packages/api-contract/openapi.yaml"
       ],
-      "outputs": [
-        "apps/mobile/lib/gen/openapi/**"
-      ]
+      "outputs": ["apps/mobile/lib/gen/openapi/**"]
     },
     "//#openapi:generate-clients": {
-      "dependsOn": [
-        "//#openapi:generate-ts-client",
-        "//#openapi:generate-dart-client"
-      ],
+      "dependsOn": ["//#openapi:generate-ts-client", "//#openapi:generate-dart-client"],
       "outputs": []
     },
     "clean": {
