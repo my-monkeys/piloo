@@ -65,6 +65,21 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   drift_dev: ^2.33.0
   build_runner: ^2.6.0
+  flutter_launcher_icons: ^0.14.4
+
+# App icons iOS + Android (#50). Génère toutes les résolutions à partir
+# de `assets/branding/app-icon.png` (1024×1024 source). Lancer après tout
+# changement de l'icône source :
+#   flutter pub run flutter_launcher_icons
+# Android adaptive : `adaptive_icon_background` matche la couleur de fond
+# de l'illustration source (sage soft #DBE3E0).
+flutter_launcher_icons:
+  ios: true
+  android: true
+  image_path: "assets/branding/app-icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#DBE3E0"
+  adaptive_icon_foreground: "assets/branding/app-icon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -76,10 +91,8 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
-  #   - images/a_dot_ham.jpeg
+  assets:
+    - assets/branding/app-icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/router.dart';
 import 'package:piloo/core/storage/secure_storage.dart';
@@ -41,7 +40,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.byIcon(PhosphorIconsFill.firstAidKit), findsOneWidget);
+      expect(find.image(const AssetImage('assets/branding/app-icon.png')), findsOneWidget);
       expect(find.text('pil'), findsOneWidget);
       expect(find.text('oo'), findsOneWidget);
       expect(find.text('Le carnet numérique de médicaments'), findsOneWidget);
@@ -62,7 +61,7 @@ void main() {
       // "Scanne, c'est tout". On vérifie ce marqueur + l'absence du
       // splash pour confirmer le redirect.
       expect(find.text("Scanne, c'est tout"), findsOneWidget);
-      expect(find.byIcon(PhosphorIconsFill.firstAidKit), findsNothing);
+      expect(find.image(const AssetImage('assets/branding/app-icon.png')), findsNothing);
     });
 
     testWidgets('avec session : redirige vers /today après le délai',
@@ -75,7 +74,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text("Aujourd'hui"), findsAtLeastNWidgets(1));
-      expect(find.byIcon(PhosphorIconsFill.firstAidKit), findsNothing);
+      expect(find.image(const AssetImage('assets/branding/app-icon.png')), findsNothing);
     });
 
     testWidgets('easter egg : 5 taps sur le logo poussent vers /_dev',
@@ -83,7 +82,7 @@ void main() {
       await tester.pumpWidget(_appWith());
       await tester.pump(const Duration(milliseconds: 100));
 
-      final logo = find.byIcon(PhosphorIconsFill.firstAidKit);
+      final logo = find.image(const AssetImage('assets/branding/app-icon.png'));
       // 5 taps rapides — le 5e doit annuler le redirect timer ET pousser
       // /_dev. Sinon le redirect auto vers /welcome aurait pu déclencher
       // avant qu'on arrive à 5.
