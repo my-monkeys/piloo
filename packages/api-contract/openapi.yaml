@@ -794,6 +794,106 @@ components:
             - message
       required:
         - error
+    ListPrisesResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriseTimelineItem"
+      required:
+        - date
+        - items
+    PriseTimelineItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        datetime_prevue:
+          type: string
+          format: date-time
+        datetime_validation:
+          type:
+            - string
+            - "null"
+          format: date-time
+        statut:
+          type: string
+          enum:
+            - prevue
+            - prise
+            - sautee
+            - oubliee
+        notes:
+          type:
+            - string
+            - "null"
+        prescription:
+          $ref: "#/components/schemas/PriseTimelinePrescription"
+      required:
+        - id
+        - officine_id
+        - datetime_prevue
+        - datetime_validation
+        - statut
+        - notes
+        - prescription
+    PriseTimelinePrescription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ordonnance_id:
+          type: string
+          format: uuid
+        nom_texte:
+          type: string
+        cip13:
+          type:
+            - string
+            - "null"
+        indication:
+          type:
+            - string
+            - "null"
+        posologie:
+          $ref: "#/components/schemas/Posologie"
+      required:
+        - id
+        - ordonnance_id
+        - nom_texte
+        - cip13
+        - indication
+        - posologie
+    Posologie:
+      type: object
+      additionalProperties: {}
+    PrisesApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
   parameters: {}
 paths:
   /health:
@@ -1463,4 +1563,98 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BdpmApiError"
+  /v1/prises/today:
+    get:
+      summary: Prises planifiées pour aujourd'hui (timeline)
+      description: Renvoie les prises de l'officine demandée pour la date courante (fuseau serveur). Le statut + la prescription jointe sont inclus pour rendre la timeline sans roundtrip.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officine_id
+          in: query
+      responses:
+        "200":
+          description: Liste des prises du jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPrisesResponse"
+        "400":
+          description: Query invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas d'accès à cette officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+  /v1/prises:
+    get:
+      summary: Prises planifiées pour une date précise
+      description: Variante de /v1/prises/today qui prend une date explicite (YYYY-MM-DD). Utilisé par le navigateur de calendrier du mobile.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officine_id
+          in: query
+        - schema:
+            type: string
+            format: date
+          required: true
+          name: date
+          in: query
+      responses:
+        "200":
+          description: Liste des prises de la date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPrisesResponse"
+        "400":
+          description: Query invalide (date manquante / mal formée)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas d'accès à cette officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
 webhooks: {}
