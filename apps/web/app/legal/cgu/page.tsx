@@ -12,7 +12,7 @@ const VERSION = '2026-05-01';
 export default function CguPage() {
   return (
     <article>
-      <p style={{ fontSize: 12, color: '#666' }}>Version : {VERSION}</p>
+      <p className="legal-version">Version : {VERSION}</p>
       <h1>Conditions générales d'utilisation</h1>
 
       <h2>1. Objet</h2>
