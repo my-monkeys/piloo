@@ -135,3 +135,45 @@ export function generatePrisesForPrescription(
   }
   return result;
 }
+
+export interface WindowGenerateOptions {
+  officineId: string;
+  /** Minuit local du premier jour de la fenêtre (inclus). */
+  windowStart: Date;
+  /** Nombre de jours dans la fenêtre. */
+  windowDays: number;
+  horairesUtilisateur?: Partial<Record<Moment, string>>;
+}
+
+/**
+ * Génère les prises sur une fenêtre glissante [windowStart, windowStart +
+ * windowDays). Utilisé pour les prescriptions "à vie" (dureeJours = null)
+ * via un cron quotidien (#108). Respecte la fréquence : un hebdomadaire
+ * dans une fenêtre de 30j produit ~4 prises ; un quotidien en produit 30.
+ */
+export function generatePrisesForWindow(
+  prescription: Pick<Prescription, 'id' | 'posologie'>,
+  options: WindowGenerateOptions,
+): NewPrisePlanifiee[] {
+  const { posologie } = prescription;
+  if (options.windowDays <= 0) return [];
+
+  const horaires = buildHorairesForDay(posologie, options.horairesUtilisateur);
+  if (horaires.length === 0) return [];
+
+  const offsets = buildDayOffsets(posologie, options.windowDays);
+  if (offsets.length === 0) return [];
+
+  const result: NewPrisePlanifiee[] = [];
+  for (const offset of offsets) {
+    for (const horaire of horaires) {
+      result.push({
+        prescriptionId: prescription.id,
+        officineId: options.officineId,
+        datetimePrevue: composeDatetime(options.windowStart, offset, horaire),
+        statut: 'prevue',
+      });
+    }
+  }
+  return result;
+}
