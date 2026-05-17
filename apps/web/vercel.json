@@ -26,6 +26,10 @@
     {
       "path": "/api/v1/cron/stock-bas",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/v1/cron/generation-glissante",
+      "schedule": "0 2 * * *"
     }
   ]
 }
