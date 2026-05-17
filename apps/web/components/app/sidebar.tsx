@@ -12,8 +12,11 @@
 
 import { $api } from '@piloo/api-client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 
+import { Button } from '@/components/ui/button';
+import { signOut } from '@/lib/auth/client';
 import { useActiveOfficine } from '@/lib/officines/active-officine';
 import { cn } from '@/lib/utils';
 
@@ -35,10 +38,23 @@ function NavLink({ item, pathname }: { item: { href: string; label: string }; pa
   );
 }
 
-export function Sidebar() {
+export function Sidebar({ userName, userEmail }: { userName?: string; userEmail?: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { activeOfficineId, setActive } = useActiveOfficine();
   const { data, isLoading, error } = $api.useQuery('get', '/v1/officines');
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function onSignOut() {
+    setSigningOut(true);
+    try {
+      await signOut();
+      router.push('/sign-in');
+      router.refresh();
+    } catch {
+      setSigningOut(false);
+    }
+  }
 
   return (
     <aside className="w-64 border-r border-border bg-piloo-surface min-h-screen p-4 flex flex-col gap-6">
@@ -100,6 +116,26 @@ export function Sidebar() {
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
       </nav>
+
+      {(userName ?? userEmail) && (
+        <div className="mt-auto pt-4 border-t border-border space-y-2">
+          <div className="px-2 text-sm">
+            <div className="font-medium truncate">{userName ?? 'Compte'}</div>
+            {userEmail && <div className="text-xs text-muted-foreground truncate">{userEmail}</div>}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => {
+              void onSignOut();
+            }}
+            disabled={signingOut}
+          >
+            {signingOut ? 'Déconnexion…' : 'Se déconnecter'}
+          </Button>
+        </div>
+      )}
     </aside>
   );
 }
