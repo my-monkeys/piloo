@@ -12,3 +12,4 @@ export * from './bdpm.ts';
 export * from './prises.ts';
 export * from './devices.ts';
 export * from './ordonnances.ts';
+export * from './export-data.ts';
