@@ -11,3 +11,4 @@ export * from './notif-prefs.ts';
 export * from './bdpm.ts';
 export * from './prises.ts';
 export * from './devices.ts';
+export * from './ordonnances.ts';

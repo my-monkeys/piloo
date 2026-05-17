@@ -972,6 +972,297 @@ components:
       required:
         - token
         - platform
+    ListOrdonnancesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Ordonnance"
+      required:
+        - items
+    Ordonnance:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        prescripteur:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        date_prescription:
+          type: string
+          format: date
+        source:
+          type: string
+          enum:
+            - manuelle
+            - ocr
+        photo_url:
+          type:
+            - string
+            - "null"
+          maxLength: 2048
+          format: uri
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        saisie_par:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - prescripteur
+        - date_prescription
+        - source
+        - photo_url
+        - notes
+        - saisie_par
+        - created_at
+        - updated_at
+        - deleted_at
+    OrdonnanceApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    OrdonnanceWithPrescriptions:
+      allOf:
+        - $ref: "#/components/schemas/Ordonnance"
+        - type: object
+          properties:
+            prescriptions:
+              type: array
+              items:
+                $ref: "#/components/schemas/Prescription"
+          required:
+            - prescriptions
+    Prescription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ordonnance_id:
+          type: string
+          format: uuid
+        cip13:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{13}$
+        cis:
+          type:
+            - string
+            - "null"
+          maxLength: 16
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        posologie:
+          $ref: "#/components/schemas/Posologie"
+        duree_jours:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+          maximum: 3650
+        indication:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - ordonnance_id
+        - cip13
+        - cis
+        - nom_texte
+        - posologie
+        - duree_jours
+        - indication
+        - notes
+        - created_at
+        - updated_at
+        - deleted_at
+    CreateOrdonnanceInput:
+      type: object
+      properties:
+        prescripteur:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        date_prescription:
+          type: string
+          format: date
+        source:
+          type: string
+          enum:
+            - manuelle
+            - ocr
+        photo_url:
+          type:
+            - string
+            - "null"
+          maxLength: 2048
+          format: uri
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        prescriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/CreatePrescriptionInput"
+          maxItems: 50
+      required:
+        - date_prescription
+    CreatePrescriptionInput:
+      type: object
+      properties:
+        cip13:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{13}$
+        cis:
+          type:
+            - string
+            - "null"
+          maxLength: 16
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        posologie:
+          $ref: "#/components/schemas/Posologie"
+        duree_jours:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+          maximum: 3650
+        indication:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - nom_texte
+        - posologie
+    UpdateOrdonnanceInput:
+      type: object
+      properties:
+        prescripteur:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        date_prescription:
+          type: string
+          format: date
+        photo_url:
+          type:
+            - string
+            - "null"
+          maxLength: 2048
+          format: uri
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+    UpdatePrescriptionInput:
+      type: object
+      properties:
+        cip13:
+          type:
+            - string
+            - "null"
+          pattern: ^\d{13}$
+        cis:
+          type:
+            - string
+            - "null"
+          maxLength: 16
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        posologie:
+          $ref: "#/components/schemas/Posologie"
+        duree_jours:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+          maximum: 3650
+        indication:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
   parameters: {}
 paths:
   /health:
@@ -1816,4 +2107,339 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DevicesApiError"
+  /v1/officines/{officineId}/ordonnances:
+    get:
+      summary: Liste les ordonnances d'une officine
+      description: Renvoie les ordonnances non soft-deleted, triées par date_prescription décroissante.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListOrdonnancesResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Pas d'accès à l'officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+    post:
+      summary: Crée une ordonnance (avec prescriptions imbriquées optionnelles)
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrdonnanceInput"
+      responses:
+        "201":
+          description: Ordonnance créée (avec prescriptions)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceWithPrescriptions"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+  /v1/ordonnances/{id}:
+    get:
+      summary: Détail d'une ordonnance (prescriptions imbriquées)
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Détail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceWithPrescriptions"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Pas d'accès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+    patch:
+      summary: Met à jour l'en-tête d'une ordonnance
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateOrdonnanceInput"
+      responses:
+        "200":
+          description: Ordonnance mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ordonnance"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+    delete:
+      summary: Soft-delete une ordonnance (cascade vers prescriptions)
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimée
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+  /v1/ordonnances/{id}/prescriptions:
+    post:
+      summary: Ajoute une prescription à une ordonnance existante
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePrescriptionInput"
+      responses:
+        "201":
+          description: Prescription créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Ordonnance introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+  /v1/prescriptions/{id}:
+    patch:
+      summary: Met à jour une prescription
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePrescriptionInput"
+      responses:
+        "200":
+          description: Prescription mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+    delete:
+      summary: Soft-delete une prescription
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - ordonnances
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimée
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
+        "404":
+          description: Inconnue ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrdonnanceApiError"
 webhooks: {}
