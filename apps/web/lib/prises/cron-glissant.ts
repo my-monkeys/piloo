@@ -91,10 +91,9 @@ async function dedupAgainstExisting(
   windowStart: Date,
   windowEnd: Date,
 ): Promise<NewPrisePlanifiee[]> {
-  // On charge les datetime_prevue déjà existants pour cette prescription
-  // dans la fenêtre, soft-deleted exclus (les soft-deleted ne sont pas
-  // candidates à la re-création — UX : si l'user a supprimé une prise,
-  // c'est qu'il ne la veut plus, même si le cron repasse).
+  // On considère TOUTES les prises de la fenêtre, soft-deleted incluses,
+  // pour éviter de re-créer une prise que l'utilisateur a supprimée. Si
+  // l'user veut récupérer une prise supprimée, il la recrée manuellement.
   const existing = await db
     .select({ datetimePrevue: prisesPlanifiees.datetimePrevue })
     .from(prisesPlanifiees)
@@ -103,7 +102,6 @@ async function dedupAgainstExisting(
         eq(prisesPlanifiees.prescriptionId, prescriptionId),
         gte(prisesPlanifiees.datetimePrevue, windowStart),
         lt(prisesPlanifiees.datetimePrevue, windowEnd),
-        isNull(prisesPlanifiees.deletedAt),
       ),
     );
   const alreadyAt = new Set(existing.map((e) => e.datetimePrevue.getTime()));

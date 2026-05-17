@@ -205,6 +205,34 @@ describe('runGenerationGlissanteCron', () => {
     expect(result.prisesCreated).toBe(WINDOW_DAYS * 2 + WINDOW_DAYS);
   });
 
+  it("ne recrée pas une prise soft-deletée par l'utilisateur", async () => {
+    const prescId = await createPrescAVie({
+      unitesParPrise: 1,
+      unite: 'cp',
+      frequence: 'quotidien',
+      moments: ['matin'],
+    });
+    const target = new Date(NOW);
+    target.setUTCHours(0, 0, 0, 0);
+    target.setUTCDate(target.getUTCDate() + 3);
+    target.setUTCHours(8, 0, 0, 0);
+    await env.handle.db.insert(prisesPlanifiees).values({
+      prescriptionId: prescId,
+      officineId,
+      datetimePrevue: target,
+      statut: 'prevue',
+      deletedAt: new Date(),
+    });
+
+    await runGenerationGlissanteCron(env.handle.db, NOW);
+
+    // 30 prises générées MOINS celle déjà soft-deletée = 29 actives.
+    const [active] = await env.handle.client<{ count: string }[]>`
+      SELECT COUNT(*)::text AS count FROM prises_planifiees WHERE deleted_at IS NULL
+    `;
+    expect(Number(active?.count ?? 0)).toBe(WINDOW_DAYS - 1);
+  });
+
   it("respecte une prise déjà marquée `prise` (n'écrase pas le statut)", async () => {
     const prescId = await createPrescAVie({
       unitesParPrise: 1,
