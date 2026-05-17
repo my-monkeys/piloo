@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 
 const NAV_TOP = [
   { href: '/dashboard', label: 'Tableau de bord' },
+  { href: '/timeline', label: 'Timeline' },
   { href: '/inventory', label: 'Inventaire' },
 ];
 const NAV_SETTINGS = [{ href: '/settings/officines', label: 'Officines' }];
