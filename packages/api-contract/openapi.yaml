@@ -1320,6 +1320,97 @@ components:
             - true
       required:
         - restored
+    GetMeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        nom:
+          type: string
+        prenom:
+          type: string
+        name:
+          type: string
+        telephone:
+          type:
+            - string
+            - "null"
+        type_compte:
+          type: string
+          enum:
+            - particulier
+            - pro
+        image:
+          type:
+            - string
+            - "null"
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - nom
+        - prenom
+        - name
+        - telephone
+        - type_compte
+        - image
+        - deleted_at
+        - created_at
+    MeApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    UpdateMeInput:
+      type: object
+      properties:
+        nom:
+          type: string
+          minLength: 1
+          maxLength: 255
+        prenom:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        telephone:
+          type:
+            - string
+            - "null"
+          maxLength: 32
+        image:
+          type:
+            - string
+            - "null"
+          maxLength: 2048
+          format: uri
   parameters: {}
 paths:
   /health:
@@ -2562,4 +2653,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccountDeleteApiError"
+  /v1/me:
+    get:
+      summary: Profil de l'utilisateur courant
+      description: Renvoie le profil complet — email, identité, type de compte.
+      tags:
+        - me
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetMeResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeApiError"
+        "404":
+          description: Introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeApiError"
+    patch:
+      summary: Modifie le profil (droit de rectification RGPD article 16)
+      description: Met à jour nom, prenom, telephone, image. L'email passe par le flow Better Auth dédié (vérification email).
+      tags:
+        - me
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeInput"
+      responses:
+        "200":
+          description: Profil mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetMeResponse"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeApiError"
+        "404":
+          description: Introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MeApiError"
 webhooks: {}
