@@ -13,3 +13,4 @@ export * from './prises.ts';
 export * from './devices.ts';
 export * from './ordonnances.ts';
 export * from './export-data.ts';
+export * from './account-delete.ts';

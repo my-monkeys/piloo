@@ -1281,6 +1281,45 @@ components:
             - message
       required:
         - error
+    AccountDeleteResponse:
+      type: object
+      properties:
+        deleted_at:
+          type: string
+          format: date-time
+        scheduled_anonymization_at:
+          type: string
+          format: date-time
+      required:
+        - deleted_at
+        - scheduled_anonymization_at
+    AccountDeleteApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    AccountRestoreResponse:
+      type: object
+      properties:
+        restored:
+          type: boolean
+          enum:
+            - true
+      required:
+        - restored
   parameters: {}
 paths:
   /health:
@@ -2480,4 +2519,47 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ExportDataApiError"
+  /v1/me/delete:
+    post:
+      summary: Déclenche la suppression du compte (délai 7 jours)
+      description: Le compte reste utilisable pendant 7 jours, le temps de pouvoir l'annuler via /v1/me/restore. Au-delà, anonymisation automatique par cron.
+      tags:
+        - rgpd
+      responses:
+        "200":
+          description: Demande enregistrée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeleteResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeleteApiError"
+  /v1/me/restore:
+    post:
+      summary: Annule une demande de suppression en cours
+      tags:
+        - rgpd
+      responses:
+        "200":
+          description: Compte restauré
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountRestoreResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeleteApiError"
+        "404":
+          description: Aucune suppression en cours
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountDeleteApiError"
 webhooks: {}
