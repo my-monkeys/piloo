@@ -24,6 +24,7 @@ const NAV_TOP = [
   { href: '/dashboard', label: 'Tableau de bord' },
   { href: '/timeline', label: 'Timeline' },
   { href: '/inventory', label: 'Inventaire' },
+  { href: '/ordonnances', label: 'Ordonnances' },
 ];
 const NAV_SETTINGS = [{ href: '/settings/officines', label: 'Officines' }];
 

@@ -1434,6 +1434,794 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/officines/{officineId}/ordonnances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liste les ordonnances d'une officine
+         * @description Renvoie les ordonnances non soft-deleted, triées par date_prescription décroissante.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListOrdonnancesResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Pas d'accès à l'officine */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Officine introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Crée une ordonnance (avec prescriptions imbriquées optionnelles)
+         * @description Réservé aux rôles owner et editor.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateOrdonnanceInput"];
+                };
+            };
+            responses: {
+                /** @description Ordonnance créée (avec prescriptions) */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceWithPrescriptions"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Officine introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/ordonnances/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détail d'une ordonnance (prescriptions imbriquées) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Détail */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceWithPrescriptions"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Pas d'accès */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Inconnue ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete une ordonnance (cascade vers prescriptions)
+         * @description Réservé aux rôles owner et editor.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Supprimée */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Inconnue ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Met à jour l'en-tête d'une ordonnance
+         * @description Réservé aux rôles owner et editor.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateOrdonnanceInput"];
+                };
+            };
+            responses: {
+                /** @description Ordonnance mise à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Ordonnance"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Inconnue ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/v1/ordonnances/{id}/prescriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajoute une prescription à une ordonnance existante
+         * @description Réservé aux rôles owner et editor.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreatePrescriptionInput"];
+                };
+            };
+            responses: {
+                /** @description Prescription créée */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Prescription"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Ordonnance introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/prescriptions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete une prescription
+         * @description Réservé aux rôles owner et editor.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Supprimée */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Inconnue ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Met à jour une prescription
+         * @description Réservé aux rôles owner et editor.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePrescriptionInput"];
+                };
+            };
+            responses: {
+                /** @description Prescription mise à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Prescription"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+                /** @description Inconnue ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrdonnanceApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/v1/me/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Export RGPD article 20 — toutes les données personnelles de l'utilisateur
+         * @description Retourne un JSON téléchargeable (Content-Disposition: attachment) contenant : compte, préférences, devices, officines en propre (avec boîtes/ordonnances/prescriptions/prises), partages reçus (métadonnées seulement), alertes.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archive JSON des données personnelles */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            [key: string]: unknown;
+                        };
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportDataApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Déclenche la suppression du compte (délai 7 jours)
+         * @description Le compte reste utilisable pendant 7 jours, le temps de pouvoir l'annuler via /v1/me/restore. Au-delà, anonymisation automatique par cron.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Demande enregistrée */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeleteResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeleteApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Annule une demande de suppression en cours */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Compte restauré */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountRestoreResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeleteApiError"];
+                    };
+                };
+                /** @description Aucune suppression en cours */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AccountDeleteApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Profil de l'utilisateur courant
+         * @description Renvoie le profil complet — email, identité, type de compte.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Profil */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GetMeResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MeApiError"];
+                    };
+                };
+                /** @description Introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MeApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Modifie le profil (droit de rectification RGPD article 16)
+         * @description Met à jour nom, prenom, telephone, image. L'email passe par le flow Better Auth dédié (vérification email).
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateMeInput"];
+                };
+            };
+            responses: {
+                /** @description Profil mis à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GetMeResponse"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MeApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MeApiError"];
+                    };
+                };
+                /** @description Introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["MeApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1805,6 +2593,161 @@ export interface components {
             /** @enum {string} */
             platform: "ios" | "android" | "web";
             app_version?: string;
+        };
+        ListOrdonnancesResponse: {
+            items: components["schemas"]["Ordonnance"][];
+        };
+        Ordonnance: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            officine_id: string;
+            prescripteur: string | null;
+            /** Format: date */
+            date_prescription: string;
+            /** @enum {string} */
+            source: "manuelle" | "ocr";
+            /** Format: uri */
+            photo_url: string | null;
+            notes: string | null;
+            /** Format: uuid */
+            saisie_par: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            deleted_at: string | null;
+        };
+        OrdonnanceApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        OrdonnanceWithPrescriptions: components["schemas"]["Ordonnance"] & {
+            prescriptions: components["schemas"]["Prescription"][];
+        };
+        Prescription: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            ordonnance_id: string;
+            cip13: string | null;
+            cis: string | null;
+            nom_texte: string;
+            posologie: components["schemas"]["Posologie"];
+            duree_jours: number | null;
+            indication: string | null;
+            notes: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            deleted_at: string | null;
+        };
+        CreateOrdonnanceInput: {
+            prescripteur?: string | null;
+            /** Format: date */
+            date_prescription: string;
+            /** @enum {string} */
+            source?: "manuelle" | "ocr";
+            /** Format: uri */
+            photo_url?: string | null;
+            notes?: string | null;
+            prescriptions?: components["schemas"]["CreatePrescriptionInput"][];
+        };
+        CreatePrescriptionInput: {
+            cip13?: string | null;
+            cis?: string | null;
+            nom_texte: string;
+            posologie: components["schemas"]["Posologie"];
+            duree_jours?: number | null;
+            indication?: string | null;
+            notes?: string | null;
+        };
+        UpdateOrdonnanceInput: {
+            prescripteur?: string | null;
+            /** Format: date */
+            date_prescription?: string;
+            /** Format: uri */
+            photo_url?: string | null;
+            notes?: string | null;
+        };
+        UpdatePrescriptionInput: {
+            cip13?: string | null;
+            cis?: string | null;
+            nom_texte?: string;
+            posologie?: components["schemas"]["Posologie"];
+            duree_jours?: number | null;
+            indication?: string | null;
+            notes?: string | null;
+        };
+        ExportDataApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        AccountDeleteResponse: {
+            /** Format: date-time */
+            deleted_at: string;
+            /** Format: date-time */
+            scheduled_anonymization_at: string;
+        };
+        AccountDeleteApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        AccountRestoreResponse: {
+            /** @enum {boolean} */
+            restored: true;
+        };
+        GetMeResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: email */
+            email: string;
+            nom: string;
+            prenom: string;
+            name: string;
+            telephone: string | null;
+            /** @enum {string} */
+            type_compte: "particulier" | "pro";
+            image: string | null;
+            /** Format: date-time */
+            deleted_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        MeApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        UpdateMeInput: {
+            nom?: string;
+            prenom?: string;
+            name?: string;
+            telephone?: string | null;
+            /** Format: uri */
+            image?: string | null;
         };
     };
     responses: never;
