@@ -30,6 +30,10 @@
     {
       "path": "/api/v1/cron/generation-glissante",
       "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/v1/cron/anonymize-accounts",
+      "schedule": "0 5 * * *"
     }
   ]
 }
