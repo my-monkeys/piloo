@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 
+import { CookieBanner } from '@/components/legal/cookie-banner';
 import { PilooQueryProvider } from '@/lib/api/query-client-provider';
+import { CookieConsentProvider } from '@/lib/cookies/consent';
 
 // Tokens de design générés depuis `packages/design-tokens/tokens.json`.
 // Expose les CSS vars `--piloo-*` accessibles partout dans l'app.
@@ -18,7 +20,10 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr">
       <body>
-        <PilooQueryProvider>{children}</PilooQueryProvider>
+        <CookieConsentProvider>
+          <PilooQueryProvider>{children}</PilooQueryProvider>
+          <CookieBanner />
+        </CookieConsentProvider>
       </body>
     </html>
   );
