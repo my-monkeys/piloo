@@ -20,7 +20,10 @@ import { signOut } from '@/lib/auth/client';
 import { useActiveOfficine } from '@/lib/officines/active-officine';
 import { cn } from '@/lib/utils';
 
-const NAV_TOP = [{ href: '/dashboard', label: 'Tableau de bord' }];
+const NAV_TOP = [
+  { href: '/dashboard', label: 'Tableau de bord' },
+  { href: '/inventory', label: 'Inventaire' },
+];
 const NAV_SETTINGS = [{ href: '/settings/officines', label: 'Officines' }];
 
 function NavLink({ item, pathname }: { item: { href: string; label: string }; pathname: string }) {
