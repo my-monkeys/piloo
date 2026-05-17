@@ -15,6 +15,11 @@ const FrequenceEnum = z.enum(['quotidien', 'hebdomadaire', 'a_la_demande']);
 const MomentEnum = z.enum(['matin', 'midi', 'soir', 'coucher']);
 const HoraireRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
 
+// TODO : zod-to-openapi ne préserve pas (encore) la structure interne
+// de cet objet dans openapi.yaml — il génère `additionalProperties: {}`
+// au lieu des champs explicites. À débugger pour que les clients
+// générés (TS/Dart) aient des types précis sur Posologie. En attendant,
+// les consommateurs front importent le type depuis @piloo/api-contract.
 export const PosologieSchema = z
   .object({
     unitesParPrise: z.number().positive(),
