@@ -22,6 +22,10 @@
     {
       "path": "/api/v1/cron/prise-oubliee",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/v1/cron/stock-bas",
+      "schedule": "0 6 * * *"
     }
   ]
 }
