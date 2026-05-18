@@ -22,13 +22,17 @@
 // visuelle. Sera branché sur Drift + filter Riverpod quand l'epic
 // Inventory (#11) avancera.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/inventory/data/boites_provider.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
 enum _Filter { tout, actif, perime, stockBas }
@@ -57,14 +61,14 @@ class _Boite implements GroupableBoite {
   final _BoiteState state;
 }
 
-class OfficineScreen extends StatefulWidget {
+class OfficineScreen extends ConsumerStatefulWidget {
   const OfficineScreen({super.key});
 
   @override
-  State<OfficineScreen> createState() => _OfficineScreenState();
+  ConsumerState<OfficineScreen> createState() => _OfficineScreenState();
 }
 
-class _OfficineScreenState extends State<OfficineScreen> {
+class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   _Filter _filter = _Filter.tout;
   BoiteGrouping _grouping = BoiteGrouping.medicament;
 
@@ -86,7 +90,8 @@ class _OfficineScreenState extends State<OfficineScreen> {
     writeBoiteGrouping(mode);
   }
 
-  // Mock — le branchement Drift arrivera avec l'epic Inventory.
+  // Fallback mock affiché tant qu'aucune boîte n'a été synchronisée ; permet
+  // de garder l'écran reviewable même offline / first-launch.
   static const _all = [
     _Boite(
       name: 'Doliprane 1000 mg',
@@ -139,25 +144,39 @@ class _OfficineScreenState extends State<OfficineScreen> {
     ),
   ];
 
-  List<_Boite> get _filtered => switch (_filter) {
-        _Filter.tout => _all,
-        _Filter.actif => _all
+  List<_Boite> _filtered(List<_Boite> source) => switch (_filter) {
+        _Filter.tout => source,
+        _Filter.actif => source
             .where((b) => b.state == _BoiteState.ok)
             .toList(growable: false),
-        _Filter.perime => _all
+        _Filter.perime => source
             .where((b) => b.state == _BoiteState.perime)
             .toList(growable: false),
-        _Filter.stockBas => _all
+        _Filter.stockBas => source
             .where((b) => b.state == _BoiteState.stockBas)
             .toList(growable: false),
       };
 
   @override
   Widget build(BuildContext context) {
+    final activeOfficineAsync = ref.watch(activeOfficineProvider);
+    final activeOfficine = activeOfficineAsync.valueOrNull;
+    final boitesAsync = activeOfficine == null
+        ? const AsyncValue<List<api.Boite>>.data([])
+        : ref.watch(boitesProvider(activeOfficine.id));
+    final apiBoites = boitesAsync.maybeWhen(
+      data: (rows) => rows.map(_mapApiBoite).toList(growable: false),
+      orElse: () => const <_Boite>[],
+    );
+    // Tant qu'aucune boîte n'a été ajoutée, on garde le mock pour ne pas
+    // afficher un écran vide en review. Dès qu'on en a une, on bascule
+    // sur les vraies données (le mock est masqué).
+    final source = apiBoites.isNotEmpty ? apiBoites : _all;
+    final filtered = _filtered(source);
     final perimeCount =
-        _all.where((b) => b.state == _BoiteState.perime).length;
+        source.where((b) => b.state == _BoiteState.perime).length;
     final stockBasCount =
-        _all.where((b) => b.state == _BoiteState.stockBas).length;
+        source.where((b) => b.state == _BoiteState.stockBas).length;
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -173,10 +192,13 @@ class _OfficineScreenState extends State<OfficineScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _OfficineSwitcher(label: 'Maison', onTap: () {}),
+                  _OfficineSwitcher(
+                    label: activeOfficine?.nom ?? 'Maison',
+                    onTap: () {},
+                  ),
                   Flexible(
                     child: Text(
-                      '12 boîtes · 8 médicaments',
+                      '${source.length} boîte${source.length > 1 ? 's' : ''}',
                       style: GoogleFonts.manrope(
                         fontSize: 12,
                         color: PilooColors.textTertiary,
@@ -209,7 +231,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                 children: [
                   _FilterChip(
-                    label: 'Tout · ${_all.length}',
+                    label: 'Tout · ${source.length}',
                     selected: _filter == _Filter.tout,
                     onTap: () => setState(() => _filter = _Filter.tout),
                   ),
@@ -240,7 +262,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
               // Bottom padding 140 = tab bar (~105) + safe area home
               // indicator (extendBody: true côté _MainShell).
               child: _GroupedList(
-                sections: groupBoites(_filtered, _grouping),
+                sections: groupBoites(filtered, _grouping),
               ),
             ),
           ],
@@ -248,6 +270,56 @@ class _OfficineScreenState extends State<OfficineScreen> {
       ),
     );
   }
+}
+
+/// Mappe une `Boite` API → modèle d'affichage local.
+///
+/// Convention : on stocke le nom BDPM en préfixe des notes
+/// ("NOM // notes libres") au moment de la création depuis le scan
+/// (#84/#89). Côté lecture on extrait. Sans préfixe, fallback CIP13.
+/// Un futur ticket ajoutera une colonne dédiée `nom_texte` côté DB,
+/// pour ne plus faire ce parsing — gardé minimal en attendant.
+_Boite _mapApiBoite(api.Boite b) {
+  final parts = _splitNotes(b.notes);
+  final name = parts.name ?? 'CIP ${b.cip13}';
+  final meta = parts.name != null
+      ? 'CIP ${b.cip13}'
+      : (b.lot != null ? 'lot ${b.lot}' : '—');
+  final state = _deriveState(b);
+  final exp = state == _BoiteState.perime
+      ? null
+      : _formatPeremption(b.peremption);
+  return _Boite(
+    name: name,
+    dci: name,
+    meta: meta,
+    icon: PhosphorIconsFill.pill,
+    count: b.unitesRestantes ?? 1,
+    exp: exp,
+    state: state,
+  );
+}
+
+({String? name, String? rest}) _splitNotes(String? raw) {
+  if (raw == null || raw.isEmpty) return (name: null, rest: null);
+  final idx = raw.indexOf(' // ');
+  if (idx <= 0) return (name: null, rest: raw);
+  return (name: raw.substring(0, idx), rest: raw.substring(idx + 4));
+}
+
+_BoiteState _deriveState(api.Boite b) {
+  if (b.statut == api.BoiteStatutEnum.perimee) return _BoiteState.perime;
+  // Périmée d'office si la date est passée — sans attendre que le cron
+  // ait mis à jour le statut côté serveur.
+  final exp = DateTime(b.peremption.year, b.peremption.month, b.peremption.day);
+  if (exp.isBefore(DateTime.now())) return _BoiteState.perime;
+  if ((b.unitesRestantes ?? 99) <= 1) return _BoiteState.stockBas;
+  return _BoiteState.ok;
+}
+
+String _formatPeremption(api.Date d) {
+  final m = d.month.toString().padLeft(2, '0');
+  return 'exp. $m/${d.year}';
 }
 
 class _OfficineSwitcher extends StatelessWidget {

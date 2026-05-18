@@ -1,0 +1,20 @@
+node_modules
+.next
+.turbo
+.vercel
+.git
+.github
+dist
+build
+coverage
+*.log
+
+# App mobile Flutter — non utilisé par le build web
+apps/mobile
+
+# Docs / assets de design — non utilisés au runtime
+docs
+
+# Fichiers de dev locaux
+.DS_Store
+.env*.local

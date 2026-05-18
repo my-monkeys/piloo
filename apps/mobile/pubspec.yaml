@@ -52,6 +52,8 @@ dependencies:
   sign_in_with_apple: ^7.0.0
   google_sign_in: ^7.2.0
   crypto: ^3.0.7
+  piloo_api_client:
+    path: lib/gen/openapi
 
 dev_dependencies:
   flutter_test:

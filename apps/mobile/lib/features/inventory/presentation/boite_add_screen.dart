@@ -15,16 +15,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _StockLevel { plein, troisQuarts, moitie, unQuart, presqueVide }
 
@@ -44,6 +48,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   int _expMonth = 3;
   int _expYear = DateTime.now().year + 2;
   String _officine = 'Maison';
+  bool _saving = false;
 
   @override
   void initState() {
@@ -109,6 +114,69 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
       });
     }
   }
+
+  Future<void> _save() async {
+    final scan = ref.read(scanResultProvider);
+    final cip13 = scan?.cip13;
+    if (cip13 == null || cip13.length != 13) {
+      PilooToast.error(context, 'Scan requis pour récupérer le CIP13.');
+      return;
+    }
+    final activeOfficine = ref.read(activeOfficineProvider).valueOrNull;
+    if (activeOfficine == null) {
+      PilooToast.error(context, 'Aucune officine active.');
+      return;
+    }
+
+    // BDPM (local) facultatif : si on a le nom on le préfixe dans notes
+    // pour le retrouver côté liste (voir convention dans officine_screen).
+    String? medName;
+    final dbAsync = ref.read(bdpmDbProvider);
+    final db = dbAsync.valueOrNull;
+    if (db != null) {
+      medName = db.findByCip13(cip13)?.denomination;
+    }
+    final userNotes = _notesCtrl.text.trim();
+    final notes = medName != null
+        ? (userNotes.isEmpty ? medName : '$medName // $userNotes')
+        : (userNotes.isEmpty ? null : userNotes);
+
+    setState(() => _saving = true);
+    try {
+      await createBoite(
+        ref,
+        officineId: activeOfficine.id,
+        cip13: cip13,
+        peremption: _peremptionDate(),
+        lot: _lotCtrl.text.trim().isEmpty ? null : _lotCtrl.text.trim(),
+        unitesRestantes: _stockToUnits(_stock),
+        notes: notes,
+      );
+      if (!mounted) return;
+      PilooToast.success(context, 'Boîte ajoutée.');
+      context.canPop() ? context.pop() : context.go(RoutePath.officine);
+    } catch (e) {
+      if (!mounted) return;
+      PilooToast.error(context, 'Échec de l\'ajout : $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  api.Date _peremptionDate() {
+    // On prend le dernier jour du mois pour matcher l'usage "périmé à
+    // compter de fin du mois N".
+    final lastDay = DateTime(_expYear, _expMonth + 1, 0).day;
+    return api.Date(_expYear, _expMonth, lastDay);
+  }
+
+  int? _stockToUnits(_StockLevel level) => switch (level) {
+        _StockLevel.plein => null, // unitesInitiales/restantes inconnues
+        _StockLevel.troisQuarts => 24,
+        _StockLevel.moitie => 16,
+        _StockLevel.unQuart => 8,
+        _StockLevel.presqueVide => 2,
+      };
 
   Future<void> _pickOfficine() async {
     final picked = await showModalBottomSheet<String>(
@@ -221,12 +289,9 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: PilooButton(
-                      label: 'Ajouter',
+                      label: _saving ? 'Ajout…' : 'Ajouter',
                       variant: PilooButtonVariant.primary,
-                      // No-op tant que la persistance Drift n'est pas
-                      // câblée (#90 / #91). Le tap fera un push vers
-                      // /today.
-                      onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
+                      onPressed: _saving ? null : _save,
                     ),
                   ),
                 ],

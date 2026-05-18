@@ -64,3 +64,4 @@ coverage/
 packages/api-contract/generated/
 apps/mobile/lib/generated/
 apps/mobile/lib/gen/openapi/
+.vercel
