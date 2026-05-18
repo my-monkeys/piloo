@@ -78,6 +78,7 @@ async function importHandlers() {
   return {
     today: await import('@/app/api/v1/prises/today/route'),
     list: await import('@/app/api/v1/prises/route'),
+    detail: await import('@/app/api/v1/prises/[id]/route'),
   };
 }
 
@@ -297,5 +298,106 @@ describe('GET /api/v1/prises?date=', () => {
     const body = (await res.json()) as { items: { officine_id: string }[] };
     expect(body.items).toHaveLength(1);
     expect(body.items[0]?.officine_id).toBe(officineA);
+  });
+});
+
+describe('PATCH /api/v1/prises/{id}', () => {
+  async function makeContext() {
+    const owner = await signup('owner-patch@piloo.fr');
+    const officineId = await makeOfficine(owner.userId);
+    await grant(owner.userId, officineId, 'owner');
+    const prescId = await makePrescription(officineId, owner.userId);
+    const priseId = await makePrise(officineId, prescId, new Date('2026-05-21T09:00:00.000Z'));
+    return { owner, officineId, priseId };
+  }
+
+  function patchReq(id: string, body: unknown, cookie?: string): Request {
+    return new Request(`${BASE_URL}/api/v1/prises/${id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookie && { cookie }),
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  function patchCtx(id: string): { params: Promise<{ id: string }> } {
+    return { params: Promise.resolve({ id }) };
+  }
+
+  it('401 sans credential', async () => {
+    const { detail } = await importHandlers();
+    const id = '00000000-0000-0000-0000-000000000000';
+    const res = await detail.PATCH(patchReq(id, { statut: 'prise' }), patchCtx(id));
+    expect(res.status).toBe(401);
+  });
+
+  it('marque la prise en "prise" + horodatage + valideePar', async () => {
+    const { owner, priseId } = await makeContext();
+    const { detail } = await importHandlers();
+    const res = await detail.PATCH(
+      patchReq(priseId, { statut: 'prise' }, owner.cookie),
+      patchCtx(priseId),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      statut: string;
+      datetime_validation: string | null;
+    };
+    expect(body.statut).toBe('prise');
+    expect(body.datetime_validation).not.toBeNull();
+  });
+
+  it('réinitialise à "prevue" remet datetime_validation à null', async () => {
+    const { owner, priseId } = await makeContext();
+    const { detail } = await importHandlers();
+    await detail.PATCH(patchReq(priseId, { statut: 'prise' }, owner.cookie), patchCtx(priseId));
+    const res = await detail.PATCH(
+      patchReq(priseId, { statut: 'prevue' }, owner.cookie),
+      patchCtx(priseId),
+    );
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      statut: string;
+      datetime_validation: string | null;
+    };
+    expect(body.statut).toBe('prevue');
+    expect(body.datetime_validation).toBeNull();
+  });
+
+  it('refuse "oubliee" (statut terminal posé par le cron)', async () => {
+    const { owner, priseId } = await makeContext();
+    const { detail } = await importHandlers();
+    const res = await detail.PATCH(
+      patchReq(priseId, { statut: 'oubliee' }, owner.cookie),
+      patchCtx(priseId),
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it('403 pour un viewer', async () => {
+    const owner = await signup('owner-v@piloo.fr');
+    const viewer = await signup('viewer-v@piloo.fr');
+    const officineId = await makeOfficine(owner.userId);
+    await grant(owner.userId, officineId, 'owner');
+    await grant(viewer.userId, officineId, 'viewer');
+    const prescId = await makePrescription(officineId, owner.userId);
+    const priseId = await makePrise(officineId, prescId, new Date('2026-05-21T09:00:00.000Z'));
+
+    const { detail } = await importHandlers();
+    const res = await detail.PATCH(
+      patchReq(priseId, { statut: 'prise' }, viewer.cookie),
+      patchCtx(priseId),
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it('404 sur ID inexistant', async () => {
+    const { owner } = await makeContext();
+    const { detail } = await importHandlers();
+    const id = '00000000-0000-0000-0000-000000000001';
+    const res = await detail.PATCH(patchReq(id, { statut: 'prise' }, owner.cookie), patchCtx(id));
+    expect(res.status).toBe(404);
   });
 });

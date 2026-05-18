@@ -1200,6 +1200,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/prises/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Valider, sauter ou réinitialiser une prise planifiée
+         * @description Marque la prise `prise` (avec horodatage de validation), `sautee` (idem), ou la repasse à `prevue` (datetime_validation remis à null). Pas de transition vers `oubliee` manuelle — c'est l'état terminal posé par le cron.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePriseInput"];
+                };
+            };
+            responses: {
+                /** @description Prise mise à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriseTimelineItem"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Pas le droit (lecteur) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+                /** @description Prise inconnue */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PrisesApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/v1/prises": {
         parameters: {
             query?: never;
@@ -2562,6 +2643,11 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        };
+        UpdatePriseInput: {
+            /** @enum {string} */
+            statut: "prevue" | "prise" | "sautee";
+            notes?: string | null;
         };
         ListDevicesResponse: {
             items: components["schemas"]["Device"][];

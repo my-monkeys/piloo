@@ -894,6 +894,22 @@ components:
             - message
       required:
         - error
+    UpdatePriseInput:
+      type: object
+      properties:
+        statut:
+          type: string
+          enum:
+            - prevue
+            - prise
+            - sautee
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - statut
     ListDevicesResponse:
       type: object
       properties:
@@ -2120,6 +2136,55 @@ paths:
                 $ref: "#/components/schemas/PrisesApiError"
         "404":
           description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+  /v1/prises/{id}:
+    patch:
+      summary: Valider, sauter ou réinitialiser une prise planifiée
+      description: Marque la prise `prise` (avec horodatage de validation), `sautee` (idem), ou la repasse à `prevue` (datetime_validation remis à null). Pas de transition vers `oubliee` manuelle — c'est l'état terminal posé par le cron.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePriseInput"
+      responses:
+        "200":
+          description: Prise mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriseTimelineItem"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas le droit (lecteur)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Prise inconnue
           content:
             application/json:
               schema:
