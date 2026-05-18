@@ -84,12 +84,24 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
           grep "^version:" pubspec.yaml
 
+      - name: Générer le client Dart OpenAPI (gitignored)
+        # Le package piloo_api_client (lib/gen/openapi/) est gitignored.
+        # Sans cette étape, `flutter pub get` échoue avec "could not find
+        # package piloo_api_client at lib/gen/openapi".
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
+
       - name: Installer les dépendances Flutter
         working_directory: apps/mobile
         script: flutter pub get
 
-      - name: Générer le code (freezed / json / openapi)
+      - name: Générer le code (freezed / json / build_runner app)
         # Tolérant si le projet n'a pas encore de code generation (M1 early).
+        # Le client Dart OpenAPI est généré au-dessus, indépendamment.
         working_directory: apps/mobile
         script: |
           if grep -q "build_runner" pubspec.yaml; then
@@ -205,6 +217,14 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
           grep "^version:" pubspec.yaml
 
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
+
       - name: Installer les dépendances Flutter
         working_directory: apps/mobile
         script: flutter pub get
@@ -279,6 +299,13 @@ workflows:
       flutter: stable
 
     scripts:
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
       - name: Installer les dépendances
         working_directory: apps/mobile
         script: flutter pub get
@@ -351,6 +378,13 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION}+${BUILD_NUMBER}/" pubspec.yaml
           rm -f pubspec.yaml.bak
           grep "^version: " pubspec.yaml
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
       - name: Resolve Flutter packages
         working_directory: apps/mobile
         script: flutter pub get

@@ -52,6 +52,22 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Install JS deps (root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Dart OpenAPI client (gitignored)
+        run: pnpm openapi:generate-dart-client
+
       - name: Vérifier le format du tag (vX.Y.Z-demo)
         run: |
           set -euo pipefail
