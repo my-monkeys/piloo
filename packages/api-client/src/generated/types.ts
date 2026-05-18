@@ -1123,6 +1123,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/bdpm/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recherche un médicament BDPM par nom ou CIP
+         * @description Recherche par CIP (7 ou 13 chiffres) ou par dénomination (ILIKE). Max 20 résultats. Sert à la saisie manuelle d'une boîte côté web.
+         */
+        get: {
+            parameters: {
+                query: {
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Résultats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BdpmSearchResponse"];
+                    };
+                };
+                /** @description Paramètre `q` invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BdpmApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/prises/today": {
         parameters: {
             query?: never;
@@ -2521,6 +2571,9 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        };
+        BdpmSearchResponse: {
+            items: components["schemas"]["BdpmMedicament"][];
         };
         ListPrisesResponse: {
             /** Format: date */

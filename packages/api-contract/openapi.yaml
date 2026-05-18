@@ -794,6 +794,15 @@ components:
             - message
       required:
         - error
+    BdpmSearchResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BdpmMedicament"
+      required:
+        - items
     ListPrisesResponse:
       type: object
       properties:
@@ -2076,6 +2085,33 @@ paths:
                 $ref: "#/components/schemas/BdpmDiffResponse"
         "400":
           description: Paramètre `from` invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmApiError"
+  /v1/bdpm/search:
+    get:
+      summary: Recherche un médicament BDPM par nom ou CIP
+      description: Recherche par CIP (7 ou 13 chiffres) ou par dénomination (ILIKE). Max 20 résultats. Sert à la saisie manuelle d'une boîte côté web.
+      tags:
+        - bdpm
+      parameters:
+        - schema:
+            type: string
+            minLength: 2
+            maxLength: 120
+          required: true
+          name: q
+          in: query
+      responses:
+        "200":
+          description: Résultats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmSearchResponse"
+        "400":
+          description: Paramètre `q` invalide
           content:
             application/json:
               schema:

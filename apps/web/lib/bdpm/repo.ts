@@ -1,6 +1,6 @@
 // Accès DB pour les endpoints BDPM (#76).
 import { medicamentsBdpm, type Db, type MedicamentBdpm } from '@piloo/db-schema';
-import { count, desc, gt } from 'drizzle-orm';
+import { count, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
 
 export interface BdpmStats {
   /** Date du dump le plus récent en base, ou null si table vide. */
@@ -34,4 +34,38 @@ export async function getBdpmDiffSince(db: Db, from: string): Promise<Medicament
     .from(medicamentsBdpm)
     .where(gt(medicamentsBdpm.versionBdpm, from))
     .orderBy(medicamentsBdpm.cis);
+}
+
+const SEARCH_LIMIT = 20;
+
+/// Recherche pour saisie manuelle (formulaire création boîte web).
+/// Heuristique : si q n'est que des chiffres ≥ 7 caractères, on suppose un
+/// CIP et on filtre dessus (égalité). Sinon ILIKE sur la dénomination
+/// (préfixe + contains, préfixe d'abord pour pertinence).
+export async function searchBdpm(db: Db, q: string): Promise<MedicamentBdpm[]> {
+  const trimmed = q.trim();
+  const isCip = /^\d{7,13}$/.test(trimmed);
+
+  if (isCip) {
+    return db
+      .select()
+      .from(medicamentsBdpm)
+      .where(or(eq(medicamentsBdpm.cip13, trimmed), eq(medicamentsBdpm.cip7, trimmed)))
+      .limit(SEARCH_LIMIT);
+  }
+
+  // Pertinence : un nom qui commence par q passe avant ceux qui le
+  // contiennent. Pas de full-text Postgres pour rester portable ; ILIKE
+  // + index trigram serait l'évolution (post-MVP).
+  const prefixPattern = `${trimmed}%`;
+  const containsPattern = `%${trimmed}%`;
+  return db
+    .select()
+    .from(medicamentsBdpm)
+    .where(ilike(medicamentsBdpm.denomination, containsPattern))
+    .orderBy(
+      sql`CASE WHEN ${medicamentsBdpm.denomination} ILIKE ${prefixPattern} THEN 0 ELSE 1 END`,
+      medicamentsBdpm.denomination,
+    )
+    .limit(SEARCH_LIMIT);
 }

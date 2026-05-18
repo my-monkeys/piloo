@@ -15,6 +15,8 @@
 import { $api, type components } from '@piloo/api-client';
 import { useMemo, useState } from 'react';
 
+import { AddBoiteDialog } from '@/components/app/inventory/add-boite-dialog';
+import { BoiteDetailPanel } from '@/components/app/inventory/boite-detail-panel';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
@@ -49,11 +51,14 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="font-display text-3xl">Inventaire</h1>
-        <p className="text-muted-foreground">
-          Toutes les boîtes de l&apos;officine active. Tri colonne, recherche, détail à droite.
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-3xl">Inventaire</h1>
+          <p className="text-muted-foreground">
+            Toutes les boîtes de l&apos;officine active. Tri colonne, recherche, détail à droite.
+          </p>
+        </div>
+        {activeOfficineId && <AddBoiteDialog officineId={activeOfficineId} />}
       </header>
 
       {!activeOfficineId ? (
@@ -83,7 +88,7 @@ export default function InventoryPage() {
           if (!o) setOpened(null);
         }}
       >
-        <SheetContent>
+        <SheetContent className="overflow-y-auto">
           {opened && (
             <>
               <SheetHeader>
@@ -92,7 +97,12 @@ export default function InventoryPage() {
                   Boîte ajoutée le {formatDate(opened.created_at)}
                 </SheetDescription>
               </SheetHeader>
-              <BoiteDetailContent boite={opened} />
+              <BoiteDetailPanel
+                boite={opened}
+                onClose={() => {
+                  setOpened(null);
+                }}
+              />
             </>
           )}
         </SheetContent>
@@ -284,37 +294,6 @@ function StatutBadge({ statut }: { statut: Boite['statut'] }) {
     >
       {label}
     </span>
-  );
-}
-
-function BoiteDetailContent({ boite }: { boite: Boite }) {
-  return (
-    <dl className="mt-6 space-y-3 text-sm">
-      <Row label="CIP13" value={<span className="font-mono">{boite.cip13}</span>} />
-      <Row label="Lot" value={boite.lot ?? '—'} />
-      <Row label="N° série" value={boite.numero_serie ?? '—'} />
-      <Row label="Péremption" value={formatDate(boite.peremption)} />
-      <Row
-        label="Stock"
-        value={
-          boite.unites_restantes !== null && boite.unites_initiales !== null
-            ? `${String(boite.unites_restantes)} / ${String(boite.unites_initiales)} unités`
-            : (boite.unites_restantes?.toString() ?? '—')
-        }
-      />
-      <Row label="Statut" value={<StatutBadge statut={boite.statut} />} />
-      <Row label="Ajoutée le" value={formatDate(boite.created_at)} />
-      {boite.notes && <Row label="Notes" value={boite.notes} />}
-    </dl>
-  );
-}
-
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
-      <dd>{value}</dd>
-    </div>
   );
 }
 

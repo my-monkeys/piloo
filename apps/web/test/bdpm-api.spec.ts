@@ -23,6 +23,7 @@ async function importHandlers() {
   return {
     version: await import('@/app/api/v1/bdpm/version/route'),
     diff: await import('@/app/api/v1/bdpm/diff/route'),
+    search: await import('@/app/api/v1/bdpm/search/route'),
   };
 }
 
@@ -133,5 +134,73 @@ describe('GET /api/v1/bdpm/diff', () => {
     const d = await diff.GET(new Request('http://x/api/v1/bdpm/diff?from=2026-01-01'));
     expect(v.status).toBe(200);
     expect(d.status).toBe(200);
+  });
+});
+
+describe('GET /api/v1/bdpm/search', () => {
+  it('400 si q absent', async () => {
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search'));
+    expect(res.status).toBe(400);
+  });
+
+  it('400 si q < 2 caractères', async () => {
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=a'));
+    expect(res.status).toBe(400);
+  });
+
+  it('CIP13 exact → match unique', async () => {
+    await seed([
+      { cis: '60000001', cip13: '3400934567890', version: '2026-05-01', denomination: 'A' },
+      { cis: '60000002', cip13: '3400934567891', version: '2026-05-01', denomination: 'B' },
+    ]);
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=3400934567890'));
+    const body = (await res.json()) as { items: { cis: string }[] };
+    expect(body.items.map((i) => i.cis)).toEqual(['60000001']);
+  });
+
+  it('recherche par nom : préfixe avant contains', async () => {
+    await seed([
+      { cis: '60000001', version: '2026-05-01', denomination: 'DOLIPRANE 500MG' },
+      { cis: '60000002', version: '2026-05-01', denomination: 'PARACETAMOL DOLIPRANE' },
+      { cis: '60000003', version: '2026-05-01', denomination: 'IBUPROFENE' },
+    ]);
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=DOLIPRANE'));
+    const body = (await res.json()) as { items: { cis: string; denomination: string }[] };
+    expect(body.items.map((i) => i.denomination)).toEqual([
+      'DOLIPRANE 500MG',
+      'PARACETAMOL DOLIPRANE',
+    ]);
+  });
+
+  it('recherche insensible à la casse', async () => {
+    await seed([{ cis: '60000001', version: '2026-05-01', denomination: 'DOLIPRANE 500MG' }]);
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=doli'));
+    const body = (await res.json()) as { items: unknown[] };
+    expect(body.items).toHaveLength(1);
+  });
+
+  it('limite à 20 résultats', async () => {
+    await seed(
+      Array.from({ length: 30 }, (_, i) => ({
+        cis: `7000000${i.toString().padStart(2, '0')}`,
+        version: '2026-05-01',
+        denomination: `MEDOC TEST ${String(i)}`,
+      })),
+    );
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=MEDOC'));
+    const body = (await res.json()) as { items: unknown[] };
+    expect(body.items.length).toBeLessThanOrEqual(20);
+  });
+
+  it('public : pas de 401 sans credential', async () => {
+    const { search } = await importHandlers();
+    const res = await search.GET(new Request('http://x/api/v1/bdpm/search?q=test'));
+    expect(res.status).toBe(200);
   });
 });
