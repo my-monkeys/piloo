@@ -16,9 +16,13 @@ import 'package:piloo/core/config/api_config.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 
 final pilooApiClientProvider = Provider<PilooApiClient>((ref) {
+  // Le client OpenAPI généré déclare ses chemins en `/v1/...` ; on doit
+  // donc préfixer la baseURL avec `/api` pour atteindre les routes
+  // Next.js (`/api/v1/...`). Sans ça les calls partent en 404.
+  final apiBase = '${ApiConfig.baseUrl}/api';
   final dio = Dio(
     BaseOptions(
-      baseUrl: ApiConfig.baseUrl,
+      baseUrl: apiBase,
       connectTimeout: const Duration(seconds: 15),
       receiveTimeout: const Duration(seconds: 20),
       headers: {'Content-Type': 'application/json'},
@@ -32,7 +36,7 @@ final pilooApiClientProvider = Provider<PilooApiClient>((ref) {
   // de coupler les providers et permettre des appels même avant que le
   // provider soit "ready" (au boot).
   dio.interceptors.add(_BearerFromSessionInterceptor(ref));
-  return PilooApiClient(dio: dio, basePathOverride: ApiConfig.baseUrl);
+  return PilooApiClient(dio: dio, basePathOverride: apiBase);
 });
 
 class _BearerFromSessionInterceptor extends Interceptor {
