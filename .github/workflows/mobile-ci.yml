@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "apps/mobile/**"
+      - "packages/api-contract/**"
       - ".github/workflows/mobile-ci.yml"
 
 concurrency:
@@ -16,9 +17,6 @@ jobs:
     name: analyze / test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: apps/mobile
 
     steps:
       - name: Checkout
@@ -31,14 +29,33 @@ jobs:
           flutter-version: 3.x
           cache: true
 
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.26.1
+
+      - name: Install JS deps (root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Dart OpenAPI client (gitignored)
+        run: pnpm openapi:generate-dart-client
+
       - name: Install dependencies
+        working-directory: apps/mobile
         run: flutter pub get
 
       - name: Analyze
         # `--no-fatal-infos` : les déprécations transitives (Flutter SDK,
         # test_api, etc.) sont info-level et ne doivent pas bloquer le CI.
         # Aligné avec le workflow web (qui faisait déjà ce choix).
+        working-directory: apps/mobile
         run: flutter analyze --no-fatal-infos
 
       - name: Test
+        working-directory: apps/mobile
         run: flutter test
