@@ -52,8 +52,20 @@ export const ListPrisesResponseSchema = z
   })
   .openapi('ListPrisesResponse');
 
+// Validation manuelle (Prise/Sautée/Reset prevue). `oubliee` n'est PAS
+// settable manuellement — c'est l'état terminal posé par le cron #118
+// quand on dépasse +1h sans action ; le repasser à `prevue` revient à
+// "j'oublie d'avoir oublié", ce qu'on ne veut pas tracer.
+export const UpdatePriseInputSchema = z
+  .object({
+    statut: z.enum(['prevue', 'prise', 'sautee']),
+    notes: z.string().max(2000).nullable().optional(),
+  })
+  .openapi('UpdatePriseInput');
+
 export type PriseTimelineItem = z.infer<typeof PriseTimelineItemSchema>;
 export type ListPrisesResponse = z.infer<typeof ListPrisesResponseSchema>;
+export type UpdatePriseInput = z.infer<typeof UpdatePriseInputSchema>;
 
 const ApiErrorSchema = z
   .object({
@@ -92,6 +104,32 @@ registry.registerPath({
     401: errorResponse('Non authentifié'),
     403: errorResponse("Pas d'accès à cette officine"),
     404: errorResponse('Officine inconnue'),
+  },
+});
+
+registry.registerPath({
+  method: 'patch',
+  path: '/v1/prises/{id}',
+  summary: 'Valider, sauter ou réinitialiser une prise planifiée',
+  description:
+    'Marque la prise `prise` (avec horodatage de validation), `sautee` (idem), ou la repasse à `prevue` (datetime_validation remis à null). ' +
+    "Pas de transition vers `oubliee` manuelle — c'est l'état terminal posé par le cron.",
+  tags: ['prises'],
+  request: {
+    params: z.object({ id: z.uuid() }),
+    body: {
+      content: { 'application/json': { schema: UpdatePriseInputSchema } },
+    },
+  },
+  responses: {
+    200: {
+      description: 'Prise mise à jour',
+      content: { 'application/json': { schema: PriseTimelineItemSchema } },
+    },
+    400: errorResponse('Body invalide'),
+    401: errorResponse('Non authentifié'),
+    403: errorResponse('Pas le droit (lecteur)'),
+    404: errorResponse('Prise inconnue'),
   },
 });
 
