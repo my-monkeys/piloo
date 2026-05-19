@@ -25,8 +25,9 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # cf. android-release.yml — pin pour phosphor_flutter 2.1.0
           channel: stable
-          flutter-version: 3.x
+          flutter-version: 3.38.7
           cache: true
 
       - name: Setup Node 22

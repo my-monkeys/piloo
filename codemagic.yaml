@@ -41,7 +41,10 @@ workflows:
           include: false
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       xcode: latest
       cocoapods: default
 
@@ -179,7 +182,10 @@ workflows:
           include: true
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       xcode: latest
       cocoapods: default
       groups:
@@ -296,7 +302,10 @@ workflows:
           source: false
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
 
     scripts:
       - name: Générer le client Dart OpenAPI (gitignored)
@@ -327,7 +336,10 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       groups:
         # KEYSTORE_FILE (base64), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
         - android_keystore

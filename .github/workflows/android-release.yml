@@ -51,6 +51,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
+          # Pin pour rester compatible avec phosphor_flutter 2.1.0 qui
+          # étend IconData (devenu `final class` dans les Flutter plus
+          # récents). 3.38.7 = version utilisée en local au moment du
+          # commit. À débloquer quand phosphor_flutter publiera une fix.
+          flutter-version: 3.38.7
           channel: stable
           cache: true
 
