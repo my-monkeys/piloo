@@ -82,21 +82,6 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   bool get _canGoPrev => _isWithinBounds(_date.subtract(const Duration(days: 1)));
   bool get _canGoNext => _isWithinBounds(_date.add(const Duration(days: 1)));
 
-  // Mock fallback affiché quand on n'a pas de données API (offline /
-  // pas d'officine active / loading initial). Permet une démo visuelle
-  // immédiate au cold start.
-  static const _mockMatin = [
-    _Prise(
-      name: 'Doliprane 1000 mg',
-      meta: '1 comprimé',
-      timeOrLabel: '8:00',
-      status: PriseStatus.upcoming,
-    ),
-  ];
-  static const _mockMidi = <_Prise>[];
-  static const _mockSoir = <_Prise>[];
-  static const _mockCoucher = <_Prise>[];
-
   ({
     List<_Prise> matin,
     List<_Prise> midi,
@@ -225,15 +210,14 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       ),
     );
 
-    final hasApiData = apiBuckets.matin.isNotEmpty ||
+    final hasAny = apiBuckets.matin.isNotEmpty ||
         apiBuckets.midi.isNotEmpty ||
         apiBuckets.soir.isNotEmpty ||
         apiBuckets.coucher.isNotEmpty;
-
-    final matin = hasApiData ? apiBuckets.matin : _mockMatin;
-    final midi = hasApiData ? apiBuckets.midi : _mockMidi;
-    final soir = hasApiData ? apiBuckets.soir : _mockSoir;
-    final coucher = hasApiData ? apiBuckets.coucher : _mockCoucher;
+    final matin = apiBuckets.matin;
+    final midi = apiBuckets.midi;
+    final soir = apiBuckets.soir;
+    final coucher = apiBuckets.coucher;
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -252,49 +236,54 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
               onNext: _canGoNext ? () => _shiftDay(1) : null,
             ),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Section(
-                      icon: PhosphorIconsFill.sunHorizon,
-                      label: 'Matin',
-                      countLabel: _countLabel(matin),
-                      countColor: _countColor(matin),
-                      prises: matin,
-                      onPriseTap: _onPriseTap,
-                    ),
-                    const SizedBox(height: 16),
-                    _Section(
-                      icon: PhosphorIconsFill.sun,
-                      label: 'Midi',
-                      countLabel: _countLabel(midi),
-                      countColor: _countColor(midi),
-                      prises: midi,
-                      onPriseTap: _onPriseTap,
-                    ),
-                    const SizedBox(height: 16),
-                    _Section(
-                      icon: PhosphorIconsFill.moon,
-                      label: 'Soir',
-                      countLabel: _countLabel(soir),
-                      countColor: _countColor(soir),
-                      prises: soir,
-                      onPriseTap: _onPriseTap,
-                    ),
-                    const SizedBox(height: 16),
-                    _Section(
-                      icon: PhosphorIconsFill.moonStars,
-                      label: 'Coucher',
-                      countLabel: _countLabel(coucher),
-                      countColor: _countColor(coucher),
-                      prises: coucher,
-                      onPriseTap: _onPriseTap,
-                    ),
-                  ],
-                ),
-              ),
+              child: prisesAsync.isLoading && !hasAny
+                  ? const Center(child: CircularProgressIndicator())
+                  : !hasAny
+                      ? _EmptyDay(date: _date)
+                      : SingleChildScrollView(
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _Section(
+                                icon: PhosphorIconsFill.sunHorizon,
+                                label: 'Matin',
+                                countLabel: _countLabel(matin),
+                                countColor: _countColor(matin),
+                                prises: matin,
+                                onPriseTap: _onPriseTap,
+                              ),
+                              const SizedBox(height: 16),
+                              _Section(
+                                icon: PhosphorIconsFill.sun,
+                                label: 'Midi',
+                                countLabel: _countLabel(midi),
+                                countColor: _countColor(midi),
+                                prises: midi,
+                                onPriseTap: _onPriseTap,
+                              ),
+                              const SizedBox(height: 16),
+                              _Section(
+                                icon: PhosphorIconsFill.moon,
+                                label: 'Soir',
+                                countLabel: _countLabel(soir),
+                                countColor: _countColor(soir),
+                                prises: soir,
+                                onPriseTap: _onPriseTap,
+                              ),
+                              const SizedBox(height: 16),
+                              _Section(
+                                icon: PhosphorIconsFill.moonStars,
+                                label: 'Coucher',
+                                countLabel: _countLabel(coucher),
+                                countColor: _countColor(coucher),
+                                prises: coucher,
+                                onPriseTap: _onPriseTap,
+                              ),
+                            ],
+                          ),
+                        ),
             ),
           ],
         ),
@@ -516,5 +505,56 @@ class _StatusDot extends StatelessWidget {
           ),
         ),
     };
+  }
+}
+
+
+class _EmptyDay extends StatelessWidget {
+  const _EmptyDay({required this.date});
+
+  final DateTime date;
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              PhosphorIconsRegular.calendarBlank,
+              size: 48,
+              color: PilooColors.textTertiary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              _isToday ? 'Rien de prévu aujourd\'hui' : 'Rien de prévu ce jour',
+              style: GoogleFonts.fraunces(
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+                color: PilooColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Ajoute une ordonnance pour planifier tes prises.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: PilooColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

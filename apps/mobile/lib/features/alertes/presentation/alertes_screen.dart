@@ -41,15 +41,6 @@ class _Alert {
 class AlertesScreen extends ConsumerWidget {
   const AlertesScreen({super.key});
 
-  static const _mock = [
-    _Alert(
-      type: _AlertType.missed,
-      title: 'Prise oubliée — Ramipril 5 mg',
-      subtitle: 'Prévue à 19:00 · il y a 1h',
-      unread: true,
-    ),
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final alertesAsync = ref.watch(alertesProvider);
@@ -57,8 +48,8 @@ class AlertesScreen extends ConsumerWidget {
       data: (rows) => rows.map(_mapAlerte).toList(),
       orElse: () => const <_Alert>[],
     );
-    final source = items.isEmpty ? _mock : items;
-    final groups = _groupByDate(source);
+    final groups = _groupByDate(items);
+    final isLoading = alertesAsync.isLoading && items.isEmpty;
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -69,45 +60,69 @@ class AlertesScreen extends ConsumerWidget {
           children: [
             _Header(),
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
-                children: [
-                  if (groups.today.isNotEmpty) ...[
-                    _Group(
-                      label: "AUJOURD'HUI",
-                      alerts: groups.today,
-                      onTap: (alert) => _onTap(context, ref, alert),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-                  if (groups.week.isNotEmpty) ...[
-                    _Group(
-                      label: 'CETTE SEMAINE',
-                      alerts: groups.week,
-                      onTap: (alert) => _onTap(context, ref, alert),
-                    ),
-                    const SizedBox(height: 14),
-                  ],
-                  if (groups.older.isNotEmpty)
-                    _Group(
-                      label: 'PLUS ANCIEN',
-                      alerts: groups.older,
-                      onTap: (alert) => _onTap(context, ref, alert),
-                    ),
-                  if (source.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 32),
-                      child: Text(
-                        'Aucune alerte. ✨',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          color: PilooColors.textTertiary,
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : items.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  PhosphorIconsRegular.bellSlash,
+                                  size: 48,
+                                  color: PilooColors.textTertiary,
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Aucune alerte',
+                                  style: GoogleFonts.fraunces(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w500,
+                                    color: PilooColors.textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'Tu es à jour. ✨',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.manrope(
+                                    fontSize: 13,
+                                    color: PilooColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      : ListView(
+                          padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                          children: [
+                            if (groups.today.isNotEmpty) ...[
+                              _Group(
+                                label: "AUJOURD'HUI",
+                                alerts: groups.today,
+                                onTap: (alert) => _onTap(context, ref, alert),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                            if (groups.week.isNotEmpty) ...[
+                              _Group(
+                                label: 'CETTE SEMAINE',
+                                alerts: groups.week,
+                                onTap: (alert) => _onTap(context, ref, alert),
+                              ),
+                              const SizedBox(height: 14),
+                            ],
+                            if (groups.older.isNotEmpty)
+                              _Group(
+                                label: 'PLUS ANCIEN',
+                                alerts: groups.older,
+                                onTap: (alert) => _onTap(context, ref, alert),
+                              ),
+                          ],
                         ),
-                      ),
-                    ),
-                ],
-              ),
             ),
           ],
         ),
