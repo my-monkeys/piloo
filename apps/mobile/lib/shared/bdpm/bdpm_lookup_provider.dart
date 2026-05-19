@@ -14,7 +14,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/shared/api/api_client_provider.dart';
-import 'bdpm_db.dart';
 import 'bdpm_medicament.dart';
 import 'bdpm_provider.dart';
 

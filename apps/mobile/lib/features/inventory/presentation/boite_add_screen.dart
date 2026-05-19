@@ -26,7 +26,6 @@ import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
-import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
