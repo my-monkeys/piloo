@@ -24,6 +24,10 @@
       "schedule": "0 22 * * *"
     },
     {
+      "path": "/api/v1/cron/rappels-prises",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/v1/cron/stock-bas",
       "schedule": "0 6 * * *"
     },

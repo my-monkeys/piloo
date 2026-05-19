@@ -50,6 +50,13 @@
       "when": 1778958690302,
       "tag": "0006_abnormal_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779189713824,
+      "tag": "0007_normal_kulan_gath",
+      "breakpoints": true
     }
   ]
 }

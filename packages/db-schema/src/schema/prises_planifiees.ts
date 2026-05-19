@@ -27,6 +27,10 @@ export const prisesPlanifiees = pgTable(
     datetimeValidation: timestamp({ withTimezone: true }),
     statut: statutPriseEnum().notNull().default('prevue'),
     valideePar: uuid().references(() => users.id, { onDelete: 'set null' }),
+    // Posée par le cron #126 dès qu'un rappel push a été envoyé pour
+    // cette prise. Idempotence : un cron qui re-tourne sur la même
+    // fenêtre ne renvoie pas la notif (where notified_at is null).
+    notifiedAt: timestamp({ withTimezone: true }),
     notes: text(),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
