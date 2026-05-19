@@ -79,6 +79,11 @@ class OfficineScreen extends ConsumerStatefulWidget {
 class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   _Filter _filter = _Filter.tout;
   BoiteGrouping _grouping = BoiteGrouping.medicament;
+  /// Texte de recherche libre. Filtre name + dci + cip13 case-insensitive.
+  /// Vide → toutes les boîtes affichées (modulo le filtre de statut).
+  /// #100 : tap sur "Principe actif" depuis la fiche médicament viendra
+  /// pré-remplir ce champ avec la DCI.
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -214,72 +219,28 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     );
   }
 
-  // Fallback mock affiché tant qu'aucune boîte n'a été synchronisée ; permet
-  // de garder l'écran reviewable même offline / first-launch.
-  static const _all = [
-    _Boite(
-      name: 'Doliprane 1000 mg',
-      dci: 'Paracétamol',
-      meta: 'Paracétamol · comprimé',
-      icon: PhosphorIconsFill.pill,
-      count: 3,
-      exp: 'exp. 08/2026',
-    ),
-    _Boite(
-      name: 'Kardegic 75 mg',
-      dci: 'Acide acétylsalicylique',
-      meta: 'Acide acétylsalicylique · sachet',
-      icon: PhosphorIconsFill.pill,
-      count: 2,
-      exp: 'exp. 06/2026',
-      state: _BoiteState.stockBas,
-    ),
-    _Boite(
-      name: 'Metformine 500 mg',
-      dci: 'Metformine',
-      meta: 'Metformine · comprimé',
-      icon: PhosphorIconsFill.pill,
-      count: 1,
-      exp: 'exp. 05/2027',
-    ),
-    _Boite(
-      name: 'Amoxicilline 500 mg',
-      dci: 'Amoxicilline',
-      meta: 'Périmée depuis 14 jours · à jeter',
-      icon: PhosphorIconsFill.warningOctagon,
-      count: 1,
-      state: _BoiteState.perime,
-    ),
-    _Boite(
-      name: 'Humex rhume',
-      dci: 'Paracétamol + chlorphénamine',
-      meta: 'Paracétamol + chlorphénamine · sirop',
-      icon: PhosphorIconsFill.drop,
-      count: 1,
-      exp: 'exp. 11/2025',
-    ),
-    _Boite(
-      name: 'Dafalgan 500 mg',
-      dci: 'Paracétamol',
-      meta: 'Paracétamol · gélule',
-      icon: PhosphorIconsFill.pill,
-      count: 2,
-      exp: 'exp. 03/2027',
-    ),
-  ];
 
-  List<_Boite> _filtered(List<_Boite> source) => switch (_filter) {
-        _Filter.tout => source,
-        _Filter.actif => source
-            .where((b) => b.state == _BoiteState.ok)
-            .toList(growable: false),
-        _Filter.perime => source
-            .where((b) => b.state == _BoiteState.perime)
-            .toList(growable: false),
-        _Filter.stockBas => source
-            .where((b) => b.state == _BoiteState.stockBas)
-            .toList(growable: false),
-      };
+  List<_Boite> _filtered(List<_Boite> source) {
+    final byStatut = switch (_filter) {
+      _Filter.tout => source,
+      _Filter.actif =>
+        source.where((b) => b.state == _BoiteState.ok).toList(growable: false),
+      _Filter.perime => source
+          .where((b) => b.state == _BoiteState.perime)
+          .toList(growable: false),
+      _Filter.stockBas => source
+          .where((b) => b.state == _BoiteState.stockBas)
+          .toList(growable: false),
+    };
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return byStatut;
+    return byStatut
+        .where((b) =>
+            b.name.toLowerCase().contains(q) ||
+            b.dci.toLowerCase().contains(q) ||
+            b.meta.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -288,14 +249,11 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     final boitesAsync = activeOfficine == null
         ? const AsyncValue<List<api.Boite>>.data([])
         : ref.watch(boitesProvider(activeOfficine.id));
-    final apiBoites = boitesAsync.maybeWhen(
+    final source = boitesAsync.maybeWhen(
       data: (rows) => rows.map(_mapApiBoite).toList(growable: false),
       orElse: () => const <_Boite>[],
     );
-    // Tant qu'aucune boîte n'a été ajoutée, on garde le mock pour ne pas
-    // afficher un écran vide en review. Dès qu'on en a une, on bascule
-    // sur les vraies données (le mock est masqué).
-    final source = apiBoites.isNotEmpty ? apiBoites : _all;
+    final isLoading = boitesAsync.isLoading && source.isEmpty;
     final filtered = _filtered(source);
     final perimeCount =
         source.where((b) => b.state == _BoiteState.perime).length;
@@ -334,9 +292,12 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 4),
-              child: _SearchBox(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: _SearchBox(
+                value: _searchQuery,
+                onChanged: (q) => setState(() => _searchQuery = q),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -383,12 +344,16 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
               ),
             ),
             Expanded(
-              // Bottom padding 140 = tab bar (~105) + safe area home
-              // indicator (extendBody: true côté _MainShell).
-              child: _GroupedList(
-                sections: groupBoites(filtered, _grouping),
-                onBoiteTap: _onBoiteTap,
-              ),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : source.isEmpty
+                      ? _EmptyOfficine()
+                      // Bottom padding 140 = tab bar (~105) + safe area
+                      // home indicator (extendBody: true côté _MainShell).
+                      : _GroupedList(
+                          sections: groupBoites(filtered, _grouping),
+                          onBoiteTap: _onBoiteTap,
+                        ),
             ),
           ],
         ),
@@ -599,8 +564,35 @@ class _OfficineSwitcher extends StatelessWidget {
   }
 }
 
-class _SearchBox extends StatelessWidget {
-  const _SearchBox();
+class _SearchBox extends StatefulWidget {
+  const _SearchBox({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_SearchBox> createState() => _SearchBoxState();
+}
+
+class _SearchBoxState extends State<_SearchBox> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.value);
+
+  @override
+  void didUpdateWidget(_SearchBox old) {
+    super.didUpdateWidget(old);
+    // Sync externe (ex: pré-remplissage par tap DCI) — on évite la
+    // boucle infinie en comparant le texte avant set.
+    if (widget.value != _ctrl.text) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -622,6 +614,8 @@ class _SearchBox extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              controller: _ctrl,
+              onChanged: widget.onChanged,
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -642,6 +636,22 @@ class _SearchBox extends StatelessWidget {
               ),
             ),
           ),
+          if (_ctrl.text.isNotEmpty)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                _ctrl.clear();
+                widget.onChanged('');
+              },
+              child: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  PhosphorIconsRegular.xCircle,
+                  size: 16,
+                  color: PilooColors.textTertiary,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -941,6 +951,46 @@ class _BoiteCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyOfficine extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              PhosphorIconsRegular.pill,
+              size: 48,
+              color: PilooColors.textTertiary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucune boîte dans cette officine',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.fraunces(
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+                color: PilooColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Scanne une boîte ou ajoute-la manuellement avec le bouton + de la barre du bas.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: PilooColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -30,6 +30,7 @@ import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnance_create_screen.dart';
+import 'package:piloo/features/ordonnances/presentation/ordonnance_detail_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnances_list_screen.dart';
 import 'package:piloo/features/partages/presentation/invitation_accept_screen.dart';
 import 'package:piloo/features/partages/presentation/invite_screen.dart';
@@ -239,11 +240,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/ordonnances/:ordonnanceId',
         name: RouteName.ordonnanceDetail,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Détail ordonnance',
-          params: {
-            'ordonnanceId': state.pathParameters['ordonnanceId'] ?? '',
-          },
+        builder: (_, state) => OrdonnanceDetailScreen(
+          ordonnanceId: state.pathParameters['ordonnanceId'] ?? '',
         ),
       ),
 
