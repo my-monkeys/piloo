@@ -34,6 +34,7 @@ import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -317,7 +318,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                 children: [
                   _OfficineSwitcher(
                     label: activeOfficine?.nom ?? 'Maison',
-                    onTap: () {},
+                    onTap: () => _showOfficineSwitcher(context, ref),
                   ),
                   Flexible(
                     child: Text(
@@ -445,6 +446,109 @@ _BoiteState _deriveState(api.Boite b) {
 String _formatPeremption(api.Date d) {
   final m = d.month.toString().padLeft(2, '0');
   return 'exp. $m/${d.year}';
+}
+
+Future<void> _showOfficineSwitcher(BuildContext context, WidgetRef ref) async {
+  final list = ref.read(officinesListProvider).value ?? const [];
+  final activeId = ref.read(activeOfficineProvider).value?.id;
+  if (list.isEmpty) return;
+  final picked = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: PilooColors.background,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: PilooColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'CHOISIR UNE OFFICINE',
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: PilooColors.textTertiary,
+                ),
+              ),
+            ),
+            ...list.map((o) {
+              final isActive = o.id == activeId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(ctx).pop(o.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: PilooColors.surface,
+                      borderRadius: BorderRadius.circular(PilooRadius.md),
+                      border: Border.all(
+                        color: isActive
+                            ? PilooColors.primary
+                            : PilooColors.border,
+                        width: isActive ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          PhosphorIconsFill.house,
+                          size: 18,
+                          color: PilooColors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            o.nom,
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: PilooColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (isActive)
+                          const Icon(
+                            PhosphorIconsFill.checkCircle,
+                            size: 18,
+                            color: PilooColors.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (picked != null && picked != activeId) {
+    await ref.read(activeOfficineProvider.notifier).select(picked);
+  }
 }
 
 class _OfficineSwitcher extends StatelessWidget {
