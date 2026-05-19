@@ -134,10 +134,15 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           );
           if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
-          // Saisie précise via le détail (#103) — TODO sheet inline.
-          if (mounted) {
-            PilooToast.info(context, 'Ajustement précis bientôt disponible.');
-          }
+          final newStock = await _askStock(boite.unitesRestantes);
+          if (newStock == null || !mounted) return;
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            unitesRestantes: newStock,
+          );
+          if (mounted) PilooToast.success(context, 'Stock mis à jour.');
         case QuickAction.seeInfo:
         case QuickAction.reportMissing:
           // Pas encore branché côté serveur (signalement = #105).
@@ -146,6 +151,51 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     } catch (e) {
       if (mounted) PilooToast.error(context, 'Action échouée : $e');
     }
+  }
+
+  /// Dialog input pour saisie précise du stock (#103). Retourne le
+  /// nouveau nombre d'unités, ou null si annulé.
+  Future<int?> _askStock(int? current) {
+    final ctrl = TextEditingController(text: current?.toString() ?? '');
+    return showDialog<int?>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: PilooColors.surface,
+          title: Text(
+            'Stock restant',
+            style: GoogleFonts.fraunces(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: PilooColors.textPrimary,
+            ),
+          ),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              hintText: 'Nombre d’unités',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () {
+                final n = int.tryParse(ctrl.text.trim());
+                if (n == null || n < 0) return;
+                Navigator.of(ctx).pop(n);
+              },
+              child: const Text('Enregistrer'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   // Fallback mock affiché tant qu'aucune boîte n'a été synchronisée ; permet
