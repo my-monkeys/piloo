@@ -51,9 +51,29 @@ class _TodayScreenState extends State<TodayScreen> {
   // DateTime.now() quand le backend timeline sera branché.
   DateTime _date = DateTime(2026, 4, 20);
 
+  // Bornes navigation (#116) :
+  // - passé = -365j (proxy de "depuis l'inscription" tant qu'on
+  //   n'expose pas createdAt côté API)
+  // - futur = +30j (matche WINDOW_DAYS du cron generation-glissante)
+  static const _maxPastDays = 365;
+  static const _maxFutureDays = 30;
+
   void _shiftDay(int delta) {
-    setState(() => _date = _date.add(Duration(days: delta)));
+    final next = _date.add(Duration(days: delta));
+    if (!_isWithinBounds(next)) return;
+    setState(() => _date = next);
   }
+
+  bool _isWithinBounds(DateTime d) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(d.year, d.month, d.day);
+    final delta = target.difference(today).inDays;
+    return delta >= -_maxPastDays && delta <= _maxFutureDays;
+  }
+
+  bool get _canGoPrev => _isWithinBounds(_date.subtract(const Duration(days: 1)));
+  bool get _canGoNext => _isWithinBounds(_date.add(const Duration(days: 1)));
 
   // Mock — sera remplacé par un provider Riverpod consommant la DB
   // locale + sync, groupé par moment.
@@ -114,8 +134,8 @@ class _TodayScreenState extends State<TodayScreen> {
             ),
             PilooDayPicker(
               date: _date,
-              onPrev: () => _shiftDay(-1),
-              onNext: () => _shiftDay(1),
+              onPrev: _canGoPrev ? () => _shiftDay(-1) : null,
+              onNext: _canGoNext ? () => _shiftDay(1) : null,
             ),
             Expanded(
               // Bottom padding 140 = tab bar (~105) + safe area home
