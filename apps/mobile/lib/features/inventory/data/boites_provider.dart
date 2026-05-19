@@ -28,6 +28,32 @@ final boitesProvider =
 ///
 /// Reçoit un `WidgetRef` ou `Ref` indifféremment (les deux exposent
 /// `read` / `invalidate`).
+/// PATCH /v1/boites/{id} : update partiel statut/stock/notes. Invalide
+/// la liste de l'officine au succès. Lance une exception si l'API refuse.
+Future<Boite> updateBoite(
+  WidgetRef ref, {
+  required String boiteId,
+  required String officineId,
+  UpdateBoiteInputStatutEnum? statut,
+  int? unitesRestantes,
+  String? notes,
+}) async {
+  final api = ref.read(pilooApiClientProvider).getBoitesApi();
+  final builder = UpdateBoiteInputBuilder()
+    ..statut = statut
+    ..unitesRestantes = unitesRestantes
+    ..notes = notes;
+  final res = await api.v1BoitesIdPatch(
+    id: boiteId,
+    updateBoiteInput: builder.build(),
+  );
+  if (res.statusCode != 200 || res.data == null) {
+    throw Exception('Update boîte : statut ${res.statusCode}');
+  }
+  ref.invalidate(boitesProvider(officineId));
+  return res.data!;
+}
+
 Future<Boite> createBoite(
   WidgetRef ref, {
   required String officineId,

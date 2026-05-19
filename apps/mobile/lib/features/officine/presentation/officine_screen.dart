@@ -30,10 +30,12 @@ import 'package:piloo_api_client/piloo_api_client.dart' as api;
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _Filter { tout, actif, perime, stockBas }
 
@@ -48,6 +50,7 @@ class _Boite implements GroupableBoite {
     required this.count,
     this.exp,
     this.state = _BoiteState.ok,
+    this.apiBoite,
   });
 
   @override
@@ -59,6 +62,9 @@ class _Boite implements GroupableBoite {
   final int count;
   final String? exp; // ex: "exp. 08/2026" ou null si périmé
   final _BoiteState state;
+  /// Référence à la Boite API quand la card provient de l'API (sinon
+  /// fallback mock). Sert au tap → quick actions sheet → PATCH.
+  final api.Boite? apiBoite;
 }
 
 class OfficineScreen extends ConsumerStatefulWidget {
@@ -88,6 +94,58 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     setState(() => _grouping = mode);
     // Persistence best-effort, on ne bloque pas l'UI dessus.
     writeBoiteGrouping(mode);
+  }
+
+  /// Tap sur une card → bottom sheet d'actions rapides (#102/#103/#104).
+  /// Sans `apiBoite` (fallback mock), tap est no-op.
+  Future<void> _onBoiteTap(_Boite boite) async {
+    final apiBoite = boite.apiBoite;
+    if (apiBoite == null) return;
+    final action = await showQuickActionsSheet(
+      context,
+      info: QuickActionsContext(
+        officineLabel: ref.read(activeOfficineProvider).valueOrNull?.nom ?? '',
+        medicamentName: boite.name,
+        cip13: apiBoite.cip13,
+      ),
+    );
+    if (action == null || !mounted) return;
+    await _runAction(apiBoite, action);
+  }
+
+  Future<void> _runAction(api.Boite boite, QuickAction action) async {
+    try {
+      switch (action) {
+        case QuickAction.markEmpty:
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            statut: api.UpdateBoiteInputStatutEnum.vide,
+            unitesRestantes: 0,
+          );
+          if (mounted) PilooToast.success(context, 'Marquée vide.');
+        case QuickAction.markExpired:
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            statut: api.UpdateBoiteInputStatutEnum.perimee,
+          );
+          if (mounted) PilooToast.success(context, 'Marquée périmée.');
+        case QuickAction.adjustStock:
+          // Saisie précise via le détail (#103) — TODO sheet inline.
+          if (mounted) {
+            PilooToast.info(context, 'Ajustement précis bientôt disponible.');
+          }
+        case QuickAction.seeInfo:
+        case QuickAction.reportMissing:
+          // Pas encore branché côté serveur (signalement = #105).
+          if (mounted) PilooToast.info(context, 'Bientôt disponible.');
+      }
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Action échouée : $e');
+    }
   }
 
   // Fallback mock affiché tant qu'aucune boîte n'a été synchronisée ; permet
@@ -263,6 +321,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
               // indicator (extendBody: true côté _MainShell).
               child: _GroupedList(
                 sections: groupBoites(filtered, _grouping),
+                onBoiteTap: _onBoiteTap,
               ),
             ),
           ],
@@ -297,6 +356,7 @@ _Boite _mapApiBoite(api.Boite b) {
     count: b.unitesRestantes ?? 1,
     exp: exp,
     state: state,
+    apiBoite: b,
   );
 }
 
@@ -536,9 +596,10 @@ class _GroupingToggle extends StatelessWidget {
 }
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList({required this.sections});
+  const _GroupedList({required this.sections, required this.onBoiteTap});
 
   final List<BoiteSection<_Boite>> sections;
+  final void Function(_Boite boite) onBoiteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -554,7 +615,12 @@ class _GroupedList extends StatelessWidget {
       }
       for (var i = 0; i < section.boites.length; i++) {
         if (i > 0) items.add(const SizedBox(height: 10));
-        items.add(_BoiteCard(boite: section.boites[i]));
+        final boite = section.boites[i];
+        items.add(GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onBoiteTap(boite),
+          child: _BoiteCard(boite: boite),
+        ));
       }
     }
     return ListView(
