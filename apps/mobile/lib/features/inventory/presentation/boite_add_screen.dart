@@ -24,6 +24,7 @@ import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/inventory/data/boites_provider.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -128,14 +129,12 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
       return;
     }
 
-    // BDPM (local) facultatif : si on a le nom on le préfixe dans notes
+    // BDPM (local OU API) : si on a le nom on le préfixe dans notes
     // pour le retrouver côté liste (voir convention dans officine_screen).
-    String? medName;
-    final dbAsync = ref.read(bdpmDbProvider);
-    final db = dbAsync.valueOrNull;
-    if (db != null) {
-      medName = db.findByCip13(cip13)?.denomination;
-    }
+    // On utilise le lookup unifié — déjà mis en cache par Riverpod si
+    // le preview screen l'a résolu.
+    final lookup = await ref.read(bdpmLookupProvider(cip13).future);
+    final medName = lookup?.denomination;
     final userNotes = _notesCtrl.text.trim();
     final notes = medName != null
         ? (userNotes.isEmpty ? medName : '$medName // $userNotes')
@@ -358,17 +357,19 @@ class _MedicamentPreviewSection extends ConsumerWidget {
         primary: 'Sans CIP scanné',
       );
     }
-    final dbAsync = ref.watch(bdpmDbProvider);
-    return dbAsync.when(
+    // Lookup local d'abord, fallback API si pas de SQLite local
+    // (cf. bdpmLookupProvider). Tant que la sync SQLite #78/#79 n'est
+    // pas câblée, le fallback API est la seule source pour les CIP13
+    // qu'on n'a jamais vus.
+    final lookup = ref.watch(bdpmLookupProvider(cip13!));
+    return lookup.when(
       loading: () => const _MedicamentPreview(
         title: 'Résolution…',
-        subtitle: 'Chargement de la base médicaments',
+        subtitle: 'Recherche dans la base médicaments',
         primary: '',
       ),
       error: (_, _) => _unknownPreview(cip13: cip13!),
-      data: (db) {
-        if (db == null) return _unknownPreview(cip13: cip13!);
-        final med = db.findByCip13(cip13!);
+      data: (med) {
         if (med == null) return _unknownPreview(cip13: cip13!);
         return _MedicamentPreview(
           title: med.denomination,
