@@ -167,9 +167,6 @@ _Alert _mapAlerte(api.Alerte a) {
   final today = <_Alert>[];
   final week = <_Alert>[];
   final older = <_Alert>[];
-  final now = DateTime.now();
-  final startOfToday = DateTime(now.year, now.month, now.day);
-  final startOfWeek = startOfToday.subtract(const Duration(days: 7));
   for (final a in alerts) {
     // Mock : pas d'apiId → on les met dans "today" pour qu'elles
     // soient visibles si jamais les groupes API sont vides.

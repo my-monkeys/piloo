@@ -454,19 +454,6 @@ class _PriseCard extends StatelessWidget {
     );
   }
 
-  Future<void> _openActions(BuildContext context) async {
-    await showPriseActionsSheet(
-      context,
-      info: PriseActionsContext(
-        medicamentName: prise.name,
-        dose: prise.meta ?? '1 prise',
-        scheduledLabel: prise.status == PriseStatus.missed
-            ? '${prise.timeOrLabel} · oubliée'
-            : 'Prévue à ${prise.timeOrLabel}',
-      ),
-    );
-    // TODO #91 : convertir le PriseAction en pending_operations.
-  }
 }
 
 class _StatusDot extends StatelessWidget {
