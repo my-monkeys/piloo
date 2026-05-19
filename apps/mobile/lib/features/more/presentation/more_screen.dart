@@ -86,6 +86,13 @@ class MoreScreen extends ConsumerWidget {
       iconBg: PilooColors.surfaceSubtle,
       iconFg: PilooColors.textPrimary,
     ),
+    _Row(
+      icon: PhosphorIconsRegular.database,
+      label: 'Base médicaments',
+      iconBg: PilooColors.surfaceSubtle,
+      iconFg: PilooColors.textPrimary,
+      routeName: RouteName.settingsBdpm,
+    ),
   ];
 
   static const _help = [

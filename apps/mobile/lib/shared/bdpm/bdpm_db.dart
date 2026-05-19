@@ -37,6 +37,17 @@ class BdpmDb {
     return (v == null || v.isEmpty) ? null : v;
   }
 
+  /// ISO timestamp de la génération du SQLite côté serveur (`generated_at`).
+  /// Retourne null si la table metadata est absente ou la clé manquante.
+  String? get generatedAt {
+    final result = _db.select(
+      "SELECT value FROM bdpm_metadata WHERE key = 'generated_at' LIMIT 1",
+    );
+    if (result.isEmpty) return null;
+    final v = result.first['value'] as String?;
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
   /// Nombre total de CIS en base.
   int get totalCis {
     final result = _db.select(
