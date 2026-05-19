@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/shared/api/api_client_provider.dart';
+import 'package:piloo/shared/notifications/notifications_service.dart';
 
 class PrisesDayKey {
   const PrisesDayKey({required this.officineId, required this.date});
@@ -33,7 +34,17 @@ final prisesDayProvider =
     if (res.statusCode != 200 || res.data == null) {
       throw Exception('GET /v1/prises : statut ${res.statusCode}');
     }
-    return res.data!.items.toList();
+    final items = res.data!.items.toList();
+    // Replanifie les notifs locales uniquement pour la query "aujourd'hui"
+    // — la timeline future est consultative, on ne veut pas spammer
+    // l'utilisateur avec des rappels J+15.
+    if (key.date == isoDate(DateTime.now())) {
+      // fire-and-forget : ne bloque pas la chaîne de chargement.
+      // Ignorer l'erreur car les permissions OS peuvent être refusées.
+      // ignore: unawaited_futures
+      ref.read(notificationsServiceProvider).scheduleForPrises(items);
+    }
+    return items;
   },
 );
 
@@ -64,6 +75,10 @@ Future<api.PriseTimelineItem> updatePriseStatut(
   if (res.statusCode != 200 || res.data == null) {
     throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
   }
+  // Annule la notif locale associée — la prise n'a plus besoin de
+  // rappel puisqu'elle vient d'être validée/sautée.
+  // ignore: unawaited_futures
+  ref.read(notificationsServiceProvider).cancelForPrise(priseId);
   ref.invalidate(
     prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
   );
