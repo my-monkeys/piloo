@@ -32,7 +32,12 @@ final bdpmSyncProvider = FutureProvider<BdpmSync>((ref) async {
   return BdpmSync(
     api: api,
     localSqlitePath: localPath,
-    buildDownloadUrl: (version) =>
-        '${ApiConfig.baseUrl}/api/v1/bdpm/sqlite?version=$version',
+    // Pas de `?version=` ici : le param sert au serveur à répondre 304
+    // si on a déjà la bonne version. Or BdpmSync n'appelle download que
+    // s'il a déjà décidé de re-télécharger (version locale absente ou
+    // périmée vs serveur). Mettre `?version=serverVersion` ferait
+    // toujours 304 → fichier jamais sauvegardé → 'Aucune base locale'
+    // permanente. Bug observé 2026-05-19.
+    buildDownloadUrl: (_) => '${ApiConfig.baseUrl}/api/v1/bdpm/sqlite',
   );
 });
