@@ -39,15 +39,18 @@ Future<Boite> createBoite(
   String? notes,
 }) async {
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
-  final input = $CreateBoiteInput((b) {
-    b
-      ..cip13 = cip13
-      ..peremption = peremption
-      ..lot = lot
-      ..unitesRestantes = unitesRestantes
-      ..unitesInitiales = unitesInitiales
-      ..notes = notes;
-  });
+  // On instancie le builder directement plutôt que via le factory à
+  // callback : sur les versions récentes de l'analyseur Dart, le
+  // paramètre du callback est inféré nullable (Function<Builder?>?),
+  // ce qui casse `b..field = ...` avec "receiver can be null".
+  final builder = $CreateBoiteInputBuilder()
+    ..cip13 = cip13
+    ..peremption = peremption
+    ..lot = lot
+    ..unitesRestantes = unitesRestantes
+    ..unitesInitiales = unitesInitiales
+    ..notes = notes;
+  final input = builder.build();
   final res = await api.v1OfficinesOfficineIdBoitesPost(
     officineId: officineId,
     createBoiteInput: input,

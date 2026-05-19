@@ -54,11 +54,13 @@ class ActiveOfficineNotifier extends AsyncNotifier<Officine?> {
       return firstOwner;
     }
 
-    // Aucune officine : crée "Maison" perso pour démarrer.
+    // Aucune officine : crée "Maison" perso pour démarrer. On instancie
+    // le builder directement (cf. boites_provider.dart pour la raison).
+    final builder = CreateOfficineInputBuilder()
+      ..nom = 'Maison'
+      ..type = CreateOfficineInputTypeEnum.perso;
     final created = await api.v1OfficinesPost(
-      createOfficineInput: CreateOfficineInput((b) => b
-        ..nom = 'Maison'
-        ..type = CreateOfficineInputTypeEnum.perso),
+      createOfficineInput: builder.build(),
     );
     if (created.statusCode != 201 || created.data == null) {
       return null;
