@@ -13,6 +13,7 @@ import { $api, type components } from '@piloo/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { InviteDialog } from '@/components/app/officines/invite-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -113,6 +114,7 @@ function OfficineRow({ officine }: { officine: Officine }) {
               Activer
             </Button>
           )}
+          {canDelete && <InviteDialog officineId={officine.id} officineNom={officine.nom} />}
           {canDelete && (
             <Button
               variant="ghost"
