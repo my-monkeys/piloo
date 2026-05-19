@@ -25,6 +25,9 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/auth/data/session.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_sync.dart';
+import 'package:piloo/shared/bdpm/bdpm_sync_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -45,6 +48,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   void initState() {
     super.initState();
     unawaited(_scheduleRedirect());
+    // Fire-and-forget : déclenche la sync BDPM SQLite au cold start
+    // (#78/#79). Ne bloque ni le splash ni la redirection — au pire
+    // le 1er scan utilise le fallback API tant que le download n'est
+    // pas terminé. Erreurs avalées : on garde le fichier local
+    // existant en mode dégradé.
+    unawaited(_syncBdpmInBackground());
+  }
+
+  Future<void> _syncBdpmInBackground() async {
+    try {
+      final sync = await ref.read(bdpmSyncProvider.future);
+      final result = await sync.ensureUpToDate();
+      if (result.outcome == BdpmSyncOutcome.initialDownload ||
+          result.outcome == BdpmSyncOutcome.updated) {
+        // Invalide le provider DB pour qu'un éventuel BdpmDb cached
+        // se ré-ouvre sur le nouveau fichier.
+        ref.invalidate(bdpmDbProvider);
+      }
+    } catch (_) {
+      // Sync best-effort — fallback API prend le relais (#283 follow-up).
+    }
   }
 
   @override

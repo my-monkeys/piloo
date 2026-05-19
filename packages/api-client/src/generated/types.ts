@@ -1123,6 +1123,52 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/bdpm/sqlite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Télécharge le fichier SQLite BDPM mobile (gzippé)
+         * @description Sert le fichier SQLite généré depuis Postgres, gzippé. Le mobile envoie `?version=YYYY-MM-DD` pour skip le download si la version locale est à jour (réponse 304). En-tête `X-Piloo-Bdpm-Version` indique la version courante.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SQLite gzippé */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/x-sqlite3": string;
+                    };
+                };
+                /** @description Version inchangée, pas de re-download nécessaire */
+                304: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/bdpm/search": {
         parameters: {
             query?: never;

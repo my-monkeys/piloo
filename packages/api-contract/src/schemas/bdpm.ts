@@ -124,6 +124,28 @@ registry.registerPath({
 
 registry.registerPath({
   method: 'get',
+  path: '/v1/bdpm/sqlite',
+  summary: 'Télécharge le fichier SQLite BDPM mobile (gzippé)',
+  description:
+    'Sert le fichier SQLite généré depuis Postgres, gzippé. Le mobile envoie `?version=YYYY-MM-DD` pour skip le download si la version locale est à jour (réponse 304). En-tête `X-Piloo-Bdpm-Version` indique la version courante.',
+  tags: ['bdpm'],
+  responses: {
+    200: {
+      description: 'SQLite gzippé',
+      content: {
+        'application/x-sqlite3': {
+          schema: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+    304: {
+      description: 'Version inchangée, pas de re-download nécessaire',
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
   path: '/v1/bdpm/search',
   summary: 'Recherche un médicament BDPM par nom ou CIP',
   description:
