@@ -1436,6 +1436,147 @@ components:
             - "null"
           maxLength: 2048
           format: uri
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_user_id:
+          type: string
+          format: uuid
+        email:
+          type:
+            - string
+            - "null"
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        accepted_by_user_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - role
+        - invited_by_user_id
+        - email
+        - expires_at
+        - accepted_at
+        - accepted_by_user_id
+        - created_at
+        - updated_at
+        - deleted_at
+    InvitationApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    CreateInvitationInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        email:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+          format: email
+        ttlHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+      required:
+        - role
+    InvitationPreview:
+      type: object
+      properties:
+        officine_nom:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - pending
+            - expired
+            - accepted
+            - revoked
+      required:
+        - officine_nom
+        - role
+        - invited_by_name
+        - expires_at
+        - status
+    AcceptInvitationResponse:
+      type: object
+      properties:
+        officine_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+      required:
+        - officine_id
+        - role
   parameters: {}
 paths:
   /health:
@@ -2830,4 +2971,117 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MeApiError"
+  /v1/officines/{officineId}/invitations:
+    post:
+      summary: Crée une invitation à rejoindre une officine
+      description: Owner uniquement. Génère un token (UUID v4) inclus dans le lien partageable.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationInput"
+      responses:
+        "201":
+          description: Invitation créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "403":
+          description: Pas owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/invitations/{token}:
+    get:
+      summary: Aperçu public d'une invitation
+      description: Public (pas d'auth) — sert au preview côté lien partagé avant signup/login.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: token
+          in: path
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPreview"
+        "404":
+          description: Token inconnu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/invitations/{token}/accept:
+    post:
+      summary: Accepte une invitation et rejoint l'officine
+      description: Requiert l'auth (l'utilisateur qui accepte). Crée la ligne `partages` et marque l'invitation acceptée.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: token
+          in: path
+      responses:
+        "200":
+          description: Accepté
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptInvitationResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "404":
+          description: Token inconnu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "409":
+          description: Déjà accepté ou expiré
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
 webhooks: {}

@@ -15,3 +15,4 @@ export * from './ordonnances.ts';
 export * from './export-data.ts';
 export * from './account-delete.ts';
 export * from './me.ts';
+export * from './invitations.ts';

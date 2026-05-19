@@ -2399,6 +2399,205 @@ export interface paths {
         };
         trace?: never;
     };
+    "/v1/officines/{officineId}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crée une invitation à rejoindre une officine
+         * @description Owner uniquement. Génère un token (UUID v4) inclus dans le lien partageable.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateInvitationInput"];
+                };
+            };
+            responses: {
+                /** @description Invitation créée */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invitation"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+                /** @description Pas owner */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+                /** @description Officine inconnue */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aperçu public d'une invitation
+         * @description Public (pas d'auth) — sert au preview côté lien partagé avant signup/login.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Preview */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationPreview"];
+                    };
+                };
+                /** @description Token inconnu */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/invitations/{token}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accepte une invitation et rejoint l'officine
+         * @description Requiert l'auth (l'utilisateur qui accepte). Crée la ligne `partages` et marque l'invitation acceptée.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Accepté */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AcceptInvitationResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+                /** @description Token inconnu */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+                /** @description Déjà accepté ou expiré */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2933,6 +3132,61 @@ export interface components {
             telephone?: string | null;
             /** Format: uri */
             image?: string | null;
+        };
+        Invitation: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            officine_id: string;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            /** Format: uuid */
+            invited_by_user_id: string;
+            email: string | null;
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            accepted_at: string | null;
+            /** Format: uuid */
+            accepted_by_user_id: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            deleted_at: string | null;
+        };
+        InvitationApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        CreateInvitationInput: {
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            /** Format: email */
+            email?: string | null;
+            ttlHours?: number;
+        };
+        InvitationPreview: {
+            officine_nom: string;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            invited_by_name: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @enum {string} */
+            status: "pending" | "expired" | "accepted" | "revoked";
+        };
+        AcceptInvitationResponse: {
+            /** Format: uuid */
+            officine_id: string;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
         };
     };
     responses: never;
