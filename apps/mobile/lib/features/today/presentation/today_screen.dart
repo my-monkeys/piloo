@@ -13,16 +13,21 @@
 //    elle-même passe en fond $warning + bord $warning-on (signal fort
 //    qu'une action est attendue)
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/today/data/prises_provider.dart';
 import 'package:piloo/features/today/presentation/prise_actions_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_day_picker.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-enum PriseStatus { taken, upcoming, missed }
+enum PriseStatus { taken, upcoming, missed, skipped }
 
 class _Prise {
   const _Prise({
@@ -30,26 +35,28 @@ class _Prise {
     required this.meta,
     required this.timeOrLabel,
     required this.status,
+    this.apiPrise,
   });
 
   final String name;
   final String? meta;
   final String timeOrLabel;
   final PriseStatus status;
+  /// Référence API pour pouvoir mutate via PATCH /v1/prises/{id} au tap.
+  /// Null quand on est sur le fallback mock (pas de session / pas
+  /// d'officine active / chargement).
+  final api.PriseTimelineItem? apiPrise;
 }
 
-class TodayScreen extends StatefulWidget {
+class TodayScreen extends ConsumerStatefulWidget {
   const TodayScreen({super.key});
 
   @override
-  State<TodayScreen> createState() => _TodayScreenState();
+  ConsumerState<TodayScreen> createState() => _TodayScreenState();
 }
 
-class _TodayScreenState extends State<TodayScreen> {
-  // Date mockée pour la review visuelle (un lundi pour matcher la
-  // maquette qui montre "LUNDI 20 avril"). Sera remplacée par
-  // DateTime.now() quand le backend timeline sera branché.
-  DateTime _date = DateTime(2026, 4, 20);
+class _TodayScreenState extends ConsumerState<TodayScreen> {
+  DateTime _date = DateTime.now();
 
   // Bornes navigation (#116) :
   // - passé = -365j (proxy de "depuis l'inscription" tant qu'on
@@ -75,52 +82,159 @@ class _TodayScreenState extends State<TodayScreen> {
   bool get _canGoPrev => _isWithinBounds(_date.subtract(const Duration(days: 1)));
   bool get _canGoNext => _isWithinBounds(_date.add(const Duration(days: 1)));
 
-  // Mock — sera remplacé par un provider Riverpod consommant la DB
-  // locale + sync, groupé par moment.
-  List<_Prise> get _matin => const [
-        _Prise(
-          name: 'Doliprane 1000 mg',
-          meta: '1 comprimé',
-          timeOrLabel: '8:00',
-          status: PriseStatus.taken,
-        ),
-        _Prise(
-          name: 'Kardegic 75 mg',
-          meta: '1 sachet · avec repas',
-          timeOrLabel: '8:30',
-          status: PriseStatus.upcoming,
-        ),
-      ];
+  // Mock fallback affiché quand on n'a pas de données API (offline /
+  // pas d'officine active / loading initial). Permet une démo visuelle
+  // immédiate au cold start.
+  static const _mockMatin = [
+    _Prise(
+      name: 'Doliprane 1000 mg',
+      meta: '1 comprimé',
+      timeOrLabel: '8:00',
+      status: PriseStatus.upcoming,
+    ),
+  ];
+  static const _mockMidi = <_Prise>[];
+  static const _mockSoir = <_Prise>[];
+  static const _mockCoucher = <_Prise>[];
 
-  List<_Prise> get _midi => const [
-        _Prise(
-          name: 'Metformine 500 mg',
-          meta: '1 comprimé · avec repas',
-          timeOrLabel: '12:30',
-          status: PriseStatus.upcoming,
-        ),
-      ];
+  ({
+    List<_Prise> matin,
+    List<_Prise> midi,
+    List<_Prise> soir,
+    List<_Prise> coucher,
+  }) _groupByMoment(List<api.PriseTimelineItem> items) {
+    final matin = <_Prise>[];
+    final midi = <_Prise>[];
+    final soir = <_Prise>[];
+    final coucher = <_Prise>[];
+    final sorted = [...items]
+      ..sort((a, b) => a.datetimePrevue.compareTo(b.datetimePrevue));
+    for (final p in sorted) {
+      final local = p.datetimePrevue.toLocal();
+      final m = _mapApiPrise(p, local);
+      final bucket = switch (local.hour) {
+        < 12 => matin,
+        < 16 => midi,
+        < 21 => soir,
+        _ => coucher,
+      };
+      bucket.add(m);
+    }
+    return (matin: matin, midi: midi, soir: soir, coucher: coucher);
+  }
 
-  List<_Prise> get _soir => const [
-        _Prise(
-          name: 'Ramipril 5 mg',
-          meta: 'Prévue à 19:00 · non validée',
-          timeOrLabel: 'Oubliée',
-          status: PriseStatus.missed,
-        ),
-      ];
+  _Prise _mapApiPrise(api.PriseTimelineItem p, DateTime local) {
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    final status = switch (p.statut) {
+      api.PriseTimelineItemStatutEnum.prise => PriseStatus.taken,
+      api.PriseTimelineItemStatutEnum.sautee => PriseStatus.skipped,
+      api.PriseTimelineItemStatutEnum.oubliee => PriseStatus.missed,
+      _ => PriseStatus.upcoming,
+    };
+    final timeLabel = status == PriseStatus.missed ? 'Oubliée' : '$hh:$mm';
+    return _Prise(
+      name: p.prescription.nomTexte,
+      meta: _posologyLine(p.prescription),
+      timeOrLabel: timeLabel,
+      status: status,
+      apiPrise: p,
+    );
+  }
 
-  List<_Prise> get _coucher => const [
-        _Prise(
-          name: 'Lercanidipine 10 mg',
-          meta: null,
-          timeOrLabel: '22:00',
-          status: PriseStatus.upcoming,
-        ),
-      ];
+  String? _posologyLine(api.PriseTimelinePrescription prescription) {
+    // Posologie est un BuiltMap<String, JsonObject?> ; on extrait
+    // unitesParPrise + unite pour la ligne meta. Si absent, retombe
+    // sur l'indication.
+    final raw = prescription.posologie;
+    final units = raw['unitesParPrise']?.value;
+    final unite = raw['unite']?.value;
+    final avecRepas = raw['avecRepas']?.value == true;
+    final parts = <String>[];
+    if (units != null && unite is String) {
+      parts.add('${units.toString()} $unite');
+    }
+    if (avecRepas) parts.add('avec repas');
+    if (parts.isEmpty && prescription.indication != null) {
+      return prescription.indication;
+    }
+    return parts.isEmpty ? null : parts.join(' · ');
+  }
+
+  Future<void> _onPriseTap(_Prise prise) async {
+    final apiPrise = prise.apiPrise;
+    if (apiPrise == null) return;
+    final local = apiPrise.datetimePrevue.toLocal();
+    final hh = local.hour.toString().padLeft(2, '0');
+    final mm = local.minute.toString().padLeft(2, '0');
+    final action = await showPriseActionsSheet(
+      context,
+      info: PriseActionsContext(
+        medicamentName: prise.name,
+        dose: prise.meta ?? '',
+        scheduledLabel: 'Prévue à $hh:$mm',
+      ),
+    );
+    if (action == null || !mounted) return;
+    final statut = switch (action) {
+      PriseAction.taken => api.UpdatePriseInputStatutEnum.prise,
+      PriseAction.skipped => api.UpdatePriseInputStatutEnum.sautee,
+      PriseAction.snoozed => null, // pas encore branché serveur-side
+    };
+    if (statut == null) {
+      if (mounted) PilooToast.info(context, 'Reporter bientôt disponible.');
+      return;
+    }
+    try {
+      await updatePriseStatut(
+        ref,
+        priseId: apiPrise.id,
+        officineId: apiPrise.officineId,
+        date: isoDate(_date),
+        statut: statut,
+      );
+      if (mounted) {
+        PilooToast.success(
+          context,
+          statut == api.UpdatePriseInputStatutEnum.prise
+              ? 'Prise validée.'
+              : 'Prise sautée.',
+        );
+      }
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Échec : $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final activeOfficine = ref.watch(activeOfficineProvider).valueOrNull;
+    final prisesAsync = activeOfficine == null
+        ? const AsyncValue<List<api.PriseTimelineItem>>.data([])
+        : ref.watch(prisesDayProvider(
+            PrisesDayKey(officineId: activeOfficine.id, date: isoDate(_date)),
+          ));
+
+    final apiBuckets = prisesAsync.maybeWhen(
+      data: _groupByMoment,
+      orElse: () => (
+        matin: <_Prise>[],
+        midi: <_Prise>[],
+        soir: <_Prise>[],
+        coucher: <_Prise>[],
+      ),
+    );
+
+    final hasApiData = apiBuckets.matin.isNotEmpty ||
+        apiBuckets.midi.isNotEmpty ||
+        apiBuckets.soir.isNotEmpty ||
+        apiBuckets.coucher.isNotEmpty;
+
+    final matin = hasApiData ? apiBuckets.matin : _mockMatin;
+    final midi = hasApiData ? apiBuckets.midi : _mockMidi;
+    final soir = hasApiData ? apiBuckets.soir : _mockSoir;
+    final coucher = hasApiData ? apiBuckets.coucher : _mockCoucher;
+
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -138,9 +252,6 @@ class _TodayScreenState extends State<TodayScreen> {
               onNext: _canGoNext ? () => _shiftDay(1) : null,
             ),
             Expanded(
-              // Bottom padding 140 = tab bar (~105) + safe area home
-              // indicator — sinon le dernier élément passe sous la
-              // tab bar (extendBody: true côté _MainShell).
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                 child: Column(
@@ -149,33 +260,37 @@ class _TodayScreenState extends State<TodayScreen> {
                     _Section(
                       icon: PhosphorIconsFill.sunHorizon,
                       label: 'Matin',
-                      countLabel: '${_matin.length} prises',
-                      countColor: PilooColors.textTertiary,
-                      prises: _matin,
+                      countLabel: _countLabel(matin),
+                      countColor: _countColor(matin),
+                      prises: matin,
+                      onPriseTap: _onPriseTap,
                     ),
                     const SizedBox(height: 16),
                     _Section(
                       icon: PhosphorIconsFill.sun,
                       label: 'Midi',
-                      countLabel: '1 prise',
-                      countColor: PilooColors.textTertiary,
-                      prises: _midi,
+                      countLabel: _countLabel(midi),
+                      countColor: _countColor(midi),
+                      prises: midi,
+                      onPriseTap: _onPriseTap,
                     ),
                     const SizedBox(height: 16),
                     _Section(
                       icon: PhosphorIconsFill.moon,
                       label: 'Soir',
-                      countLabel: '1 oubliée',
-                      countColor: PilooColors.warningOn,
-                      prises: _soir,
+                      countLabel: _countLabel(soir),
+                      countColor: _countColor(soir),
+                      prises: soir,
+                      onPriseTap: _onPriseTap,
                     ),
                     const SizedBox(height: 16),
                     _Section(
                       icon: PhosphorIconsFill.moonStars,
                       label: 'Coucher',
-                      countLabel: '1 prise',
-                      countColor: PilooColors.textTertiary,
-                      prises: _coucher,
+                      countLabel: _countLabel(coucher),
+                      countColor: _countColor(coucher),
+                      prises: coucher,
+                      onPriseTap: _onPriseTap,
                     ),
                   ],
                 ),
@@ -186,6 +301,18 @@ class _TodayScreenState extends State<TodayScreen> {
       ),
     );
   }
+
+  String _countLabel(List<_Prise> prises) {
+    if (prises.isEmpty) return 'Aucune';
+    final missed = prises.where((p) => p.status == PriseStatus.missed).length;
+    if (missed > 0) return '$missed oubliée${missed > 1 ? 's' : ''}';
+    return '${prises.length} prise${prises.length > 1 ? 's' : ''}';
+  }
+
+  Color _countColor(List<_Prise> prises) {
+    final hasMissed = prises.any((p) => p.status == PriseStatus.missed);
+    return hasMissed ? PilooColors.warningOn : PilooColors.textTertiary;
+  }
 }
 
 class _Section extends StatelessWidget {
@@ -195,6 +322,7 @@ class _Section extends StatelessWidget {
     required this.countLabel,
     required this.countColor,
     required this.prises,
+    required this.onPriseTap,
   });
 
   final IconData icon;
@@ -202,6 +330,7 @@ class _Section extends StatelessWidget {
   final String countLabel;
   final Color countColor;
   final List<_Prise> prises;
+  final Future<void> Function(_Prise) onPriseTap;
 
   @override
   Widget build(BuildContext context) {
@@ -243,7 +372,7 @@ class _Section extends StatelessWidget {
         ...List.generate(prises.length, (i) {
           return Padding(
             padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
-            child: _PriseCard(prise: prises[i]),
+            child: _PriseCard(prise: prises[i], onTap: onPriseTap),
           );
         }),
       ],
@@ -252,9 +381,10 @@ class _Section extends StatelessWidget {
 }
 
 class _PriseCard extends StatelessWidget {
-  const _PriseCard({required this.prise});
+  const _PriseCard({required this.prise, required this.onTap});
 
   final _Prise prise;
+  final Future<void> Function(_Prise) onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -265,12 +395,13 @@ class _PriseCard extends StatelessWidget {
       PriseStatus.taken => PilooColors.textSecondary,
       PriseStatus.upcoming => PilooColors.textPrimary,
       PriseStatus.missed => PilooColors.warningOn,
+      PriseStatus.skipped => PilooColors.textTertiary,
     };
     final metaColor = missed ? PilooColors.warningOn : PilooColors.textSecondary;
 
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: () => _openActions(context),
+      onTap: () => onTap(prise),
       child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -380,6 +511,21 @@ class _StatusDot extends StatelessWidget {
             PhosphorIconsFill.warning,
             size: 14,
             color: Colors.white,
+          ),
+        ),
+      PriseStatus.skipped => Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: PilooColors.surfaceSubtle,
+            border: Border.all(color: PilooColors.border, width: 2),
+          ),
+          alignment: Alignment.center,
+          child: const Icon(
+            PhosphorIconsRegular.x,
+            size: 14,
+            color: PilooColors.textTertiary,
           ),
         ),
     };
