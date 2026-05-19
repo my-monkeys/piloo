@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:sqlite3/sqlite3.dart';
 
@@ -52,6 +53,12 @@ Widget _harness({
   return ProviderScope(
     overrides: [
       bdpmDbProvider.overrideWith((ref) async => bdpm),
+      // Le screen utilise désormais bdpmLookupProvider (local + fallback
+      // API). En test on court-circuite via le DB local fourni — pas de
+      // fallback API. Renvoie null si pas de match local.
+      bdpmLookupProvider.overrideWith((ref, cip13) async {
+        return bdpm?.findByCip13(cip13);
+      }),
       if (initialScan != null)
         scanResultProvider.overrideWith(
           (ref) => ScanResultController()..set(initialScan),
