@@ -34,6 +34,7 @@ import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
@@ -143,9 +144,23 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
             unitesRestantes: newStock,
           );
           if (mounted) PilooToast.success(context, 'Stock mis à jour.');
-        case QuickAction.seeInfo:
         case QuickAction.reportMissing:
-          // Pas encore branché côté serveur (signalement = #105).
+          final alertesApi = ref.read(pilooApiClientProvider).getAlertesApi();
+          final input = api.SignalerManqueInputBuilder()
+            ..cip13 = boite.cip13
+            ..libelle = boite.cip13;
+          final res = await alertesApi.v1OfficinesOfficineIdSignalerManquePost(
+            officineId: boite.officineId,
+            signalerManqueInput: input.build(),
+          );
+          if (!mounted) return;
+          if (res.statusCode == 201 || res.statusCode == 200) {
+            PilooToast.success(context, 'Manque signalé aux membres.');
+          } else {
+            PilooToast.error(context, 'Échec : statut ${res.statusCode ?? 0}');
+          }
+        case QuickAction.seeInfo:
+          // Renvoie vers la fiche médicament (#99) — pas encore implémentée.
           if (mounted) PilooToast.info(context, 'Bientôt disponible.');
       }
     } catch (e) {

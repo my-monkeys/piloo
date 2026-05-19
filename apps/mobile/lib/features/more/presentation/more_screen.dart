@@ -299,8 +299,12 @@ class _RowItem extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
+        // pushNamed() résout le name de route → path enregistré
+        // (cf. router.dart). `context.push('/${row.routeName!}')`
+        // construisait à tort un path depuis le name (ex. '/settings-bdpm')
+        // au lieu du vrai path (ex. '/settings/bdpm').
         if (row.routeName != null) {
-          context.push('/${row.routeName!}');
+          context.pushNamed(row.routeName!);
         }
       },
       child: Padding(
