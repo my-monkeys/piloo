@@ -396,7 +396,9 @@ describe('PATCH /api/v1/prises/{id}', () => {
   it('404 sur ID inexistant', async () => {
     const { owner } = await makeContext();
     const { detail } = await importHandlers();
-    const id = '00000000-0000-0000-0000-000000000001';
+    // UUID v4 valide (version=4, variant=8/9/a/b) mais sans ligne en DB
+    // — z.uuid() rejette les UUID nuls comme 0...01 (pas de version bits).
+    const id = '11111111-1111-4111-8111-111111111111';
     const res = await detail.PATCH(patchReq(id, { statut: 'prise' }, owner.cookie), patchCtx(id));
     expect(res.status).toBe(404);
   });
