@@ -7,6 +7,7 @@
 //
 // Validation email locale ; PUT /me serveur à câbler avec OpenAPI.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -14,23 +15,25 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 enum _Sex { femme, homme, autre }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final _firstNameCtrl = TextEditingController(text: 'Maxime');
-  final _lastNameCtrl = TextEditingController(text: 'Durand');
-  final _emailCtrl = TextEditingController(text: 'maxime@exemple.fr');
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  bool _initialized = false;
   // Champs santé. Optionnels — l'utilisateur n'est pas obligé de les
   // remplir.
   // IMPORTANT : ces données sont stockées en local + sync, mais
@@ -112,6 +115,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionProvider).value;
+    if (!_initialized && session != null) {
+      final parts = session.name.trim().split(RegExp(r'\s+'));
+      _firstNameCtrl.text = parts.isNotEmpty ? parts.first : '';
+      _lastNameCtrl.text = parts.length > 1 ? parts.skip(1).join(' ') : '';
+      _emailCtrl.text = session.email;
+      _initialized = true;
+    }
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
