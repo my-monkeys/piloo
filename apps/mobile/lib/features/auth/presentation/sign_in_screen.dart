@@ -55,10 +55,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
     }
 
     setState(() => _submitting = true);
+    final email = _email.text.trim();
     try {
       final api = ref.read(authApiProvider);
       final session = await api.signInEmail(
-        email: _email.text.trim(),
+        email: email,
         password: _password.text,
       );
       await ref.read(sessionProvider.notifier).signIn(session);
@@ -66,6 +67,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       if (!mounted) return;
       context.go(RoutePath.today);
     } on AuthApiException catch (e) {
+      // #62 — quand requireEmailVerification est ON, le signIn renvoie
+      // EMAIL_NOT_VERIFIED. On route vers l'écran d'attente (qui propose
+      // un renvoi) plutôt que d'afficher une erreur générique.
+      if (e.code == 'EMAIL_NOT_VERIFIED') {
+        if (mounted) context.go(RoutePath.verifyEmail, extra: email);
+        return;
+      }
       if (mounted) PilooToast.error(context, e.message);
     } finally {
       if (mounted) setState(() => _submitting = false);

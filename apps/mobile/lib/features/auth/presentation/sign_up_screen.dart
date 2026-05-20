@@ -70,19 +70,28 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     setState(() => _submitting = true);
     try {
       final api = ref.read(authApiProvider);
-      final session = await api.signUpEmail(
-        email: _email.text.trim(),
+      final email = _email.text.trim();
+      final result = await api.signUpEmail(
+        email: email,
         password: _password.text,
         name: '${_prenom.text.trim()} ${_nom.text.trim()}'.trim(),
         nom: _nom.text.trim(),
         prenom: _prenom.text.trim(),
         typeCompte: widget.typeCompte,
       );
-      await ref.read(sessionProvider.notifier).signIn(session);
 
       if (!mounted) return;
-      // Atterrissage sur l'écran principal après inscription.
-      context.go(RoutePath.today);
+      switch (result) {
+        case SignUpVerified(:final session):
+          // Compte créé + déjà vérifié (cas où requireEmailVerification
+          // est OFF côté serveur, ex. tests d'intégration).
+          await ref.read(sessionProvider.notifier).signIn(session);
+          if (!mounted) return;
+          context.go(RoutePath.today);
+        case SignUpPendingVerification(:final email):
+          // #62 — mail magic link parti, on attend la confirmation.
+          context.go(RoutePath.verifyEmail, extra: email);
+      }
     } on AuthApiException catch (e) {
       if (mounted) PilooToast.error(context, e.message);
     } finally {
