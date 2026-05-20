@@ -13,6 +13,7 @@ import { bearer } from 'better-auth/plugins';
 
 import { getDb } from '@/lib/db';
 import { sendEmail } from '@/lib/email/client';
+import { renderResetPassword } from '@/lib/email/templates/reset-password';
 import { renderVerifyEmail } from '@/lib/email/templates/verify-email';
 
 import { createPersonalOfficineFor } from './hooks.ts';
@@ -72,6 +73,21 @@ function buildAuth({
     emailAndPassword: {
       enabled: true,
       requireEmailVerification,
+      // #63 — lien de reset 1h. Sessions actives invalidées après reset
+      // (sécurité : si un attaquant avait posé une session, il est éjecté).
+      resetPasswordTokenExpiresIn: 60 * 60,
+      revokeSessionsOnPasswordReset: true,
+      sendResetPassword: async ({ user, url }) => {
+        const prenom = (user as { prenom?: string }).prenom ?? user.name;
+        const rendered = renderResetPassword({ prenom, resetUrl: url });
+        await sendEmail({
+          to: user.email,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+          tag: 'reset-password',
+        });
+      },
     },
     emailVerification: {
       sendOnSignUp: requireEmailVerification,

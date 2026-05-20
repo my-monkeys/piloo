@@ -1,42 +1,37 @@
 // Écran A6 Mot de passe oublié (#63).
 // Maquette : `fl2AZ` du fichier docs/design/piloo-mobile.pen
 //
-// Reproduit fidèlement :
-//  - Header back button
-//  - Hero : cercle 96 $accent-soft + icône phosphor key-fill 44 $accent
-//  - "Mot de passe oublié" Fraunces 26 + sous-titre Manrope 14
-//    "Pas de panique. Indique ton email et on t'envoie un lien pour
-//    en créer un nouveau."
-//  - Form email (height 48, gap 6)
-//  - Bouton "Recevoir le lien" primaire
-//  - Lien bas "Retour à la connexion" $primary 14/600
-//
-// Scope POC : Brevo n'est pas branché (cf. #62 / docs/architecture.md).
-// Le bouton "Recevoir le lien" simule l'envoi → toast info + push
-// /verify-email avec l'email passé en extra. Quand Brevo arrivera, on
-// branchera AuthApi.forgetPassword() qui appelle Better Auth.
+// Branchement #63 : appelle POST /api/auth/forget-password (Better Auth).
+// Better Auth renvoie 200 même si l'email n'existe pas (anti-énumération),
+// donc on affiche systématiquement le même message de succès.
+// L'utilisateur clique le lien dans son mail → ouvre /reset-password
+// côté web (Universal Links viendront avec piloo.fr).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
+import 'package:piloo/features/auth/data/auth_api.dart';
+import 'package:piloo/features/auth/data/auth_api_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_text_field.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _email = TextEditingController();
   bool _submitting = false;
+  bool _sent = false;
 
   @override
   void dispose() {
@@ -45,18 +40,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _onSubmit() async {
-    if (!_email.text.contains('@')) {
+    final email = _email.text.trim();
+    if (!email.contains('@')) {
       PilooToast.error(context, 'Email invalide.');
       return;
     }
     setState(() => _submitting = true);
-    // POC : pas d'appel API tant que Brevo n'est pas branché. On simule
-    // l'envoi en passant directement à l'écran de vérification.
-    await Future<void>.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() => _submitting = false);
-    PilooToast.info(context, 'Lien envoyé.');
-    context.go(RoutePath.verifyEmail, extra: _email.text.trim());
+    try {
+      await ref.read(authApiProvider).forgetPassword(email);
+      if (!mounted) return;
+      setState(() => _sent = true);
+    } on AuthApiException catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -74,41 +72,83 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 24),
-                    Center(child: _IconBadge()),
-                    const SizedBox(height: 18),
-                    _Title(),
-                    const SizedBox(height: 20),
-                    PilooTextField(
-                      label: 'Email',
-                      controller: _email,
-                      hint: 'maxime@exemple.fr',
-                      leadingIcon: PhosphorIconsRegular.envelope,
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.done,
-                      autofillHints: const [AutofillHints.email],
-                      height: 48,
-                      onSubmitted: (_) => _onSubmit(),
-                    ),
-                    const Spacer(),
-                    PilooButton(
-                      label: 'Recevoir le lien',
-                      variant: PilooButtonVariant.primary,
-                      isLoading: _submitting,
-                      onPressed: _submitting ? null : _onSubmit,
-                    ),
-                    const SizedBox(height: 20),
-                    Center(child: _BackToSignInLink()),
-                  ],
-                ),
+                child: _sent ? _SentState(email: _email.text.trim()) : _formBody(),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _formBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        Center(child: _IconBadge()),
+        const SizedBox(height: 18),
+        _Title(),
+        const SizedBox(height: 20),
+        PilooTextField(
+          label: 'Email',
+          controller: _email,
+          hint: 'maxime@exemple.fr',
+          leadingIcon: PhosphorIconsRegular.envelope,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.email],
+          height: 48,
+          onSubmitted: (_) => _onSubmit(),
+        ),
+        const Spacer(),
+        PilooButton(
+          label: 'Recevoir le lien',
+          variant: PilooButtonVariant.primary,
+          isLoading: _submitting,
+          onPressed: _submitting ? null : _onSubmit,
+        ),
+        const SizedBox(height: 20),
+        Center(child: _BackToSignInLink()),
+      ],
+    );
+  }
+}
+
+class _SentState extends StatelessWidget {
+  const _SentState({required this.email});
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        Center(child: _IconBadge()),
+        const SizedBox(height: 18),
+        Text(
+          'Vérifie ton email',
+          textAlign: TextAlign.center,
+          style: GoogleFonts.fraunces(
+            fontSize: 26,
+            fontWeight: FontWeight.w500,
+            color: PilooColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          "Si un compte existe pour cet email, un lien de réinitialisation arrive dans quelques minutes. Le lien expire dans 1 heure.",
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            color: PilooColors.textSecondary,
+            height: 1.5,
+          ),
+        ),
+        const Spacer(),
+        Center(child: _BackToSignInLink()),
+      ],
     );
   }
 }
