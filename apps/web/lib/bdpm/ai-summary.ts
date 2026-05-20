@@ -24,6 +24,8 @@ import { GoogleGenAI } from '@google/genai';
 import { medicamentsBdpm, type Db } from '@piloo/db-schema';
 import { and, eq, isNull, isNotNull, or, ne, sql } from 'drizzle-orm';
 
+import { log } from '@/lib/server/logger';
+
 const CURRENT_VERSION = 'gemini-2.5-flash/v1';
 const MODEL = 'gemini-2.5-flash';
 
@@ -121,8 +123,10 @@ export async function runSummaryGeneration(
       failures++;
       // On log mais on continue — un médoc qui plante le LLM ne doit
       // pas faire échouer toute la passe.
-
-      console.warn('summary failed', row.cip13, e instanceof Error ? e.message : e);
+      log.warn('bdpm.ai_summary.failed', {
+        cip13: row.cip13,
+        message: e instanceof Error ? e.message : String(e),
+      });
     }
     if (throttleMs > 0) {
       await new Promise((r) => setTimeout(r, throttleMs));
