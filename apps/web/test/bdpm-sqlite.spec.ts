@@ -31,11 +31,14 @@ afterEach(() => {
 });
 
 async function seedBdpm(rows: { cis: string; cip13?: string | null; version: string }[]) {
+  // PK = cip13 depuis le fix #48 — on skip les rows sans CIP, et on
+  // dérive un CIP unique par CIS à défaut pour rester déterministe.
+  const usable = rows.filter((r) => r.cip13 !== null);
   await env.handle.db.insert(medicamentsBdpm).values(
-    rows.map((r) => ({
-      cis: r.cis,
-      cip13: r.cip13 ?? null,
+    usable.map((r) => ({
+      cip13: r.cip13 ?? `34009${r.cis.padStart(8, '0')}`,
       cip7: null,
+      cis: r.cis,
       denomination: `MEDOC ${r.cis}`,
       forme: 'comprimé',
       dosage: '500 mg',
@@ -53,13 +56,15 @@ describe('generateBdpmSqlite', () => {
     await seedBdpm([
       { cis: '60000001', cip13: '3400934567890', version: '2026-04-01' },
       { cis: '60000002', cip13: '3400934567891', version: '2026-05-01' },
+      // 3e row sans CIP : skip silencieusement depuis #48 (schéma
+      // CIP-keyed). Seedhelper la filtre → 2 lignes en base.
       { cis: '60000003', cip13: null, version: '2026-05-01' },
     ]);
 
     const out = join(workDir, 'bdpm.sqlite');
     const result = await generateBdpmSqlite(env.handle.db, out);
 
-    expect(result.totalCis).toBe(3);
+    expect(result.totalCis).toBe(2);
     expect(result.version).toBe('2026-05-01');
 
     const sqlite = new DatabaseSync(out, { readOnly: true });
@@ -69,7 +74,7 @@ describe('generateBdpmSqlite', () => {
         value: string;
       }[];
       expect(meta.find((m) => m.key === 'version')?.value).toBe('2026-05-01');
-      expect(meta.find((m) => m.key === 'total_cis')?.value).toBe('3');
+      expect(meta.find((m) => m.key === 'total_cis')?.value).toBe('2');
       expect(meta.find((m) => m.key === 'generated_at')?.value).toMatch(/\d{4}-\d{2}-\d{2}T/);
 
       const meds = sqlite
@@ -77,7 +82,7 @@ describe('generateBdpmSqlite', () => {
           'SELECT cis, cip13, denomination, taux_remboursement FROM medicaments ORDER BY cis',
         )
         .all();
-      expect(meds).toHaveLength(3);
+      expect(meds).toHaveLength(2);
       expect(meds[0]).toMatchObject({
         cis: '60000001',
         cip13: '3400934567890',
@@ -102,11 +107,14 @@ describe('generateBdpmSqlite', () => {
 
     const sqlite = new DatabaseSync(out, { readOnly: true });
     try {
-      // EXPLAIN doit montrer SEARCH USING INDEX idx_cip13.
+      // Depuis le fix CIP-keyed (#48), cip13 EST la PRIMARY KEY de la
+      // table WITHOUT ROWID → SQLite utilise directement la PK pour le
+      // lookup, pas d'index secondaire nécessaire. Le plan doit
+      // mentionner PRIMARY KEY (ou son alias sqlite_autoindex).
       const plan = sqlite
         .prepare('EXPLAIN QUERY PLAN SELECT * FROM medicaments WHERE cip13 = ?')
         .all('3400900000123') as { detail: string }[];
-      expect(plan.some((p) => p.detail.includes('idx_cip13'))).toBe(true);
+      expect(plan.some((p) => /PRIMARY KEY|sqlite_autoindex/i.test(p.detail))).toBe(true);
     } finally {
       sqlite.close();
     }

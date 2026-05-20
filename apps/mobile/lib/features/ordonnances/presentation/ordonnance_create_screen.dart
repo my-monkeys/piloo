@@ -15,6 +15,7 @@
 // serveur (transaction unique) sera câblée avec le client OpenAPI
 // quand il sera généré.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -22,13 +23,15 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/ordonnances/data/ocr_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class OrdonnanceCreateScreen extends StatefulWidget {
+class OrdonnanceCreateScreen extends ConsumerStatefulWidget {
   const OrdonnanceCreateScreen({super.key});
 
   @override
-  State<OrdonnanceCreateScreen> createState() =>
+  ConsumerState<OrdonnanceCreateScreen> createState() =>
       _OrdonnanceCreateScreenState();
 }
 
@@ -56,18 +59,70 @@ class _Prescription {
   String duration;
 }
 
-class _OrdonnanceCreateScreenState extends State<OrdonnanceCreateScreen> {
+class _OrdonnanceCreateScreenState
+    extends ConsumerState<OrdonnanceCreateScreen> {
   int _step = 1; // 1, 2, 3
   // Étape 1
-  DateTime _date = DateTime(2026, 4, 23);
+  DateTime _date = DateTime.now();
   final _prescripteurCtrl = TextEditingController();
-  // Étape 2
+  // Étape 2 : démarre avec une ligne vide (pattern existant). Remplacé
+  // entièrement quand le flow OCR (#152) extrait des prescriptions.
   final List<_Prescription> _prescriptions = [_Prescription()];
+  bool _ocrLoading = false;
 
   @override
   void dispose() {
     _prescripteurCtrl.dispose();
     super.dispose();
+  }
+
+  /// OCR ordonnance (#152) : pick photo → POST /v1/ocr/ordonnance →
+  /// pré-remplit date + prescripteur + prescriptions[]. L'utilisateur
+  /// peut ensuite éditer chaque ligne avant le step Récap.
+  Future<void> _runOcr(OcrPhotoSource source) async {
+    if (_ocrLoading) return;
+    setState(() => _ocrLoading = true);
+    try {
+      final result = await pickAndOcr(ref, source: source);
+      if (result == null || !mounted) return;
+      setState(() {
+        if (result.prescripteur != null) {
+          _prescripteurCtrl.text = result.prescripteur!;
+        }
+        if (result.datePrescription != null) {
+          final parts = result.datePrescription!.split('-').map(int.parse).toList();
+          if (parts.length == 3) {
+            _date = DateTime(parts[0], parts[1], parts[2]);
+          }
+        }
+        _prescriptions
+          ..clear()
+          ..addAll(result.prescriptions.map(_prescriptionFromOcr));
+      });
+      if (mounted) {
+        PilooToast.success(
+          context,
+          '${result.prescriptions.length} médicament(s) extrait(s) — vérifie chaque ligne.',
+        );
+      }
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'OCR échoué : $e');
+    } finally {
+      if (mounted) setState(() => _ocrLoading = false);
+    }
+  }
+
+  _Prescription _prescriptionFromOcr(OcrPrescription o) {
+    final p = _Prescription();
+    p.medName = o.nomTexte;
+    if (o.unitesParPrise != null) p.unitsPerTake = o.unitesParPrise!.toInt();
+    if (o.unite != null) p.medForm = o.unite!;
+    if (o.dureeJours != null) p.duration = '${o.dureeJours} jours';
+    if (o.indication != null) p.duration = o.indication!;
+    // `frequence` et `moments` : Gemini renvoie du texte libre ("matin"
+    // ou "3 fois par jour"). On ne tente pas de parser ici — l'user
+    // ajustera moments/takesPerDay dans l'editor.
+    return p;
   }
 
   void _next() {
@@ -105,6 +160,8 @@ class _OrdonnanceCreateScreenState extends State<OrdonnanceCreateScreen> {
                       date: _date,
                       onPickDate: (d) => setState(() => _date = d),
                       prescripteurCtrl: _prescripteurCtrl,
+                      ocrLoading: _ocrLoading,
+                      onImportPhoto: _runOcr,
                     ),
                   2 => _StepPrescriptions(
                       prescriptions: _prescriptions,
@@ -363,17 +420,23 @@ class _StepInfos extends StatelessWidget {
     required this.date,
     required this.onPickDate,
     required this.prescripteurCtrl,
+    required this.ocrLoading,
+    required this.onImportPhoto,
   });
 
   final DateTime date;
   final ValueChanged<DateTime> onPickDate;
   final TextEditingController prescripteurCtrl;
+  final bool ocrLoading;
+  final ValueChanged<OcrPhotoSource> onImportPhoto;
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _OcrImportCard(loading: ocrLoading, onPick: onImportPhoto),
+        const SizedBox(height: 18),
         _SectionLabel('DATE DE L\'ORDONNANCE'),
         const SizedBox(height: 6),
         GestureDetector(
@@ -1749,6 +1812,149 @@ class _RecapPrescription extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Card "Importer depuis une photo" affichée en haut du Step 1 (#152).
+/// Deux boutons : Camera / Galerie. Toast loading pendant l'OCR.
+class _OcrImportCard extends StatelessWidget {
+  const _OcrImportCard({required this.loading, required this.onPick});
+
+  final bool loading;
+  final ValueChanged<OcrPhotoSource> onPick;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PilooColors.accentSoft,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+        border: Border.all(color: PilooColors.accent),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                PhosphorIconsFill.sparkle,
+                size: 18,
+                color: PilooColors.accent,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Pré-remplir depuis une photo',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: PilooColors.accent,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            "Prends ou choisis une photo de l'ordonnance, on extrait les médicaments pour toi. Tu vérifies chaque ligne ensuite.",
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              color: PilooColors.textSecondary,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _OcrButton(
+                  icon: PhosphorIconsRegular.camera,
+                  label: 'Photo',
+                  onTap: loading ? null : () => onPick(OcrPhotoSource.camera),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _OcrButton(
+                  icon: PhosphorIconsRegular.imageSquare,
+                  label: 'Galerie',
+                  onTap: loading ? null : () => onPick(OcrPhotoSource.gallery),
+                ),
+              ),
+            ],
+          ),
+          if (loading) ...[
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: PilooColors.accent,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Analyse en cours…',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: PilooColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _OcrButton extends StatelessWidget {
+  const _OcrButton({required this.icon, required this.label, this.onTap});
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final disabled = onTap == null;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: disabled ? PilooColors.textTertiary : PilooColors.accent,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: disabled ? PilooColors.textTertiary : PilooColors.textPrimary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

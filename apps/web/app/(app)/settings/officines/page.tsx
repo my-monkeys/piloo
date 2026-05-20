@@ -13,6 +13,7 @@ import { $api, type components } from '@piloo/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { InviteDialog } from '@/components/app/officines/invite-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -65,6 +66,8 @@ export default function OfficinesSettingsPage() {
         </Card>
       )}
 
+      <PendingInvitationsSection />
+
       {data?.items.length ? (
         <ul className="grid gap-3">
           {data.items.map((o) => (
@@ -75,6 +78,51 @@ export default function OfficinesSettingsPage() {
         </ul>
       ) : null}
     </div>
+  );
+}
+
+function PendingInvitationsSection() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = $api.useQuery('get', '/v1/me/invitations');
+  const acceptMutation = $api.useMutation('post', '/v1/invitations/{token}/accept', {
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['get', '/v1/me/invitations'] });
+      void queryClient.invalidateQueries({ queryKey: ['get', '/v1/officines'] });
+    },
+  });
+
+  if (isLoading) return null;
+  if (!data?.items.length) return null;
+
+  return (
+    <section className="space-y-2">
+      <h2 className="text-sm font-medium text-muted-foreground">Invitations en attente</h2>
+      <ul className="grid gap-2">
+        {data.items.map((inv) => (
+          <li key={inv.token}>
+            <Card className="border-piloo-primary/50">
+              <CardContent className="flex items-center justify-between gap-3 p-4">
+                <div className="space-y-1">
+                  <p className="font-medium">{inv.officine_nom}</p>
+                  <p className="text-xs text-muted-foreground">
+                    Invité(e) par {inv.invited_by_name} · rôle {inv.role}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  disabled={acceptMutation.isPending}
+                  onClick={() => {
+                    acceptMutation.mutate({ params: { path: { token: inv.token } } });
+                  }}
+                >
+                  {acceptMutation.isPending ? 'Acceptation…' : 'Accepter'}
+                </Button>
+              </CardContent>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -113,6 +161,7 @@ function OfficineRow({ officine }: { officine: Officine }) {
               Activer
             </Button>
           )}
+          {canDelete && <InviteDialog officineId={officine.id} officineNom={officine.nom} />}
           {canDelete && (
             <Button
               variant="ghost"

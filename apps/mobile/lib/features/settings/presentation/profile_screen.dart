@@ -7,30 +7,35 @@
 //
 // Validation email locale ; PUT /me serveur à câbler avec OpenAPI.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class ProfileScreen extends StatefulWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 enum _Sex { femme, homme, autre }
 
-class _ProfileScreenState extends State<ProfileScreen> {
-  final _firstNameCtrl = TextEditingController(text: 'Maxime');
-  final _lastNameCtrl = TextEditingController(text: 'Durand');
-  final _emailCtrl = TextEditingController(text: 'maxime@exemple.fr');
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  final _firstNameCtrl = TextEditingController();
+  final _lastNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  bool _initialized = false;
   // Champs santé. Optionnels — l'utilisateur n'est pas obligé de les
   // remplir.
   // IMPORTANT : ces données sont stockées en local + sync, mais
@@ -91,10 +96,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   static const _emailRegex =
       r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$";
 
-  void _save() {
+  bool _saving = false;
+
+  Future<void> _save() async {
+    if (_saving) return;
     final email = _emailCtrl.text.trim();
-    if (_firstNameCtrl.text.trim().isEmpty ||
-        _lastNameCtrl.text.trim().isEmpty) {
+    final prenom = _firstNameCtrl.text.trim();
+    final nom = _lastNameCtrl.text.trim();
+    if (prenom.isEmpty || nom.isEmpty) {
       PilooToast.error(context, 'Prénom et nom sont obligatoires.');
       return;
     }
@@ -102,16 +111,51 @@ class _ProfileScreenState extends State<ProfileScreen> {
       PilooToast.error(context, 'Email invalide.');
       return;
     }
-    PilooToast.success(context, 'Profil mis à jour.');
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        context.canPop() ? context.pop() : context.go(RoutePath.more);
+    setState(() => _saving = true);
+    try {
+      final client = ref.read(pilooApiClientProvider).getMeApi();
+      // Le serveur attend nom/prenom séparés et reconstitue `name` lui-même.
+      // L'email n'est PAS modifiable via /me (Better Auth gère le change-email
+      // via un flow dédié) — on l'envoie quand même pour cohérence d'affichage,
+      // le serveur ignorera si le champ n'est pas accepté.
+      final input = (api.UpdateMeInputBuilder()
+            ..nom = nom
+            ..prenom = prenom)
+          .build();
+      final res = await client.v1MePatch(updateMeInput: input);
+      if (res.statusCode != 200 || res.data == null) {
+        throw Exception('PATCH /v1/me : ${res.statusCode}');
       }
-    });
+      // Met à jour la session locale pour refléter le nouveau nom.
+      final current = ref.read(sessionProvider).value;
+      if (current != null) {
+        final updated = current.copyWith(name: '$prenom $nom');
+        await ref.read(sessionProvider.notifier).signIn(updated);
+      }
+      if (!mounted) return;
+      PilooToast.success(context, 'Profil mis à jour.');
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          context.canPop() ? context.pop() : context.go(RoutePath.more);
+        }
+      });
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Échec : $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final session = ref.watch(sessionProvider).value;
+    if (!_initialized && session != null) {
+      final parts = session.name.trim().split(RegExp(r'\s+'));
+      _firstNameCtrl.text = parts.isNotEmpty ? parts.first : '';
+      _lastNameCtrl.text = parts.length > 1 ? parts.skip(1).join(' ') : '';
+      _emailCtrl.text = session.email;
+      _initialized = true;
+    }
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(

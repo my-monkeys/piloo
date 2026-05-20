@@ -84,38 +84,41 @@ export function* parseTsv<T>(content: string, parser: (line: string) => T | null
 }
 
 /// Combine les CIS et leurs CIP en lignes prêtes à insérer dans
-/// `medicaments_bdpm`. La table est CIS-keyed, mais on a un seul CIP13
-/// par CIS dans le schéma DB → on prend le premier CIP "commercialisable"
-/// (ou simplement le premier de la liste si aucun heuristique). C'est un
-/// raccourci accepté pour le MVP : un médicament a souvent plusieurs
-/// présentations (boîte de 16 vs boîte de 30) qui partagent la même DCI ;
-/// le CIP13 stocké sert à *résoudre un scan* en CIS — peu importe lequel
-/// des CIP13 résoud, c'est le même médicament.
+/// `medicaments_bdpm`. **1 ligne par CIP13** : un médicament (CIS) a
+/// 1 à N présentations (tailles de boîte), chacune avec son propre
+/// CIP13. La PK est CIP13 — voir packages/db-schema/src/schema/bdpm.ts.
+///
+/// Les CIPs orphelins (CIS non trouvé dans le CIS_bdpm) sont skip :
+/// sans dénomination on ne peut pas afficher l'info au user.
+/// Les CIS sans aucun CIP commercialisé sont skip aussi (rare, mais
+/// possible pour les AMM toutes neuves sans présentation rattachée).
 export function combine(
   cisItems: Iterable<BdpmCis>,
   cipItems: Iterable<BdpmCip>,
   versionBdpm: string,
 ): MedicamentBdpmRow[] {
-  // Index CIP par CIS (premier vu gagne, déjà l'ordre du fichier officiel).
-  const cipByCis = new Map<string, BdpmCip>();
-  for (const cip of cipItems) {
-    if (!cipByCis.has(cip.cis)) cipByCis.set(cip.cis, cip);
-  }
+  const cisById = new Map<string, BdpmCis>();
+  for (const cis of cisItems) cisById.set(cis.cis, cis);
 
+  const seenCip13 = new Set<string>();
   const out: MedicamentBdpmRow[] = [];
-  for (const cisItem of cisItems) {
-    const cip = cipByCis.get(cisItem.cis);
+  for (const cip of cipItems) {
+    if (cip.cip13 === null) continue;
+    if (seenCip13.has(cip.cip13)) continue;
+    const cisItem = cisById.get(cip.cis);
+    if (!cisItem) continue;
+    seenCip13.add(cip.cip13);
     out.push({
+      cip13: cip.cip13,
+      cip7: cip.cip7,
       cis: cisItem.cis,
-      cip13: cip?.cip13 ?? null,
-      cip7: cip?.cip7 ?? null,
       denomination: cisItem.denomination,
       forme: cisItem.forme,
       dosage: extractDosage(cisItem.denomination),
       voieAdministration: cisItem.voiesAdministration,
       titulaire: cisItem.titulaire,
       statutAmm: cisItem.statutAmm,
-      tauxRemboursement: cip?.tauxRemboursement ?? null,
+      tauxRemboursement: cip.tauxRemboursement,
       versionBdpm,
     });
   }
@@ -124,9 +127,9 @@ export function combine(
 
 /// Format prêt à insérer dans Drizzle (snake_case côté DB, camelCase en TS).
 export interface MedicamentBdpmRow {
-  cis: string;
-  cip13: string | null;
+  cip13: string;
   cip7: string | null;
+  cis: string;
   denomination: string;
   forme: string | null;
   dosage: string | null;

@@ -20,8 +20,20 @@
       "schedule": "0 3 5 * *"
     },
     {
+      "path": "/api/v1/cron/bdpm-auto-link",
+      "schedule": "0 4 5 * *"
+    },
+    {
       "path": "/api/v1/cron/prise-oubliee",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 22 * * *"
+    },
+    {
+      "path": "/api/v1/cron/rappels-prises",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/v1/cron/rappels-retard",
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/v1/cron/stock-bas",

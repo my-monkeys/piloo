@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "744206664536",
+    "project_id": "piloo-99d96",
+    "storage_bucket": "piloo-99d96.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:744206664536:android:54869e178f0db292a39b2d",
+        "android_client_info": {
+          "package_name": "fr.mymonkey.piloo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApi06X5-feTnr2Heave0QFO3vy_G-Z3kw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Piloo — Guide des fonctionnalités</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="/dev/stdin" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">Piloo — Guide des fonctionnalités</h1>
+<p class="subtitle">Tour d’horizon du site web</p>
+<p class="date">Mai 2026</p>
+</header>
+<h1 id="piloo-guide-des-fonctionnalités">Piloo — Guide des
+fonctionnalités</h1>
+<p><strong>Piloo</strong> est un carnet numérique de médicaments pour la
+maison, avec un pont léger entre les particuliers (et leurs aidants) et
+les professionnels de santé qui passent à domicile. Ce guide passe en
+revue tout ce que le site web permet de faire.</p>
+<blockquote>
+<p><em>Piloo est un aide-mémoire personnel. Il ne remplace ni votre
+ordonnance, ni l’avis de votre médecin ou pharmacien.</em></p>
+</blockquote>
+<hr />
+<h2 id="découverte-et-inscription">1. Découverte et inscription</h2>
+<h3 id="landing-publique">1.1 Landing publique</h3>
+<p>La page d’accueil présente le produit en trois étapes (scanner,
+suivre, partager), met en avant les fonctionnalités clés, les éléments
+de réassurance (RGPD, hébergement français) puis renvoie vers
+l’inscription.</p>
+<figure>
+<img src="design/exports/web/W01-landing.png" alt="Landing marketing" />
+<figcaption aria-hidden="true">Landing marketing</figcaption>
+</figure>
+<h3 id="inscription">1.2 Inscription</h3>
+<p>Création d’un compte en quelques champs avec acceptation explicite
+des CGU et de la politique RGPD.</p>
+<figure>
+<img src="design/exports/web/W03-signup.png" alt="Inscription" />
+<figcaption aria-hidden="true">Inscription</figcaption>
+</figure>
+<h3 id="connexion">1.3 Connexion</h3>
+<p>Connexion par email + mot de passe, ou via Apple / Google. Lien
+direct vers la réinitialisation.</p>
+<figure>
+<img src="design/exports/web/W02-login.png" alt="Connexion" />
+<figcaption aria-hidden="true">Connexion</figcaption>
+</figure>
+<h3 id="vérification-demail">1.4 Vérification d’email</h3>
+<p>Un email de confirmation est envoyé. L’utilisateur peut relancer
+l’envoi après un court délai.</p>
+<figure>
+<img src="design/exports/web/W04-verif-email.png"
+alt="Vérification email" />
+<figcaption aria-hidden="true">Vérification email</figcaption>
+</figure>
+<h3 id="mot-de-passe-oublié">1.5 Mot de passe oublié</h3>
+<p>Réinitialisation par lien magique envoyé par email (expiration
+1h).</p>
+<figure>
+<img src="design/exports/web/W05-mdp-oublie.png"
+alt="Mot de passe oublié" />
+<figcaption aria-hidden="true">Mot de passe oublié</figcaption>
+</figure>
+<hr />
+<h2 id="onboarding">2. Onboarding</h2>
+<h3 id="choix-du-type-de-compte">2.1 Choix du type de compte</h3>
+<p>Au premier accès, l’utilisateur choisit entre :</p>
+<ul>
+<li><strong>Particulier</strong> — gère sa propre armoire à pharmacie et
+éventuellement celle de proches.</li>
+<li><strong>Professionnel de santé</strong> — gère plusieurs officines
+patients (aide-soignant, IDEL, SSIAD…).</li>
+</ul>
+<figure>
+<img src="design/exports/web/W06-choix-type.png"
+alt="Choix du type de compte" />
+<figcaption aria-hidden="true">Choix du type de compte</figcaption>
+</figure>
+<h3 id="bienvenue">2.2 Bienvenue</h3>
+<p>Une mini visite guidée en trois étapes pose les bases : scanner une
+boîte, créer une ordonnance, inviter un proche.</p>
+<figure>
+<img src="design/exports/web/W07-welcome-modal.png"
+alt="Welcome modal" />
+<figcaption aria-hidden="true">Welcome modal</figcaption>
+</figure>
+<hr />
+<h2 id="tableau-de-bord">3. Tableau de bord</h2>
+<p>Vue d’entrée de l’application connectée :</p>
+<ul>
+<li>4 indicateurs clés (boîtes en stock, prises du jour, alertes,
+partages actifs)</li>
+<li>Les prochaines prises à venir</li>
+<li>Les alertes les plus récentes (péremption, stock bas, manque
+signalé…)</li>
+</ul>
+<figure>
+<img src="design/exports/web/W08-dashboard.png" alt="Dashboard" />
+<figcaption aria-hidden="true">Dashboard</figcaption>
+</figure>
+<hr />
+<h2 id="aujourdhui-la-timeline-des-prises">4. Aujourd’hui — la timeline
+des prises</h2>
+<h3 id="vue-jour">4.1 Vue Jour</h3>
+<p>Liste chronologique des prises de la journée, regroupées par moment :
+matin, midi, soir, coucher. Chaque prise peut être marquée
+<em>prise</em>, <em>sautée</em> ou <em>reportée</em>. Un panneau latéral
+récapitule la journée.</p>
+<figure>
+<img src="design/exports/web/W09-aujourdhui.png"
+alt="Aujourd’hui — vue Jour" />
+<figcaption aria-hidden="true">Aujourd’hui — vue Jour</figcaption>
+</figure>
+<h3 id="vue-semaine">4.2 Vue Semaine</h3>
+<p>Grille 7 jours × 4 moments avec statuts colorés : utile pour repérer
+les oublis et préparer la semaine.</p>
+<figure>
+<img src="design/exports/web/W10-week-view.png"
+alt="Aujourd’hui — vue Semaine" />
+<figcaption aria-hidden="true">Aujourd’hui — vue Semaine</figcaption>
+</figure>
+<hr />
+<h2 id="officine-linventaire-des-boîtes">5. Officine — l’inventaire des
+boîtes</h2>
+<h3 id="inventaire-principal">5.1 Inventaire principal</h3>
+<p>Tableau filtrable des boîtes : par officine, par statut (active /
+vide / périmée), tri par date de péremption. Regroupement par médicament
+ou par molécule (DCI), ou vue plate de toutes les boîtes. Le panneau
+latéral montre le détail d’une boîte sélectionnée (lot, péremption,
+niveau de stock, historique).</p>
+<figure>
+<img src="design/exports/web/W11-officine.png"
+alt="Officine — table + drawer" />
+<figcaption aria-hidden="true">Officine — table + drawer</figcaption>
+</figure>
+<h3 id="fiche-médicament">5.2 Fiche médicament</h3>
+<p>Au tap sur un médicament, modale d’informations issues de la BDPM
+(Base de Données Publique des Médicaments) :</p>
+<ul>
+<li>Nom, dosage, forme galénique</li>
+<li>Principe actif (DCI), laboratoire, taux de remboursement</li>
+<li>Résumé en langage simple (pré-généré)</li>
+<li>Lien vers la notice officielle</li>
+</ul>
+<figure>
+<img src="design/exports/web/W12-fiche-medicament.png"
+alt="Fiche médicament" />
+<figcaption aria-hidden="true">Fiche médicament</figcaption>
+</figure>
+<hr />
+<h2 id="ordonnances">6. Ordonnances</h2>
+<h3 id="liste-des-ordonnances">6.1 Liste des ordonnances</h3>
+<p>Toutes les ordonnances saisies, avec prescripteur, date, et un aperçu
+des médicaments concernés.</p>
+<figure>
+<img src="design/exports/web/W13-ordonnances.png"
+alt="Ordonnances — liste" />
+<figcaption aria-hidden="true">Ordonnances — liste</figcaption>
+</figure>
+<h3 id="création-dune-ordonnance">6.2 Création d’une ordonnance</h3>
+<p>Modale multi-étapes pour saisir une ordonnance :</p>
+<ul>
+<li>Date et prescripteur (nom + spécialité)</li>
+<li>Médicaments (recherche BDPM ou scan d’une boîte)</li>
+<li>Posologie structurée : nombre d’unités × fréquence, moments de
+prise, avec/sans repas, durée</li>
+<li>Génération automatique des prises planifiées qui alimentent la
+timeline</li>
+</ul>
+<figure>
+<img src="design/exports/web/W14-creation-ordonnance.png"
+alt="Création d’ordonnance" />
+<figcaption aria-hidden="true">Création d’ordonnance</figcaption>
+</figure>
+<h3 id="détail-dune-ordonnance">6.3 Détail d’une ordonnance</h3>
+<p>Fiche complète : praticien, statistiques d’observance (prises
+validées, oubliées, sautées) et liste des prescriptions actives.</p>
+<figure>
+<img src="design/exports/web/W15-ordonnance-detail.png"
+alt="Détail ordonnance" />
+<figcaption aria-hidden="true">Détail ordonnance</figcaption>
+</figure>
+<hr />
+<h2 id="alertes">7. Alertes</h2>
+<p>Flux unifié des événements importants, groupés par date. Cinq types
+d’alertes :</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Déclenchement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Péremption à 30 jours</td>
+<td>Une boîte arrive bientôt à péremption</td>
+</tr>
+<tr>
+<td>Péremption à 7 jours</td>
+<td>Urgence péremption (push + email)</td>
+</tr>
+<tr>
+<td>Stock bas</td>
+<td>Stock estimé &lt; 7 jours de traitement</td>
+</tr>
+<tr>
+<td>Prise oubliée</td>
+<td>Aucune validation 1h après l’horaire prévu</td>
+</tr>
+<tr>
+<td>Manque signalé</td>
+<td>Un partagé a indiqué qu’un médicament manque</td>
+</tr>
+</tbody>
+</table>
+<figure>
+<img src="design/exports/web/W16-alertes.png" alt="Alertes" />
+<figcaption aria-hidden="true">Alertes</figcaption>
+</figure>
+<hr />
+<h2 id="paramètres">8. Paramètres</h2>
+<h3 id="profil">8.1 Profil</h3>
+<p>Édition des informations personnelles : nom, prénom, email,
+téléphone, type de compte.</p>
+<figure>
+<img src="design/exports/web/W17-profil.png" alt="Profil" />
+<figcaption aria-hidden="true">Profil</figcaption>
+</figure>
+<h3 id="notifications-horaires">8.2 Notifications &amp; horaires</h3>
+<p>Matrice canal × événement : pour chaque type d’alerte, choisir le
+canal (push, email, SMS). Définition des horaires par défaut des moments
+de prise (matin, midi, soir, coucher).</p>
+<figure>
+<img src="design/exports/web/W18-notifs.png" alt="Notifications" />
+<figcaption aria-hidden="true">Notifications</figcaption>
+</figure>
+<h3 id="sécurité">8.3 Sécurité</h3>
+<p>Changement de mot de passe, activation de la double authentification
+(TOTP), liste des sessions actives avec révocation.</p>
+<figure>
+<img src="design/exports/web/W19-securite.png" alt="Sécurité" />
+<figcaption aria-hidden="true">Sécurité</figcaption>
+</figure>
+<h3 id="compte-rgpd">8.4 Compte &amp; RGPD</h3>
+<ul>
+<li>Export des données personnelles</li>
+<li>Choix de la langue et du thème</li>
+<li>Zone de danger : suppression de compte (délai de grâce 7 jours)</li>
+</ul>
+<figure>
+<img src="design/exports/web/W20-compte-rgpd.png"
+alt="Compte &amp; RGPD" />
+<figcaption aria-hidden="true">Compte &amp; RGPD</figcaption>
+</figure>
+<hr />
+<h2 id="officines-partages">9. Officines &amp; partages</h2>
+<h3 id="mes-officines">9.1 Mes officines</h3>
+<p>Liste des officines accessibles, avec le rôle de l’utilisateur sur
+chacune et l’officine active. Création possible d’une officine
+supplémentaire (ex : pour un parent).</p>
+<figure>
+<img src="design/exports/web/W21-mes-officines.png"
+alt="Mes officines" />
+<figcaption aria-hidden="true">Mes officines</figcaption>
+</figure>
+<h3 id="gestion-des-partages">9.2 Gestion des partages</h3>
+<p>Pour chaque officine, tableau des membres et de leurs rôles, plus les
+invitations en attente. Trois rôles disponibles :</p>
+<ul>
+<li><strong>Propriétaire</strong> — tous les droits, y compris la
+gestion des partages.</li>
+<li><strong>Éditeur</strong> — peut ajouter / modifier des boîtes, gérer
+les ordonnances, marquer les prises.</li>
+<li><strong>Lecteur</strong> — consultation uniquement, mais peut
+signaler un manque.</li>
+</ul>
+<figure>
+<img src="design/exports/web/W22-gestion-partages.png"
+alt="Gestion des partages" />
+<figcaption aria-hidden="true">Gestion des partages</figcaption>
+</figure>
+<h3 id="inviter-un-membre">9.3 Inviter un membre</h3>
+<p>Modale d’invitation : email + choix du rôle, génération d’un lien
+d’invitation signé valable 72h.</p>
+<figure>
+<img src="design/exports/web/W23-modal-inviter.png"
+alt="Modal Inviter" />
+<figcaption aria-hidden="true">Modal Inviter</figcaption>
+</figure>
+<h3 id="acceptation-dinvitation">9.4 Acceptation d’invitation</h3>
+<p>Page publique sur laquelle atterrit le destinataire du lien : aperçu
+de l’officine, rôle proposé, et bouton d’acceptation après connexion /
+inscription.</p>
+<figure>
+<img src="design/exports/web/W24-accepter-invitation.png"
+alt="Accepter une invitation" />
+<figcaption aria-hidden="true">Accepter une invitation</figcaption>
+</figure>
+<hr />
+<h2 id="en-résumé">En résumé</h2>
+<p>Piloo couvre tout le cycle d’usage d’une armoire à pharmacie
+connectée :</p>
+<ol type="1">
+<li><strong>Inventaire</strong> — scanner ses boîtes, suivre les stocks
+et les dates de péremption.</li>
+<li><strong>Prises</strong> — timeline jour / semaine, notifications,
+observance.</li>
+<li><strong>Ordonnances</strong> — saisie structurée, génération des
+prises planifiées.</li>
+<li><strong>Partage</strong> — rôles granulaires entre patient, aidant
+familial et professionnel.</li>
+<li><strong>Alertes</strong> — péremption, stock bas, oublis, manques
+signalés.</li>
+</ol>
+<p>Le tout en mode offline-first, avec une base médicaments officielle
+BDPM mise à jour deux fois par jour.</p>
+</body>
+</html>

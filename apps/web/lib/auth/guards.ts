@@ -47,6 +47,29 @@ export async function requireAuth(
   };
 }
 
+/// Guard admin : vérifie auth + email dans la whitelist ADMIN_EMAILS
+/// (env var, comma-separated). Renvoie une Response 403 si l'user n'a
+/// pas accès. À utiliser pour les routes /api/v1/admin/*.
+///
+/// Pas de système de rôles DB pour l'instant — on garde l'admin
+/// minimal pour valider les résumés IA (#166). Si ça grossit on
+/// passera sur une table `admin_users`.
+export async function requireAdmin(
+  request: Request,
+  options: RequireAuthOptions = {},
+): Promise<AuthSession | Response> {
+  const session = await requireAuth(request, options);
+  if (session instanceof Response) return session;
+  const allowed = (process.env['ADMIN_EMAILS'] ?? '')
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+  if (!allowed.includes(session.user.email.toLowerCase())) {
+    return apiErrorResponse('forbidden', 'Accès admin requis.');
+  }
+  return session;
+}
+
 interface RequireRoleOptions {
   // Injection pour les tests : DB Drizzle dédiée au testcontainer.
   db?: ReturnType<typeof getDb>;

@@ -12,9 +12,11 @@
     "test": "vitest run",
     "audit:logs": "node scripts/audit-logs.mjs",
     "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs",
-    "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs"
+    "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs",
+    "bdpm:summaries": "node --experimental-strip-types scripts/generate-bdpm-summaries.mjs"
   },
   "dependencies": {
+    "@google/genai": "^2.4.0",
     "@piloo/api-client": "workspace:*",
     "@piloo/api-contract": "workspace:*",
     "@piloo/db-schema": "workspace:*",
@@ -26,6 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.45.2",
+    "firebase-admin": "^13.10.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.16.0",
     "next": "^15.1.0",

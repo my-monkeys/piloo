@@ -22,14 +22,24 @@
 // visuelle. Sera branché sur Drift + filter Riverpod quand l'epic
 // Inventory (#11) avancera.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _Filter { tout, actif, perime, stockBas }
 
@@ -44,6 +54,7 @@ class _Boite implements GroupableBoite {
     required this.count,
     this.exp,
     this.state = _BoiteState.ok,
+    this.apiBoite,
   });
 
   @override
@@ -55,18 +66,26 @@ class _Boite implements GroupableBoite {
   final int count;
   final String? exp; // ex: "exp. 08/2026" ou null si périmé
   final _BoiteState state;
+  /// Référence à la Boite API quand la card provient de l'API (sinon
+  /// fallback mock). Sert au tap → quick actions sheet → PATCH.
+  final api.Boite? apiBoite;
 }
 
-class OfficineScreen extends StatefulWidget {
+class OfficineScreen extends ConsumerStatefulWidget {
   const OfficineScreen({super.key});
 
   @override
-  State<OfficineScreen> createState() => _OfficineScreenState();
+  ConsumerState<OfficineScreen> createState() => _OfficineScreenState();
 }
 
-class _OfficineScreenState extends State<OfficineScreen> {
+class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   _Filter _filter = _Filter.tout;
   BoiteGrouping _grouping = BoiteGrouping.medicament;
+  /// Texte de recherche libre. Filtre name + dci + cip13 case-insensitive.
+  /// Vide → toutes les boîtes affichées (modulo le filtre de statut).
+  /// #100 : tap sur "Principe actif" depuis la fiche médicament viendra
+  /// pré-remplir ce champ avec la DCI.
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -86,78 +105,215 @@ class _OfficineScreenState extends State<OfficineScreen> {
     writeBoiteGrouping(mode);
   }
 
-  // Mock — le branchement Drift arrivera avec l'epic Inventory.
-  static const _all = [
-    _Boite(
-      name: 'Doliprane 1000 mg',
-      dci: 'Paracétamol',
-      meta: 'Paracétamol · comprimé',
-      icon: PhosphorIconsFill.pill,
-      count: 3,
-      exp: 'exp. 08/2026',
-    ),
-    _Boite(
-      name: 'Kardegic 75 mg',
-      dci: 'Acide acétylsalicylique',
-      meta: 'Acide acétylsalicylique · sachet',
-      icon: PhosphorIconsFill.pill,
-      count: 2,
-      exp: 'exp. 06/2026',
-      state: _BoiteState.stockBas,
-    ),
-    _Boite(
-      name: 'Metformine 500 mg',
-      dci: 'Metformine',
-      meta: 'Metformine · comprimé',
-      icon: PhosphorIconsFill.pill,
-      count: 1,
-      exp: 'exp. 05/2027',
-    ),
-    _Boite(
-      name: 'Amoxicilline 500 mg',
-      dci: 'Amoxicilline',
-      meta: 'Périmée depuis 14 jours · à jeter',
-      icon: PhosphorIconsFill.warningOctagon,
-      count: 1,
-      state: _BoiteState.perime,
-    ),
-    _Boite(
-      name: 'Humex rhume',
-      dci: 'Paracétamol + chlorphénamine',
-      meta: 'Paracétamol + chlorphénamine · sirop',
-      icon: PhosphorIconsFill.drop,
-      count: 1,
-      exp: 'exp. 11/2025',
-    ),
-    _Boite(
-      name: 'Dafalgan 500 mg',
-      dci: 'Paracétamol',
-      meta: 'Paracétamol · gélule',
-      icon: PhosphorIconsFill.pill,
-      count: 2,
-      exp: 'exp. 03/2027',
-    ),
-  ];
+  /// Tap sur une card → bottom sheet d'actions rapides (#102/#103/#104).
+  /// Sans `apiBoite` (fallback mock), tap est no-op.
+  Future<void> _onBoiteTap(_Boite boite) async {
+    final apiBoite = boite.apiBoite;
+    if (apiBoite == null) return;
+    final action = await showQuickActionsSheet(
+      context,
+      info: QuickActionsContext(
+        officineLabel: ref.read(activeOfficineProvider).valueOrNull?.nom ?? '',
+        medicamentName: boite.name,
+        cip13: apiBoite.cip13,
+      ),
+    );
+    if (action == null || !mounted) return;
+    await _runAction(apiBoite, action);
+  }
 
-  List<_Boite> get _filtered => switch (_filter) {
-        _Filter.tout => _all,
-        _Filter.actif => _all
-            .where((b) => b.state == _BoiteState.ok)
-            .toList(growable: false),
-        _Filter.perime => _all
-            .where((b) => b.state == _BoiteState.perime)
-            .toList(growable: false),
-        _Filter.stockBas => _all
-            .where((b) => b.state == _BoiteState.stockBas)
-            .toList(growable: false),
-      };
+  Future<void> _runAction(api.Boite boite, QuickAction action) async {
+    try {
+      switch (action) {
+        case QuickAction.markEmpty:
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            statut: api.UpdateBoiteInputStatutEnum.vide,
+            unitesRestantes: 0,
+          );
+          if (mounted) PilooToast.success(context, 'Marquée vide.');
+        case QuickAction.markExpired:
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            statut: api.UpdateBoiteInputStatutEnum.perimee,
+          );
+          if (mounted) PilooToast.success(context, 'Marquée périmée.');
+        case QuickAction.adjustStock:
+          final newStock = await _askStock(boite.unitesRestantes);
+          if (newStock == null || !mounted) return;
+          await updateBoite(
+            ref,
+            boiteId: boite.id,
+            officineId: boite.officineId,
+            unitesRestantes: newStock,
+          );
+          if (mounted) PilooToast.success(context, 'Stock mis à jour.');
+        case QuickAction.reportMissing:
+          final alertesApi = ref.read(pilooApiClientProvider).getAlertesApi();
+          final input = api.SignalerManqueInputBuilder()
+            ..cip13 = boite.cip13
+            ..libelle = boite.cip13;
+          final res = await alertesApi.v1OfficinesOfficineIdSignalerManquePost(
+            officineId: boite.officineId,
+            signalerManqueInput: input.build(),
+          );
+          if (!mounted) return;
+          if (res.statusCode == 201 || res.statusCode == 200) {
+            PilooToast.success(context, 'Manque signalé aux membres.');
+          } else {
+            PilooToast.error(context, 'Échec : statut ${res.statusCode ?? 0}');
+          }
+        case QuickAction.seeInfo:
+          if (mounted) context.push(RoutePath.medicamentInfo(boite.cip13));
+        case QuickAction.rename:
+          await _runRename(boite);
+      }
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Action échouée : $e');
+    }
+  }
+
+  /// Renomme une boîte en éditant le préfixe `NOM // notes` de la
+  /// colonne `notes`. Sert principalement quand la boîte scannée n'est
+  /// pas reconnue dans BDPM — au lieu d'afficher "CIP 3400…", l'user
+  /// met le nom imprimé sur la boîte.
+  Future<void> _runRename(api.Boite boite) async {
+    final parts = _splitNotes(boite.notes);
+    final currentName = parts.name ?? '';
+    final newName = await _askRename(currentName);
+    if (newName == null || !mounted) return;
+    final trimmed = newName.trim();
+    final newNotes = trimmed.isEmpty
+        ? parts.rest // l'user efface le nom → on garde juste les notes libres
+        : (parts.rest == null || parts.rest!.isEmpty
+            ? trimmed
+            : '$trimmed // ${parts.rest}');
+    await updateBoite(
+      ref,
+      boiteId: boite.id,
+      officineId: boite.officineId,
+      notes: newNotes,
+    );
+    if (mounted) PilooToast.success(context, 'Renommée.');
+  }
+
+  Future<String?> _askRename(String current) {
+    final ctrl = TextEditingController(text: current);
+    return showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PilooColors.surface,
+        title: Text(
+          'Renommer',
+          style: GoogleFonts.fraunces(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: PilooColors.textPrimary,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Nom du médicament tel qu\'il apparaît sur la boîte.',
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: PilooColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'ex. Doliprane 1000 mg',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sheet de saisie du stock (#102 + #103). Combine :
+  ///   - 5 chips "Plein / 3-4 / Moitié / 1-4 / Vide" pour estimation rapide
+  ///   - un champ numérique pour comptage précis
+  /// Les chips pré-remplissent le champ, l'utilisateur valide. Retourne
+  /// le nombre d'unités, ou null si annulé.
+  Future<int?> _askStock(int? current) {
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _StockAdjustSheet(initial: current),
+    );
+  }
+
+
+  List<_Boite> _filtered(List<_Boite> source) {
+    final byStatut = switch (_filter) {
+      _Filter.tout => source,
+      _Filter.actif =>
+        source.where((b) => b.state == _BoiteState.ok).toList(growable: false),
+      _Filter.perime => source
+          .where((b) => b.state == _BoiteState.perime)
+          .toList(growable: false),
+      _Filter.stockBas => source
+          .where((b) => b.state == _BoiteState.stockBas)
+          .toList(growable: false),
+    };
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return byStatut;
+    return byStatut
+        .where((b) =>
+            b.name.toLowerCase().contains(q) ||
+            b.dci.toLowerCase().contains(q) ||
+            b.meta.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final activeOfficineAsync = ref.watch(activeOfficineProvider);
+    final activeOfficine = activeOfficineAsync.valueOrNull;
+    final boitesAsync = activeOfficine == null
+        ? const AsyncValue<List<api.Boite>>.data([])
+        : ref.watch(boitesProvider(activeOfficine.id));
+    final source = boitesAsync.maybeWhen(
+      data: (rows) => rows
+          // Boîtes vidées : on les retire de l'affichage — l'utilisateur
+          // a marqué la boîte épuisée, plus aucune action utile dessus.
+          // Elles restent en DB (historique, agrégats stock_bas).
+          .where((b) => b.statut != api.BoiteStatutEnum.vide && (b.unitesRestantes ?? 1) > 0)
+          .map(_mapApiBoite)
+          .toList(growable: false),
+      orElse: () => const <_Boite>[],
+    );
+    final isLoading = boitesAsync.isLoading && source.isEmpty;
+    final filtered = _filtered(source);
     final perimeCount =
-        _all.where((b) => b.state == _BoiteState.perime).length;
+        source.where((b) => b.state == _BoiteState.perime).length;
     final stockBasCount =
-        _all.where((b) => b.state == _BoiteState.stockBas).length;
+        source.where((b) => b.state == _BoiteState.stockBas).length;
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -173,10 +329,13 @@ class _OfficineScreenState extends State<OfficineScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  _OfficineSwitcher(label: 'Maison', onTap: () {}),
+                  _OfficineSwitcher(
+                    label: activeOfficine?.nom ?? 'Maison',
+                    onTap: () => _showOfficineSwitcher(context, ref),
+                  ),
                   Flexible(
                     child: Text(
-                      '12 boîtes · 8 médicaments',
+                      '${source.length} boîte${source.length > 1 ? 's' : ''}',
                       style: GoogleFonts.manrope(
                         fontSize: 12,
                         color: PilooColors.textTertiary,
@@ -188,9 +347,12 @@ class _OfficineScreenState extends State<OfficineScreen> {
                 ],
               ),
             ),
-            const Padding(
-              padding: EdgeInsets.fromLTRB(20, 4, 20, 4),
-              child: _SearchBox(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+              child: _SearchBox(
+                value: _searchQuery,
+                onChanged: (q) => setState(() => _searchQuery = q),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
@@ -209,7 +371,7 @@ class _OfficineScreenState extends State<OfficineScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
                 children: [
                   _FilterChip(
-                    label: 'Tout · ${_all.length}',
+                    label: 'Tout · ${source.length}',
                     selected: _filter == _Filter.tout,
                     onTap: () => setState(() => _filter = _Filter.tout),
                   ),
@@ -237,16 +399,175 @@ class _OfficineScreenState extends State<OfficineScreen> {
               ),
             ),
             Expanded(
-              // Bottom padding 140 = tab bar (~105) + safe area home
-              // indicator (extendBody: true côté _MainShell).
-              child: _GroupedList(
-                sections: groupBoites(_filtered, _grouping),
-              ),
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : source.isEmpty
+                      ? _EmptyOfficine()
+                      // Bottom padding 140 = tab bar (~105) + safe area
+                      // home indicator (extendBody: true côté _MainShell).
+                      : _GroupedList(
+                          sections: groupBoites(filtered, _grouping),
+                          onBoiteTap: _onBoiteTap,
+                        ),
             ),
           ],
         ),
       ),
     );
+  }
+}
+
+/// Mappe une `Boite` API → modèle d'affichage local.
+///
+/// Convention : on stocke le nom BDPM en préfixe des notes
+/// ("NOM // notes libres") au moment de la création depuis le scan
+/// (#84/#89). Côté lecture on extrait. Sans préfixe, fallback CIP13.
+/// Un futur ticket ajoutera une colonne dédiée `nom_texte` côté DB,
+/// pour ne plus faire ce parsing — gardé minimal en attendant.
+_Boite _mapApiBoite(api.Boite b) {
+  final parts = _splitNotes(b.notes);
+  final name = parts.name ?? 'CIP ${b.cip13}';
+  final meta = parts.name != null
+      ? 'CIP ${b.cip13}'
+      : (b.lot != null ? 'lot ${b.lot}' : '—');
+  final state = _deriveState(b);
+  final exp = state == _BoiteState.perime
+      ? null
+      : _formatPeremption(b.peremption);
+  return _Boite(
+    name: name,
+    dci: name,
+    meta: meta,
+    icon: PhosphorIconsFill.pill,
+    count: b.unitesRestantes ?? 1,
+    exp: exp,
+    state: state,
+    apiBoite: b,
+  );
+}
+
+({String? name, String? rest}) _splitNotes(String? raw) {
+  if (raw == null || raw.isEmpty) return (name: null, rest: null);
+  final idx = raw.indexOf(' // ');
+  if (idx <= 0) return (name: null, rest: raw);
+  return (name: raw.substring(0, idx), rest: raw.substring(idx + 4));
+}
+
+_BoiteState _deriveState(api.Boite b) {
+  if (b.statut == api.BoiteStatutEnum.perimee) return _BoiteState.perime;
+  // Périmée d'office si la date est passée — sans attendre que le cron
+  // ait mis à jour le statut côté serveur.
+  final exp = DateTime(b.peremption.year, b.peremption.month, b.peremption.day);
+  if (exp.isBefore(DateTime.now())) return _BoiteState.perime;
+  if ((b.unitesRestantes ?? 99) <= 1) return _BoiteState.stockBas;
+  return _BoiteState.ok;
+}
+
+String _formatPeremption(api.Date d) {
+  final m = d.month.toString().padLeft(2, '0');
+  return 'exp. $m/${d.year}';
+}
+
+Future<void> _showOfficineSwitcher(BuildContext context, WidgetRef ref) async {
+  final list = ref.read(officinesListProvider).value ?? const [];
+  final activeId = ref.read(activeOfficineProvider).value?.id;
+  if (list.isEmpty) return;
+  final picked = await showModalBottomSheet<String>(
+    context: context,
+    backgroundColor: PilooColors.background,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: PilooColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 8),
+              child: Text(
+                'CHOISIR UNE OFFICINE',
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: PilooColors.textTertiary,
+                ),
+              ),
+            ),
+            ...list.map((o) {
+              final isActive = o.id == activeId;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(ctx).pop(o.id),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: PilooColors.surface,
+                      borderRadius: BorderRadius.circular(PilooRadius.md),
+                      border: Border.all(
+                        color: isActive
+                            ? PilooColors.primary
+                            : PilooColors.border,
+                        width: isActive ? 2 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          PhosphorIconsFill.house,
+                          size: 18,
+                          color: PilooColors.primary,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            o.nom,
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: PilooColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                        if (isActive)
+                          const Icon(
+                            PhosphorIconsFill.checkCircle,
+                            size: 18,
+                            color: PilooColors.primary,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ],
+        ),
+      ),
+    ),
+  );
+  if (picked != null && picked != activeId) {
+    await ref.read(activeOfficineProvider.notifier).select(picked);
   }
 }
 
@@ -298,8 +619,35 @@ class _OfficineSwitcher extends StatelessWidget {
   }
 }
 
-class _SearchBox extends StatelessWidget {
-  const _SearchBox();
+class _SearchBox extends StatefulWidget {
+  const _SearchBox({required this.value, required this.onChanged});
+
+  final String value;
+  final ValueChanged<String> onChanged;
+
+  @override
+  State<_SearchBox> createState() => _SearchBoxState();
+}
+
+class _SearchBoxState extends State<_SearchBox> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.value);
+
+  @override
+  void didUpdateWidget(_SearchBox old) {
+    super.didUpdateWidget(old);
+    // Sync externe (ex: pré-remplissage par tap DCI) — on évite la
+    // boucle infinie en comparant le texte avant set.
+    if (widget.value != _ctrl.text) {
+      _ctrl.text = widget.value;
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -321,6 +669,8 @@ class _SearchBox extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              controller: _ctrl,
+              onChanged: widget.onChanged,
               decoration: InputDecoration(
                 isDense: true,
                 contentPadding: EdgeInsets.zero,
@@ -341,6 +691,22 @@ class _SearchBox extends StatelessWidget {
               ),
             ),
           ),
+          if (_ctrl.text.isNotEmpty)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                _ctrl.clear();
+                widget.onChanged('');
+              },
+              child: const Padding(
+                padding: EdgeInsets.only(left: 8),
+                child: Icon(
+                  PhosphorIconsRegular.xCircle,
+                  size: 16,
+                  color: PilooColors.textTertiary,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -464,9 +830,10 @@ class _GroupingToggle extends StatelessWidget {
 }
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList({required this.sections});
+  const _GroupedList({required this.sections, required this.onBoiteTap});
 
   final List<BoiteSection<_Boite>> sections;
+  final void Function(_Boite boite) onBoiteTap;
 
   @override
   Widget build(BuildContext context) {
@@ -482,7 +849,12 @@ class _GroupedList extends StatelessWidget {
       }
       for (var i = 0; i < section.boites.length; i++) {
         if (i > 0) items.add(const SizedBox(height: 10));
-        items.add(_BoiteCard(boite: section.boites[i]));
+        final boite = section.boites[i];
+        items.add(GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => onBoiteTap(boite),
+          child: _BoiteCard(boite: boite),
+        ));
       }
     }
     return ListView(
@@ -634,6 +1006,198 @@ class _BoiteCard extends StatelessWidget {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _EmptyOfficine extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              PhosphorIconsRegular.pill,
+              size: 48,
+              color: PilooColors.textTertiary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Aucune boîte dans cette officine',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.fraunces(
+                fontSize: 17,
+                fontWeight: FontWeight.w500,
+                color: PilooColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Scanne une boîte ou ajoute-la manuellement avec le bouton + de la barre du bas.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: PilooColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StockAdjustSheet extends StatefulWidget {
+  const _StockAdjustSheet({required this.initial});
+
+  /// Stock actuel (= unitesRestantes courant). Sert à pré-remplir le
+  /// champ texte et à indiquer où on en est. Peut être null (boîte
+  /// dont on n'a jamais compté précisément, ex: marquée "Plein" à la
+  /// création).
+  final int? initial;
+
+  @override
+  State<_StockAdjustSheet> createState() => _StockAdjustSheetState();
+}
+
+class _StockAdjustSheetState extends State<_StockAdjustSheet> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initial?.toString() ?? '');
+
+  /// Valeurs chips standards (alignées avec boite_add_screen `_stockToUnits`).
+  /// Plein = 32 (typique blister 2×16), 3/4 = 24, Moitié = 16, 1/4 = 8, Vide = 0.
+  /// Estimation grossière — l'utilisateur ajuste ensuite si besoin.
+  static const _chips = <({String label, int units})>[
+    (label: 'Plein', units: 32),
+    (label: '3/4', units: 24),
+    (label: 'Moitié', units: 16),
+    (label: '1/4', units: 8),
+    (label: 'Vide', units: 0),
+  ];
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final n = int.tryParse(_ctrl.text.trim());
+    if (n == null || n < 0) return;
+    Navigator.of(context).pop(n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Comprimés restants',
+                style: GoogleFonts.fraunces(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Nombre d’unités dans la boîte (comprimés, gélules, sachets…).',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: PilooColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  for (var i = 0; i < _chips.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          setState(() {
+                            _ctrl.text = _chips[i].units.toString();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: PilooColors.surface,
+                            borderRadius: BorderRadius.circular(PilooRadius.md),
+                            border: Border.all(color: PilooColors.border),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _chips[i].label,
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: PilooColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _ctrl,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre exact',
+                  hintText: 'ex. 14',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Annuler'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: const Text('Enregistrer'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

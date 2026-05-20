@@ -5,6 +5,7 @@
 //
 //   GET /v1/bdpm/version            → version active + total
 //   GET /v1/bdpm/diff?from=YYYY-MM-DD → médicaments changés/ajoutés
+//   GET /v1/bdpm/search?q=...       → recherche par nom ou CIP (web manual entry)
 //
 // Limite : la table miroir ne garde pas d'historique de delete →
 // le diff couvre les ajouts et modifications, pas les retraits AMM.
@@ -28,6 +29,9 @@ export const BdpmMedicamentSchema = z
     titulaire: z.string().nullable(),
     statut_amm: z.string().nullable(),
     taux_remboursement: z.number().int().min(0).max(100).nullable(),
+    /// Résumé IA pré-généré (#167). Null tant que la pipeline LLM
+    /// n'a pas encore traité ce CIP — l'UI affiche un placeholder.
+    ai_summary: z.string().nullable().optional(),
     version_bdpm: z.iso.date(),
   })
   .openapi('BdpmMedicament');
@@ -53,9 +57,26 @@ export const BdpmDiffResponseSchema = z
   })
   .openapi('BdpmDiffResponse');
 
+// /search : aide à la saisie manuelle d'une boîte côté web (et plus tard
+// mobile). q ≥ 2 caractères. Si q matche un CIP (7 ou 13 chiffres) on cherche
+// d'abord par CIP, sinon fuzzy sur denomination.
+export const BdpmSearchQuerySchema = z
+  .object({
+    q: z.string().trim().min(2).max(120),
+  })
+  .openapi('BdpmSearchQuery');
+
+export const BdpmSearchResponseSchema = z
+  .object({
+    items: z.array(BdpmMedicamentSchema),
+  })
+  .openapi('BdpmSearchResponse');
+
 export type BdpmMedicament = z.infer<typeof BdpmMedicamentSchema>;
 export type BdpmVersionResponse = z.infer<typeof BdpmVersionResponseSchema>;
 export type BdpmDiffResponse = z.infer<typeof BdpmDiffResponseSchema>;
+export type BdpmSearchQuery = z.infer<typeof BdpmSearchQuerySchema>;
+export type BdpmSearchResponse = z.infer<typeof BdpmSearchResponseSchema>;
 
 const ApiErrorSchema = z
   .object({
@@ -101,5 +122,44 @@ registry.registerPath({
       content: { 'application/json': { schema: BdpmDiffResponseSchema } },
     },
     400: errorResponse('Paramètre `from` invalide'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/bdpm/sqlite',
+  summary: 'Télécharge le fichier SQLite BDPM mobile (gzippé)',
+  description:
+    'Sert le fichier SQLite généré depuis Postgres, gzippé. Le mobile envoie `?version=YYYY-MM-DD` pour skip le download si la version locale est à jour (réponse 304). En-tête `X-Piloo-Bdpm-Version` indique la version courante.',
+  tags: ['bdpm'],
+  responses: {
+    200: {
+      description: 'SQLite gzippé',
+      content: {
+        'application/x-sqlite3': {
+          schema: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+    304: {
+      description: 'Version inchangée, pas de re-download nécessaire',
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/bdpm/search',
+  summary: 'Recherche un médicament BDPM par nom ou CIP',
+  description:
+    "Recherche par CIP (7 ou 13 chiffres) ou par dénomination (ILIKE). Max 20 résultats. Sert à la saisie manuelle d'une boîte côté web.",
+  tags: ['bdpm'],
+  request: { query: BdpmSearchQuerySchema },
+  responses: {
+    200: {
+      description: 'Résultats',
+      content: { 'application/json': { schema: BdpmSearchResponseSchema } },
+    },
+    400: errorResponse('Paramètre `q` invalide'),
   },
 });

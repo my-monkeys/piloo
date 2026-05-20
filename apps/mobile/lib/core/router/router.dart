@@ -30,6 +30,7 @@ import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnance_create_screen.dart';
+import 'package:piloo/features/ordonnances/presentation/ordonnance_detail_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnances_list_screen.dart';
 import 'package:piloo/features/partages/presentation/invitation_accept_screen.dart';
 import 'package:piloo/features/partages/presentation/invite_screen.dart';
@@ -38,6 +39,7 @@ import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/settings/presentation/horaires_screen.dart';
 import 'package:piloo/features/settings/presentation/notifications_screen.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
+import 'package:piloo/features/settings/presentation/bdpm_status_screen.dart';
 import 'package:piloo/features/settings/presentation/security_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
@@ -238,11 +240,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/ordonnances/:ordonnanceId',
         name: RouteName.ordonnanceDetail,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Détail ordonnance',
-          params: {
-            'ordonnanceId': state.pathParameters['ordonnanceId'] ?? '',
-          },
+        builder: (_, state) => OrdonnanceDetailScreen(
+          ordonnanceId: state.pathParameters['ordonnanceId'] ?? '',
         ),
       ),
 
@@ -308,6 +307,11 @@ GoRouter buildRouter() {
         path: RoutePath.settingsSecurity,
         name: RouteName.settingsSecurity,
         builder: (_, _) => const SecurityScreen(),
+      ),
+      GoRoute(
+        path: RoutePath.settingsBdpm,
+        name: RouteName.settingsBdpm,
+        builder: (_, _) => const BdpmStatusScreen(),
       ),
 
       // Vue pro

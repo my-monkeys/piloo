@@ -1,86 +1,186 @@
 // Écran S4 Accepter invitation (#135).
-// Maquette : `M8kbS` du fichier docs/design/piloo-mobile.pen.
 //
 // Atterrissage depuis un lien d'invitation (deeplink
-// `/invitations/:token`). Affiche un aperçu :
-//  - qui invite (avatar initiales + nom)
-//  - quelle officine
-//  - rôle proposé
-//  - les 3 droits que ce rôle confère (check vert) + 1 limitation
-//    (x-circle gris)
-//  - actions Accepter (primary) / Refuser (outline)
+// `/invitations/:token`). Branché aux endpoints :
+//   - GET /v1/invitations/{token} → preview (qui invite, officine, rôle)
+//   - POST /v1/invitations/{token}/accept → ajoute l'utilisateur courant
 //
-// Refuser → l'invitation est marquée invalide côté serveur (le lien
-// ne fonctionnera plus). Accepter → ajoute l'utilisateur à
-// l'officine puis push vers /today (ou /welcome si user pas connecté).
+// Accepter → ajoute l'utilisateur à l'officine puis push vers /today.
+// Refuser → ne contacte pas le serveur (le lien restera valide jusqu'à
+// expiration). Pour vraiment révoquer, le propriétaire passe par
+// l'écran web Settings → Officines.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/partages/data/invitation_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class InvitationAcceptScreen extends StatelessWidget {
+class InvitationAcceptScreen extends ConsumerStatefulWidget {
   const InvitationAcceptScreen({this.token, super.key});
 
   final String? token;
 
   @override
+  ConsumerState<InvitationAcceptScreen> createState() =>
+      _InvitationAcceptScreenState();
+}
+
+class _InvitationAcceptScreenState
+    extends ConsumerState<InvitationAcceptScreen> {
+  bool _accepting = false;
+
+  Future<void> _accept() async {
+    final token = widget.token;
+    if (token == null || _accepting) return;
+    setState(() => _accepting = true);
+    try {
+      await acceptInvitation(ref, token);
+      ref.invalidate(officinesListProvider);
+      ref.invalidate(activeOfficineProvider);
+      if (mounted) {
+        PilooToast.success(context, 'Invitation acceptée.');
+        context.go(RoutePath.today);
+      }
+    } catch (e) {
+      if (mounted) {
+        PilooToast.error(context, 'Impossible d\'accepter : $e');
+      }
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
+  }
+
+  void _close() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RoutePath.today);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final token = widget.token;
+    if (token == null) {
+      return Scaffold(
+        backgroundColor: PilooColors.background,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+            child: Column(
+              children: [
+                _Header(onClose: _close),
+                const SizedBox(height: 24),
+                Text(
+                  'Lien invalide.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    color: PilooColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    final previewAsync = ref.watch(invitationPreviewProvider(token));
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(onClose: () => context.canPop() ? context.pop() : context.go(RoutePath.today)),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Hero(
-                      initials: 'SL',
-                      inviterName: 'Sophie Laurent',
-                      officineName: 'Maison',
-                    ),
-                    const SizedBox(height: 18),
-                    _OfficineCard(),
-                    const SizedBox(height: 14),
-                    Center(child: _RoleBadge()),
-                    const SizedBox(height: 18),
-                    _CanDoList(),
-                  ],
+        child: previewAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                _Header(onClose: _close),
+                const SizedBox(height: 24),
+                Text(
+                  'Impossible de charger l\'invitation.\n$e',
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    color: PilooColors.textSecondary,
+                  ),
                 ),
-              ),
+              ],
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-              child: Column(
-                children: [
-                  PilooButton(
-                    label: "Accepter l'invitation",
-                    variant: PilooButtonVariant.primary,
-                    onPressed: () {/* TODO POST /invitations/:token/accept */},
-                  ),
-                  const SizedBox(height: 8),
-                  PilooButton(
-                    label: 'Refuser',
-                    variant: PilooButtonVariant.outline,
-                    onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
+          data: (preview) => _buildBody(preview),
         ),
       ),
     );
   }
+
+  Widget _buildBody(api.InvitationPreview preview) {
+    final isPending =
+        preview.status == api.InvitationPreviewStatusEnum.pending;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _Header(onClose: _close),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _Hero(
+                  initials: _initialsFrom(preview.invitedByName),
+                  inviterName: preview.invitedByName,
+                  officineName: preview.officineNom,
+                ),
+                const SizedBox(height: 18),
+                Center(child: _RoleBadge(role: preview.role)),
+                if (!isPending) ...[
+                  const SizedBox(height: 16),
+                  _StatusBanner(status: preview.status),
+                ],
+              ],
+            ),
+          ),
+        ),
+        if (isPending)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+            child: Column(
+              children: [
+                PilooButton(
+                  label: _accepting
+                      ? 'Acceptation...'
+                      : "Accepter l'invitation",
+                  variant: PilooButtonVariant.primary,
+                  onPressed: _accepting ? null : _accept,
+                ),
+                const SizedBox(height: 8),
+                PilooButton(
+                  label: 'Refuser',
+                  variant: PilooButtonVariant.outline,
+                  onPressed: _close,
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+String _initialsFrom(String name) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  if (parts.isEmpty) return '?';
+  return parts.take(2).map((p) => p.substring(0, 1).toUpperCase()).join();
 }
 
 class _Header extends StatelessWidget {
@@ -192,65 +292,28 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _OfficineCard extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: PilooColors.primarySoft,
-        borderRadius: BorderRadius.circular(PilooRadius.lg),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: PilooColors.surface,
-              borderRadius: BorderRadius.circular(PilooRadius.md),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              PhosphorIconsFill.house,
-              size: 22,
-              color: PilooColors.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Officine familiale',
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: PilooColors.primary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '12 boîtes · 2 autres membres',
-                  style: GoogleFonts.manrope(
-                    fontSize: 12,
-                    color: PilooColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RoleBadge extends StatelessWidget {
+  const _RoleBadge({required this.role});
+
+  final api.InvitationPreviewRoleEnum role;
+
   @override
   Widget build(BuildContext context) {
+    final (label, icon) = switch (role) {
+      api.InvitationPreviewRoleEnum.owner => (
+          'En tant que Propriétaire',
+          PhosphorIconsRegular.key,
+        ),
+      api.InvitationPreviewRoleEnum.editor => (
+          "En tant qu'Éditeur",
+          PhosphorIconsRegular.pencilSimple,
+        ),
+      api.InvitationPreviewRoleEnum.viewer => (
+          'En tant que Lecteur',
+          PhosphorIconsRegular.eye,
+        ),
+      _ => ('Invitation', PhosphorIconsRegular.envelope),
+    };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -260,14 +323,10 @@ class _RoleBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(
-            PhosphorIconsRegular.pencilSimple,
-            size: 14,
-            color: PilooColors.infoOn,
-          ),
+          Icon(icon, size: 14, color: PilooColors.infoOn),
           const SizedBox(width: 6),
           Text(
-            "En tant qu'Éditeur",
+            label,
             style: GoogleFonts.manrope(
               fontSize: 13,
               fontWeight: FontWeight.w600,
@@ -280,63 +339,37 @@ class _RoleBadge extends StatelessWidget {
   }
 }
 
-class _CanDoList extends StatelessWidget {
-  static const _entries = [
-    (
-      icon: PhosphorIconsFill.checkCircle,
-      iconColor: PilooColors.successOn,
-      text: 'Voir et modifier les boîtes de Maison',
-      textColor: PilooColors.textPrimary,
-    ),
-    (
-      icon: PhosphorIconsFill.checkCircle,
-      iconColor: PilooColors.successOn,
-      text: 'Gérer les ordonnances et valider les prises',
-      textColor: PilooColors.textPrimary,
-    ),
-    (
-      icon: PhosphorIconsFill.xCircle,
-      iconColor: PilooColors.textTertiary,
-      text: 'Pas de gestion des partages (réservé au Propriétaire)',
-      textColor: PilooColors.textSecondary,
-    ),
-  ];
+class _StatusBanner extends StatelessWidget {
+  const _StatusBanner({required this.status});
+
+  final api.InvitationPreviewStatusEnum status;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'TU POURRAS',
-          style: GoogleFonts.manrope(
-            fontSize: 10,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-            color: PilooColors.textTertiary,
-          ),
+    final text = switch (status) {
+      api.InvitationPreviewStatusEnum.expired => 'Cette invitation a expiré.',
+      api.InvitationPreviewStatusEnum.accepted =>
+        'Cette invitation a déjà été acceptée.',
+      api.InvitationPreviewStatusEnum.revoked =>
+        "Cette invitation a été révoquée.",
+      _ => 'Invitation indisponible.',
+    };
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: PilooColors.warning,
+        borderRadius: BorderRadius.circular(PilooRadius.md),
+        border: Border.all(color: PilooColors.warningOn),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.manrope(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: PilooColors.warningOn,
         ),
-        const SizedBox(height: 8),
-        for (var i = 0; i < _entries.length; i++) ...[
-          if (i > 0) const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Icon(_entries[i].icon, size: 16, color: _entries[i].iconColor),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  _entries[i].text,
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    color: _entries[i].textColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ],
+      ),
     );
   }
 }

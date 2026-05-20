@@ -14,6 +14,7 @@ export function serializeBdpmMedicament(row: MedicamentBdpm): BdpmMedicament {
     titulaire: row.titulaire,
     statut_amm: row.statutAmm,
     taux_remboursement: row.tauxRemboursement,
+    ai_summary: row.aiSummary,
     version_bdpm: row.versionBdpm,
   };
 }

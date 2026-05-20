@@ -49,9 +49,17 @@ dependencies:
   shared_preferences: ^2.3.0
   mobile_scanner: ^7.2.0
   connectivity_plus: ^6.0.0
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
+  flutter_timezone: ^4.1.1
+  image_picker: ^1.1.2
+  firebase_core: ^4.2.0
+  firebase_messaging: ^16.1.0
   sign_in_with_apple: ^7.0.0
   google_sign_in: ^7.2.0
   crypto: ^3.0.7
+  piloo_api_client:
+    path: lib/gen/openapi
 
 dev_dependencies:
   flutter_test:

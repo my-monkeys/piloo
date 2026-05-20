@@ -17,13 +17,13 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
-import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 
 enum QuickAction {
   adjustStock,
   seeInfo,
+  rename,
   markEmpty,
   markExpired,
   reportMissing,
@@ -103,13 +103,16 @@ class _QuickActionsSheet extends StatelessWidget {
               iconColor: PilooColors.infoOn,
               iconBg: PilooColors.info,
               title: 'Voir la fiche médicament',
-              onTap: () {
-                Navigator.of(context).pop(QuickAction.seeInfo);
-                if (info.cip13 != null) {
-                  Navigator.of(context)
-                      .pushNamed(RoutePath.medicamentInfo(info.cip13!));
-                }
-              },
+              onTap: () => Navigator.of(context).pop(QuickAction.seeInfo),
+            ),
+            const SizedBox(height: 8),
+            _ActionRow(
+              icon: PhosphorIconsRegular.pencilSimple,
+              iconColor: PilooColors.textPrimary,
+              iconBg: PilooColors.surfaceSubtle,
+              title: 'Renommer',
+              subtitle: 'Utile quand le médicament est inconnu en base',
+              onTap: () => Navigator.of(context).pop(QuickAction.rename),
             ),
             const SizedBox(height: 8),
             _ActionRow(

@@ -15,16 +15,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
-import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _StockLevel { plein, troisQuarts, moitie, unQuart, presqueVide }
 
@@ -43,7 +48,11 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   // qu'on récupère du DataMatrix (AI 17 = YYMM).
   int _expMonth = 3;
   int _expYear = DateTime.now().year + 2;
-  String _officine = 'Maison';
+  /// Officine cible pour la création. null = on n'a pas encore résolu
+  /// l'officine active (1er build) ou l'utilisateur l'a explicitement
+  /// changée via le picker.
+  String? _selectedOfficineId;
+  bool _saving = false;
 
   @override
   void initState() {
@@ -76,7 +85,6 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
     'décembre',
   ];
 
-  static const _officines = ['Maison', 'Voiture', 'Bureau', 'Maman'];
 
   String get _expLabel =>
       '${_expMonth.toString().padLeft(2, '0')} / $_expYear';
@@ -110,7 +118,86 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
     }
   }
 
+  Future<void> _save() async {
+    final scan = ref.read(scanResultProvider);
+    final cip13 = scan?.cip13;
+    if (cip13 == null || cip13.length != 13) {
+      PilooToast.error(context, 'Scan requis pour récupérer le CIP13.');
+      return;
+    }
+    final activeOfficine = ref.read(activeOfficineProvider).valueOrNull;
+    final officineId = _selectedOfficineId ?? activeOfficine?.id;
+    if (officineId == null) {
+      PilooToast.error(context, 'Aucune officine sélectionnée.');
+      return;
+    }
+
+    // BDPM (local OU API) : si on a le nom on le préfixe dans notes
+    // pour le retrouver côté liste (voir convention dans officine_screen).
+    // On utilise le lookup unifié — déjà mis en cache par Riverpod si
+    // le preview screen l'a résolu.
+    final lookup = await ref.read(bdpmLookupProvider(cip13).future);
+    final medName = lookup?.denomination;
+    final userNotes = _notesCtrl.text.trim();
+    final notes = medName != null
+        ? (userNotes.isEmpty ? medName : '$medName // $userNotes')
+        : (userNotes.isEmpty ? null : userNotes);
+
+    setState(() => _saving = true);
+    try {
+      await createBoite(
+        ref,
+        officineId: officineId,
+        cip13: cip13,
+        peremption: _peremptionDate(),
+        lot: _lotCtrl.text.trim().isEmpty ? null : _lotCtrl.text.trim(),
+        unitesRestantes: _stockToUnits(_stock),
+        notes: notes,
+      );
+      if (!mounted) return;
+      PilooToast.success(context, 'Boîte ajoutée.');
+      context.canPop() ? context.pop() : context.go(RoutePath.officine);
+    } catch (e) {
+      if (!mounted) return;
+      PilooToast.error(context, 'Échec de l\'ajout : $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  String _resolveOfficineLabel() {
+    final list =
+        ref.watch(officinesListProvider).valueOrNull ?? const [];
+    final targetId = _selectedOfficineId ??
+        ref.watch(activeOfficineProvider).valueOrNull?.id;
+    if (targetId == null || list.isEmpty) return 'Officine';
+    final match = list.where((o) => o.id == targetId).firstOrNull;
+    return match?.nom ?? 'Officine';
+  }
+
+  api.Date _peremptionDate() {
+    // On prend le dernier jour du mois pour matcher l'usage "périmé à
+    // compter de fin du mois N".
+    final lastDay = DateTime(_expYear, _expMonth + 1, 0).day;
+    return api.Date(_expYear, _expMonth, lastDay);
+  }
+
+  int? _stockToUnits(_StockLevel level) => switch (level) {
+        _StockLevel.plein => null, // unitesInitiales/restantes inconnues
+        _StockLevel.troisQuarts => 24,
+        _StockLevel.moitie => 16,
+        _StockLevel.unQuart => 8,
+        _StockLevel.presqueVide => 2,
+      };
+
   Future<void> _pickOfficine() async {
+    final list = ref.read(officinesListProvider).valueOrNull ?? const [];
+    if (list.isEmpty) {
+      PilooToast.error(context, 'Aucune officine disponible.');
+      return;
+    }
+    final currentId = _selectedOfficineId ??
+        ref.read(activeOfficineProvider).valueOrNull?.id;
     final picked = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: PilooColors.background,
@@ -118,12 +205,12 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _OfficinePicker(
-        current: _officine,
-        options: _officines,
+        currentId: currentId,
+        options: list.map((o) => (id: o.id, label: o.nom)).toList(),
       ),
     );
     if (picked != null && mounted) {
-      setState(() => _officine = picked);
+      setState(() => _selectedOfficineId = picked);
     }
   }
 
@@ -187,7 +274,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                             size: 16,
                             color: PilooColors.primary,
                           ),
-                          text: _officine,
+                          text: _resolveOfficineLabel(),
                           trailing: const Icon(
                             PhosphorIconsRegular.caretDown,
                             size: 14,
@@ -221,12 +308,9 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: PilooButton(
-                      label: 'Ajouter',
+                      label: _saving ? 'Ajout…' : 'Ajouter',
                       variant: PilooButtonVariant.primary,
-                      // No-op tant que la persistance Drift n'est pas
-                      // câblée (#90 / #91). Le tap fera un push vers
-                      // /today.
-                      onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
+                      onPressed: _saving ? null : _save,
                     ),
                   ),
                 ],
@@ -293,17 +377,19 @@ class _MedicamentPreviewSection extends ConsumerWidget {
         primary: 'Sans CIP scanné',
       );
     }
-    final dbAsync = ref.watch(bdpmDbProvider);
-    return dbAsync.when(
+    // Lookup local d'abord, fallback API si pas de SQLite local
+    // (cf. bdpmLookupProvider). Tant que la sync SQLite #78/#79 n'est
+    // pas câblée, le fallback API est la seule source pour les CIP13
+    // qu'on n'a jamais vus.
+    final lookup = ref.watch(bdpmLookupProvider(cip13!));
+    return lookup.when(
       loading: () => const _MedicamentPreview(
         title: 'Résolution…',
-        subtitle: 'Chargement de la base médicaments',
+        subtitle: 'Recherche dans la base médicaments',
         primary: '',
       ),
       error: (_, _) => _unknownPreview(cip13: cip13!),
-      data: (db) {
-        if (db == null) return _unknownPreview(cip13: cip13!);
-        final med = db.findByCip13(cip13!);
+      data: (med) {
         if (med == null) return _unknownPreview(cip13: cip13!);
         return _MedicamentPreview(
           title: med.denomination,
@@ -769,10 +855,11 @@ class _CupertinoPickerWheelState extends State<CupertinoPickerWheel> {
 }
 
 class _OfficinePicker extends StatelessWidget {
-  const _OfficinePicker({required this.current, required this.options});
+  const _OfficinePicker({required this.currentId, required this.options});
 
-  final String current;
-  final List<String> options;
+  final String? currentId;
+  /// Tuples (id, label) — id sert au pop, label à l'affichage.
+  final List<({String id, String label})> options;
 
   @override
   Widget build(BuildContext context) {
@@ -805,10 +892,10 @@ class _OfficinePicker extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             ...options.map((o) {
-              final selected = o == current;
+              final selected = o.id == currentId;
               return GestureDetector(
                 behavior: HitTestBehavior.opaque,
-                onTap: () => Navigator.of(context).pop(o),
+                onTap: () => Navigator.of(context).pop(o.id),
                 child: Container(
                   margin: const EdgeInsets.only(top: 8),
                   padding: const EdgeInsets.all(14),
@@ -834,7 +921,7 @@ class _OfficinePicker extends StatelessWidget {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          o,
+                          o.label,
                           style: GoogleFonts.manrope(
                             fontSize: 15,
                             fontWeight: selected

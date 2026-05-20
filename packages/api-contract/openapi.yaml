@@ -313,6 +313,123 @@ components:
             - string
             - "null"
           maxLength: 2000
+    ListPrisesResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PriseTimelineItem"
+      required:
+        - date
+        - items
+    PriseTimelineItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        datetime_prevue:
+          type: string
+          format: date-time
+        datetime_validation:
+          type:
+            - string
+            - "null"
+          format: date-time
+        statut:
+          type: string
+          enum:
+            - prevue
+            - prise
+            - sautee
+            - oubliee
+        notes:
+          type:
+            - string
+            - "null"
+        prescription:
+          $ref: "#/components/schemas/PriseTimelinePrescription"
+      required:
+        - id
+        - officine_id
+        - datetime_prevue
+        - datetime_validation
+        - statut
+        - notes
+        - prescription
+    PriseTimelinePrescription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ordonnance_id:
+          type: string
+          format: uuid
+        nom_texte:
+          type: string
+        cip13:
+          type:
+            - string
+            - "null"
+        indication:
+          type:
+            - string
+            - "null"
+        posologie:
+          $ref: "#/components/schemas/Posologie"
+      required:
+        - id
+        - ordonnance_id
+        - nom_texte
+        - cip13
+        - indication
+        - posologie
+    Posologie:
+      type: object
+      additionalProperties: {}
+    PrisesApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    UpdatePriseInput:
+      type: object
+      properties:
+        statut:
+          type: string
+          enum:
+            - prevue
+            - prise
+            - sautee
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        datetime_prevue:
+          type: string
+          format: date-time
     SyncPushResponse:
       type: object
       properties:
@@ -462,6 +579,34 @@ components:
                     type: object
                     properties: {}
                     additionalProperties: false
+                  timestamp_local:
+                    type: integer
+                    minimum: 0
+                required:
+                  - id
+                  - type
+                  - entity_type
+                  - entity_id
+                  - payload
+                  - timestamp_local
+              - type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                    enum:
+                      - update_prise
+                  entity_type:
+                    type: string
+                    enum:
+                      - prise
+                  entity_id:
+                    type: string
+                    format: uuid
+                  payload:
+                    $ref: "#/components/schemas/UpdatePriseInput"
                   timestamp_local:
                     type: integer
                     minimum: 0
@@ -761,6 +906,10 @@ components:
             - "null"
           minimum: 0
           maximum: 100
+        ai_summary:
+          type:
+            - string
+            - "null"
         version_bdpm:
           type: string
           format: date
@@ -794,106 +943,15 @@ components:
             - message
       required:
         - error
-    ListPrisesResponse:
+    BdpmSearchResponse:
       type: object
       properties:
-        date:
-          type: string
-          format: date
         items:
           type: array
           items:
-            $ref: "#/components/schemas/PriseTimelineItem"
+            $ref: "#/components/schemas/BdpmMedicament"
       required:
-        - date
         - items
-    PriseTimelineItem:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        officine_id:
-          type: string
-          format: uuid
-        datetime_prevue:
-          type: string
-          format: date-time
-        datetime_validation:
-          type:
-            - string
-            - "null"
-          format: date-time
-        statut:
-          type: string
-          enum:
-            - prevue
-            - prise
-            - sautee
-            - oubliee
-        notes:
-          type:
-            - string
-            - "null"
-        prescription:
-          $ref: "#/components/schemas/PriseTimelinePrescription"
-      required:
-        - id
-        - officine_id
-        - datetime_prevue
-        - datetime_validation
-        - statut
-        - notes
-        - prescription
-    PriseTimelinePrescription:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        ordonnance_id:
-          type: string
-          format: uuid
-        nom_texte:
-          type: string
-        cip13:
-          type:
-            - string
-            - "null"
-        indication:
-          type:
-            - string
-            - "null"
-        posologie:
-          $ref: "#/components/schemas/Posologie"
-      required:
-        - id
-        - ordonnance_id
-        - nom_texte
-        - cip13
-        - indication
-        - posologie
-    Posologie:
-      type: object
-      additionalProperties: {}
-    PrisesApiError:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            code:
-              type: string
-            message:
-              type: string
-            details:
-              type: object
-              additionalProperties: {}
-          required:
-            - code
-            - message
-      required:
-        - error
     ListDevicesResponse:
       type: object
       properties:
@@ -1411,6 +1469,282 @@ components:
             - "null"
           maxLength: 2048
           format: uri
+    Invitation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_user_id:
+          type: string
+          format: uuid
+        email:
+          type:
+            - string
+            - "null"
+        expires_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+        accepted_by_user_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - role
+        - invited_by_user_id
+        - email
+        - expires_at
+        - accepted_at
+        - accepted_by_user_id
+        - created_at
+        - updated_at
+        - deleted_at
+    InvitationApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    CreateInvitationInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        email:
+          type:
+            - string
+            - "null"
+          maxLength: 255
+          format: email
+        ttlHours:
+          type: integer
+          minimum: 1
+          maximum: 168
+      required:
+        - role
+    InvitationPreview:
+      type: object
+      properties:
+        officine_nom:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum:
+            - pending
+            - expired
+            - accepted
+            - revoked
+      required:
+        - officine_nom
+        - role
+        - invited_by_name
+        - expires_at
+        - status
+    PendingInvitationsList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingInvitation"
+      required:
+        - items
+    PendingInvitation:
+      type: object
+      properties:
+        token:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        officine_nom:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - token
+        - officine_id
+        - officine_nom
+        - role
+        - invited_by_name
+        - expires_at
+    AcceptInvitationResponse:
+      type: object
+      properties:
+        officine_id:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+      required:
+        - officine_id
+        - role
+    OcrOrdonnanceResponse:
+      type: object
+      properties:
+        prescripteur:
+          type:
+            - string
+            - "null"
+        specialite:
+          type:
+            - string
+            - "null"
+        date_prescription:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+        prescriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/OcrPrescription"
+      required:
+        - prescripteur
+        - specialite
+        - date_prescription
+        - notes
+        - prescriptions
+    OcrPrescription:
+      type: object
+      properties:
+        nom_texte:
+          type: string
+        unites_par_prise:
+          type:
+            - number
+            - "null"
+        unite:
+          type:
+            - string
+            - "null"
+        frequence:
+          type:
+            - string
+            - "null"
+        duree_jours:
+          type:
+            - integer
+            - "null"
+        indication:
+          type:
+            - string
+            - "null"
+      required:
+        - nom_texte
+        - unites_par_prise
+        - unite
+        - frequence
+        - duree_jours
+        - indication
+    OcrApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    OcrOrdonnanceInput:
+      type: object
+      properties:
+        image_base64:
+          type: string
+          minLength: 1
+          maxLength: 8388608
+        mime_type:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - image/heic
+      required:
+        - image_base64
+        - mime_type
   parameters: {}
 paths:
   /health:
@@ -1796,6 +2130,149 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BoiteApiError"
+  /v1/prises/today:
+    get:
+      summary: Prises planifiées pour aujourd'hui (timeline)
+      description: Renvoie les prises de l'officine demandée pour la date courante (fuseau serveur). Le statut + la prescription jointe sont inclus pour rendre la timeline sans roundtrip.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officine_id
+          in: query
+      responses:
+        "200":
+          description: Liste des prises du jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPrisesResponse"
+        "400":
+          description: Query invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas d'accès à cette officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+  /v1/prises/{id}:
+    patch:
+      summary: Valider, sauter ou réinitialiser une prise planifiée
+      description: Marque la prise `prise` (avec horodatage de validation), `sautee` (idem), ou la repasse à `prevue` (datetime_validation remis à null). Pas de transition vers `oubliee` manuelle — c'est l'état terminal posé par le cron.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePriseInput"
+      responses:
+        "200":
+          description: Prise mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PriseTimelineItem"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas le droit (lecteur)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Prise inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+  /v1/prises:
+    get:
+      summary: Prises planifiées pour une date précise
+      description: Variante de /v1/prises/today qui prend une date explicite (YYYY-MM-DD). Utilisé par le navigateur de calendrier du mobile.
+      tags:
+        - prises
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officine_id
+          in: query
+        - schema:
+            type: string
+            format: date
+          required: true
+          name: date
+          in: query
+      responses:
+        "200":
+          description: Liste des prises de la date
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListPrisesResponse"
+        "400":
+          description: Query invalide (date manquante / mal formée)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "403":
+          description: Pas d'accès à cette officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrisesApiError"
   /v1/sync/push:
     post:
       summary: Pousse un batch d'opérations locales vers le serveur
@@ -2080,100 +2557,49 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/BdpmApiError"
-  /v1/prises/today:
+  /v1/bdpm/sqlite:
     get:
-      summary: Prises planifiées pour aujourd'hui (timeline)
-      description: Renvoie les prises de l'officine demandée pour la date courante (fuseau serveur). Le statut + la prescription jointe sont inclus pour rendre la timeline sans roundtrip.
+      summary: Télécharge le fichier SQLite BDPM mobile (gzippé)
+      description: Sert le fichier SQLite généré depuis Postgres, gzippé. Le mobile envoie `?version=YYYY-MM-DD` pour skip le download si la version locale est à jour (réponse 304). En-tête `X-Piloo-Bdpm-Version` indique la version courante.
       tags:
-        - prises
+        - bdpm
+      responses:
+        "200":
+          description: SQLite gzippé
+          content:
+            application/x-sqlite3:
+              schema:
+                type: string
+                format: binary
+        "304":
+          description: Version inchangée, pas de re-download nécessaire
+  /v1/bdpm/search:
+    get:
+      summary: Recherche un médicament BDPM par nom ou CIP
+      description: Recherche par CIP (7 ou 13 chiffres) ou par dénomination (ILIKE). Max 20 résultats. Sert à la saisie manuelle d'une boîte côté web.
+      tags:
+        - bdpm
       parameters:
         - schema:
             type: string
-            format: uuid
+            minLength: 2
+            maxLength: 120
           required: true
-          name: officine_id
+          name: q
           in: query
       responses:
         "200":
-          description: Liste des prises du jour
+          description: Résultats
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ListPrisesResponse"
+                $ref: "#/components/schemas/BdpmSearchResponse"
         "400":
-          description: Query invalide
+          description: Paramètre `q` invalide
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "401":
-          description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "403":
-          description: Pas d'accès à cette officine
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "404":
-          description: Officine inconnue
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-  /v1/prises:
-    get:
-      summary: Prises planifiées pour une date précise
-      description: Variante de /v1/prises/today qui prend une date explicite (YYYY-MM-DD). Utilisé par le navigateur de calendrier du mobile.
-      tags:
-        - prises
-      parameters:
-        - schema:
-            type: string
-            format: uuid
-          required: true
-          name: officine_id
-          in: query
-        - schema:
-            type: string
-            format: date
-          required: true
-          name: date
-          in: query
-      responses:
-        "200":
-          description: Liste des prises de la date
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ListPrisesResponse"
-        "400":
-          description: Query invalide (date manquante / mal formée)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "401":
-          description: Non authentifié
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "403":
-          description: Pas d'accès à cette officine
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
-        "404":
-          description: Officine inconnue
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PrisesApiError"
+                $ref: "#/components/schemas/BdpmApiError"
   /v1/devices:
     get:
       summary: Liste les devices enregistrés de l'utilisateur courant
@@ -2713,4 +3139,172 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MeApiError"
+  /v1/officines/{officineId}/invitations:
+    post:
+      summary: Crée une invitation à rejoindre une officine
+      description: Owner uniquement. Génère un token (UUID v4) inclus dans le lien partageable.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateInvitationInput"
+      responses:
+        "201":
+          description: Invitation créée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invitation"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "403":
+          description: Pas owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/invitations/{token}:
+    get:
+      summary: Aperçu public d'une invitation
+      description: Public (pas d'auth) — sert au preview côté lien partagé avant signup/login.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: token
+          in: path
+      responses:
+        "200":
+          description: Preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationPreview"
+        "404":
+          description: Token inconnu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/me/invitations:
+    get:
+      summary: Liste les invitations en attente adressées à l'utilisateur courant
+      description: Filtre par email de l'user authentifié + statut pending (acceptedAt null, deletedAt null, expiresAt > now). Utilisé pour le badge "Invitation en attente" de l'écran Mes officines (#129).
+      tags:
+        - invitations
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingInvitationsList"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/invitations/{token}/accept:
+    post:
+      summary: Accepte une invitation et rejoint l'officine
+      description: Requiert l'auth (l'utilisateur qui accepte). Crée la ligne `partages` et marque l'invitation acceptée.
+      tags:
+        - invitations
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: token
+          in: path
+      responses:
+        "200":
+          description: Accepté
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AcceptInvitationResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "404":
+          description: Token inconnu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+        "409":
+          description: Déjà accepté ou expiré
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/ocr/ordonnance:
+    post:
+      summary: Extrait le contenu d'une photo d'ordonnance via vision LLM
+      description: "Reçoit une image base64 et retourne les prescripteur/date/médicaments parsés. L'utilisateur valide ensuite ligne par ligne avant POST officines/.../ordonnances. Aucune persistance serveur (RGPD : image possiblement nominative)."
+      tags:
+        - ocr
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrOrdonnanceInput"
+      responses:
+        "200":
+          description: Structure extraite
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrOrdonnanceResponse"
+        "400":
+          description: Body invalide ou image illisible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
+        "422":
+          description: Aucun contenu extractible (photo floue / non médicale)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
 webhooks: {}

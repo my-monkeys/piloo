@@ -9,6 +9,7 @@
 import { $api } from '@piloo/api-client';
 import Link from 'next/link';
 
+import { AddOrdonnanceDialog } from '@/components/app/ordonnances/add-ordonnance-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -61,13 +62,14 @@ function OrdonnancesList({ officineId }: { officineId: string }) {
 
   return (
     <div className="space-y-6">
-      <header className="flex items-center justify-between">
+      <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="font-display text-3xl">Ordonnances</h1>
           <p className="text-muted-foreground">
             Historique des ordonnances saisies pour cette officine.
           </p>
         </div>
+        <AddOrdonnanceDialog officineId={officineId} />
       </header>
 
       {items.length === 0 ? (

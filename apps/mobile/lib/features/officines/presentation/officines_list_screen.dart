@@ -10,11 +10,16 @@
 // autre card switch l'officine active (state global Riverpod plus
 // tard ; pour l'instant on bascule juste localement).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/officines/data/pending_invitations_provider.dart';
 import 'package:piloo/features/officines/presentation/officine_edit_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -30,8 +35,6 @@ class _Officine {
     required this.iconColor,
     required this.iconBg,
     required this.role,
-    this.roleSubtitle,
-    this.alertCount,
   });
 
   final String id;
@@ -41,22 +44,17 @@ class _Officine {
   final Color iconColor;
   final Color iconBg;
   final _OfficineRole role;
-  // ex: "2 personnes" ou "partagée par Marie D."
-  final String? roleSubtitle;
-  // Badge alerte ambre quand >0 (ex: officine d'un proche avec
-  // notifications non lues).
-  final int? alertCount;
 }
 
-class OfficinesListScreen extends StatefulWidget {
+class OfficinesListScreen extends ConsumerStatefulWidget {
   const OfficinesListScreen({super.key});
 
   @override
-  State<OfficinesListScreen> createState() => _OfficinesListScreenState();
+  ConsumerState<OfficinesListScreen> createState() =>
+      _OfficinesListScreenState();
 }
 
-class _OfficinesListScreenState extends State<OfficinesListScreen> {
-  String _activeId = 'maison';
+class _OfficinesListScreenState extends ConsumerState<OfficinesListScreen> {
 
   Future<void> _showActions(BuildContext context, _Officine officine) async {
     await showModalBottomSheet<void>(
@@ -127,42 +125,12 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
     );
   }
 
-  static const _officines = [
-    _Officine(
-      id: 'maison',
-      name: 'Maison',
-      meta: "12 boîtes · 5 prises prévues aujourd'hui",
-      icon: PhosphorIconsFill.house,
-      iconColor: PilooColors.primary,
-      iconBg: PilooColors.primarySoft,
-      role: _OfficineRole.proprietaire,
-      roleSubtitle: '2 personnes',
-    ),
-    _Officine(
-      id: 'papa',
-      name: 'Papa',
-      meta: "8 boîtes · 3 prises aujourd'hui",
-      icon: PhosphorIconsFill.heart,
-      iconColor: PilooColors.accent,
-      iconBg: PilooColors.accentSoft,
-      role: _OfficineRole.editeur,
-      roleSubtitle: 'partagée par Marie D.',
-      alertCount: 1,
-    ),
-    _Officine(
-      id: 'mme-dubois',
-      name: 'Mme Dubois',
-      meta: '23 boîtes · patient IDEL',
-      icon: PhosphorIconsFill.userCircle,
-      iconColor: PilooColors.textSecondary,
-      iconBg: PilooColors.surfaceSubtle,
-      role: _OfficineRole.proprietaire,
-      roleSubtitle: '3 personnes',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final listAsync = ref.watch(officinesListProvider);
+    final activeAsync = ref.watch(activeOfficineProvider);
+    final activeId = activeAsync.value?.id;
+
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -176,20 +144,67 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
                   context,
                   'Officine "${draft.name}" créée.',
                 );
+                ref.invalidate(officinesListProvider);
               }
             }),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                itemCount: _officines.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, i) {
-                  final o = _officines[i];
-                  return _OfficineCard(
-                    officine: o,
-                    active: o.id == _activeId,
-                    onTap: () => setState(() => _activeId = o.id),
-                    onActions: () => _showActions(context, o),
+              child: listAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      'Impossible de charger les officines.\n$e',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        color: PilooColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+                data: (rows) {
+                  return CustomScrollView(
+                    slivers: [
+                      const SliverPadding(
+                        padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+                        sliver: SliverToBoxAdapter(child: _PendingInvitationsSection()),
+                      ),
+                      if (rows.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text(
+                              'Aucune officine.',
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                color: PilooColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                          sliver: SliverList.separated(
+                            itemCount: rows.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (_, i) {
+                              final o = _mapApi(rows[i]);
+                              return _OfficineCard(
+                                officine: o,
+                                active: o.id == activeId,
+                                onTap: () => ref
+                                    .read(activeOfficineProvider.notifier)
+                                    .select(o.id),
+                                onActions: () => _showActions(context, o),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -199,6 +214,49 @@ class _OfficinesListScreenState extends State<OfficinesListScreen> {
       ),
     );
   }
+}
+
+_Officine _mapApi(api.Officine o) {
+  final role = switch (o.role) {
+    api.OfficineRoleEnum.owner => _OfficineRole.proprietaire,
+    api.OfficineRoleEnum.editor => _OfficineRole.editeur,
+    api.OfficineRoleEnum.viewer => _OfficineRole.lecteur,
+    _ => _OfficineRole.lecteur,
+  };
+  final (icon, color, bg) = switch (o.type) {
+    api.OfficineTypeEnum.perso => (
+        PhosphorIconsFill.house,
+        PilooColors.primary,
+        PilooColors.primarySoft,
+      ),
+    api.OfficineTypeEnum.patient => (
+        PhosphorIconsFill.userCircle,
+        PilooColors.textSecondary,
+        PilooColors.surfaceSubtle,
+      ),
+    _ => (
+        PhosphorIconsFill.house,
+        PilooColors.primary,
+        PilooColors.primarySoft,
+      ),
+  };
+  return _Officine(
+    id: o.id,
+    name: o.nom,
+    meta: _formatMeta(o),
+    icon: icon,
+    iconColor: color,
+    iconBg: bg,
+    role: role,
+  );
+}
+
+String _formatMeta(api.Officine o) {
+  return switch (o.type) {
+    api.OfficineTypeEnum.perso => 'Officine personnelle',
+    api.OfficineTypeEnum.patient => 'Patient pro de santé',
+    _ => '',
+  };
 }
 
 class _Header extends StatelessWidget {
@@ -304,33 +362,19 @@ class _OfficineCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Tile icône + (éventuel) point d'alerte en overlay
-                // top-right : déplacé là pour ne pas être écrasé par
-                // le badge "Actif" qui apparaît à droite.
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: officine.iconBg,
-                        borderRadius: BorderRadius.circular(PilooRadius.md),
-                      ),
-                      alignment: Alignment.center,
-                      child: Icon(
-                        officine.icon,
-                        size: 22,
-                        color: officine.iconColor,
-                      ),
-                    ),
-                    if (officine.alertCount != null)
-                      Positioned(
-                        right: -4,
-                        top: -4,
-                        child: _AlertDot(count: officine.alertCount!),
-                      ),
-                  ],
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: officine.iconBg,
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    officine.icon,
+                    size: 22,
+                    color: officine.iconColor,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -381,19 +425,6 @@ class _OfficineCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (officine.roleSubtitle != null) ...[
-                  const SizedBox(width: 6),
-                  Flexible(
-                    child: Text(
-                      '· ${officine.roleSubtitle!}',
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        color: PilooColors.textTertiary,
-                      ),
-                    ),
-                  ),
-                ],
                 if (active) ...[
                   const SizedBox(width: 8),
                   const _ActiveBadge(),
@@ -508,34 +539,143 @@ class _SheetAction extends StatelessWidget {
   }
 }
 
-/// Pastille de notification overlay sur le coin haut-droit de la
-/// tile icône (style badge iOS). Bord blanc épais pour bien la
-/// détacher du tile derrière.
-class _AlertDot extends StatelessWidget {
-  const _AlertDot({required this.count});
+/// Section "Invitations en attente" (#129). Affichée au-dessus de la liste
+/// des officines quand au moins une invitation pending matche l'email de
+/// l'user. Permet l'accept inline sans passer par le lien dédié.
+class _PendingInvitationsSection extends ConsumerWidget {
+  const _PendingInvitationsSection();
 
-  final int count;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncList = ref.watch(pendingInvitationsProvider);
+    return asyncList.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, top: 4),
+                child: Text(
+                  'Invitations en attente',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: PilooColors.textSecondary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              for (final inv in items) ...[
+                _PendingInvitationCard(invitation: inv),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PendingInvitationCard extends ConsumerStatefulWidget {
+  const _PendingInvitationCard({required this.invitation});
+
+  final api.PendingInvitation invitation;
+
+  @override
+  ConsumerState<_PendingInvitationCard> createState() => _PendingInvitationCardState();
+}
+
+class _PendingInvitationCardState extends ConsumerState<_PendingInvitationCard> {
+  bool _accepting = false;
+
+  String _roleLabel(api.PendingInvitationRoleEnum r) {
+    if (r == api.PendingInvitationRoleEnum.owner) return 'Propriétaire';
+    if (r == api.PendingInvitationRoleEnum.editor) return 'Éditeur';
+    return 'Lecteur';
+  }
+
+  Future<void> _onAccept() async {
+    setState(() => _accepting = true);
+    try {
+      await acceptInvitation(ref, widget.invitation.token);
+      if (!mounted) return;
+      PilooToast.success(context, 'Tu as rejoint "${widget.invitation.officineNom}".');
+      ref.invalidate(pendingInvitationsProvider);
+      ref.invalidate(officinesListProvider);
+    } catch (_) {
+      if (mounted) PilooToast.error(context, "Impossible d'accepter l'invitation.");
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final inv = widget.invitation;
     return Container(
-      constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PilooColors.accent,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: PilooColors.surface, width: 2),
+        color: PilooColors.surface,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+        border: Border.all(color: PilooColors.primary),
       ),
-      alignment: Alignment.center,
-      child: Text(
-        '$count',
-        style: GoogleFonts.manrope(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          color: Colors.white,
-          height: 1.0,
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(PhosphorIconsFill.envelopeOpen, size: 28, color: PilooColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  inv.officineNom,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: PilooColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${inv.invitedByName} · ${_roleLabel(inv.role)}',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: PilooColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _accepting ? null : _onAccept,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _accepting ? PilooColors.primarySoft : PilooColors.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                _accepting ? '…' : 'Accepter',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _accepting ? PilooColors.primary : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+

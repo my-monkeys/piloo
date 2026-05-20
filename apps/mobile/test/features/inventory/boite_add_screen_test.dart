@@ -9,11 +9,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:piloo/core/storage/secure_storage.dart';
+import 'package:piloo/features/auth/data/session_storage.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/inventory/presentation/boite_add_screen.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 import 'package:sqlite3/sqlite3.dart';
+
+class _NoActiveOfficineNotifier extends ActiveOfficineNotifier {
+  @override
+  Future<api.Officine?> build() async => null;
+}
 
 BdpmDb _fixtureBdpm() {
   final db = sqlite3.openInMemory();
@@ -51,7 +63,18 @@ Widget _harness({
 }) {
   return ProviderScope(
     overrides: [
+      sessionStorageProvider.overrideWithValue(
+        SessionStorage(InMemorySecureStorage()),
+      ),
+      activeOfficineProvider.overrideWith(_NoActiveOfficineNotifier.new),
+      officinesListProvider.overrideWith((_) async => const <api.Officine>[]),
       bdpmDbProvider.overrideWith((ref) async => bdpm),
+      // Le screen utilise désormais bdpmLookupProvider (local + fallback
+      // API). En test on court-circuite via le DB local fourni — pas de
+      // fallback API. Renvoie null si pas de match local.
+      bdpmLookupProvider.overrideWith((ref, cip13) async {
+        return bdpm?.findByCip13(cip13);
+      }),
       if (initialScan != null)
         scanResultProvider.overrideWith(
           (ref) => ScanResultController()..set(initialScan),

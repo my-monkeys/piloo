@@ -13,7 +13,7 @@
 import { readFile } from 'node:fs/promises';
 import { parseArgs } from 'node:util';
 
-import { getDb } from '../lib/db.ts';
+import { getDb } from '../lib/db/index.ts';
 import { importBdpm } from '../lib/bdpm/import.ts';
 import { log } from '../lib/server/logger.ts';
 

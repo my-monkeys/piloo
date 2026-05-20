@@ -41,7 +41,10 @@ workflows:
           include: false
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       xcode: latest
       cocoapods: default
 
@@ -84,19 +87,33 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
           grep "^version:" pubspec.yaml
 
+      - name: Générer le client Dart OpenAPI (gitignored)
+        # Le package piloo_api_client (lib/gen/openapi/) est gitignored.
+        # Sans cette étape, `flutter pub get` échoue avec "could not find
+        # package piloo_api_client at lib/gen/openapi".
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
+
       - name: Installer les dépendances Flutter
         working_directory: apps/mobile
         script: flutter pub get
 
-      - name: Générer le code (freezed / json / openapi)
+      - name: Générer le code (freezed / json / build_runner app)
         # Tolérant si le projet n'a pas encore de code generation (M1 early).
+        # Le client Dart OpenAPI est généré au-dessus, indépendamment.
         working_directory: apps/mobile
         script: |
-          if grep -q "build_runner" pubspec.yaml; then
-            dart run build_runner build --delete-conflicting-outputs
-          else
-            echo "build_runner non configuré — skip"
-          fi
+          # Les .g.dart de drift (local_db.g.dart) sont commités au repo.
+          # On ne re-génère pas en CI : build_runner échoue sur les Dart
+          # SDK récents avec "'dart compile' does not support build hooks"
+          # (build hooks de sqlite3_flutter_libs). Seuls les changements
+          # de schéma Drift nécessitent une régénération — à faire en
+          # local puis commiter.
+          echo "skip build_runner — .g.dart commités, régénération locale uniquement"
 
       - name: Analyse statique
         working_directory: apps/mobile
@@ -167,7 +184,10 @@ workflows:
           include: true
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       xcode: latest
       cocoapods: default
       groups:
@@ -205,6 +225,14 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION_NAME}+${BUILD_NUMBER}/" pubspec.yaml
           grep "^version:" pubspec.yaml
 
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
+
       - name: Installer les dépendances Flutter
         working_directory: apps/mobile
         script: flutter pub get
@@ -212,11 +240,13 @@ workflows:
       - name: Générer le code (best-effort)
         working_directory: apps/mobile
         script: |
-          if grep -q "build_runner" pubspec.yaml; then
-            dart run build_runner build --delete-conflicting-outputs
-          else
-            echo "build_runner non configuré — skip"
-          fi
+          # Les .g.dart de drift (local_db.g.dart) sont commités au repo.
+          # On ne re-génère pas en CI : build_runner échoue sur les Dart
+          # SDK récents avec "'dart compile' does not support build hooks"
+          # (build hooks de sqlite3_flutter_libs). Seuls les changements
+          # de schéma Drift nécessitent une régénération — à faire en
+          # local puis commiter.
+          echo "skip build_runner — .g.dart commités, régénération locale uniquement"
 
       - name: Analyse statique
         working_directory: apps/mobile
@@ -276,18 +306,25 @@ workflows:
           source: false
 
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
 
     scripts:
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
       - name: Installer les dépendances
         working_directory: apps/mobile
         script: flutter pub get
-      - name: Générer le code (best-effort)
+      - name: Générer le code (skip — .g.dart commités)
         working_directory: apps/mobile
-        script: |
-          if grep -q "build_runner" pubspec.yaml; then
-            dart run build_runner build --delete-conflicting-outputs
-          fi
+        script: echo "skip build_runner — .g.dart commités, régénération locale uniquement"
       - name: flutter analyze
         working_directory: apps/mobile
         script: flutter analyze --no-fatal-infos
@@ -300,7 +337,10 @@ workflows:
     instance_type: mac_mini_m1
     max_build_duration: 60
     environment:
-      flutter: stable
+      # Pin pour phosphor_flutter 2.1.0 (extend IconData → broken sur
+      # Flutter récent qui rend IconData `final class`). À reverter à
+      # `stable` quand phosphor_flutter publiera une fix.
+      flutter: 3.38.7
       groups:
         # KEYSTORE_FILE (base64), KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
         - android_keystore
@@ -351,6 +391,13 @@ workflows:
           sed -i.bak -E "s/^version: .*/version: ${VERSION}+${BUILD_NUMBER}/" pubspec.yaml
           rm -f pubspec.yaml.bak
           grep "^version: " pubspec.yaml
+      - name: Générer le client Dart OpenAPI (gitignored)
+        script: |
+          set -eu
+          corepack enable
+          corepack prepare pnpm@10.26.1 --activate
+          pnpm install --frozen-lockfile
+          pnpm openapi:generate-dart-client
       - name: Resolve Flutter packages
         working_directory: apps/mobile
         script: flutter pub get

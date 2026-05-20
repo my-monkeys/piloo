@@ -28,7 +28,13 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
+
+/// Version produit côté UI. Synchronisée manuellement avec `pubspec.yaml`
+/// au moment des releases — voir Codemagic. Mise dans le footer du Plus.
+const String _kAppVersion = '0.1.26';
 
 class _Row {
   const _Row({
@@ -51,25 +57,24 @@ class _Row {
 class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
-  static const _monApp = [
-    _Row(
-      icon: PhosphorIconsFill.house,
-      label: 'Mes officines',
-      value: '3',
-      routeName: RouteName.officinesList,
-    ),
-    _Row(
-      icon: PhosphorIconsRegular.prescription,
-      label: 'Ordonnances',
-      routeName: RouteName.ordonnances,
-    ),
-    _Row(
-      icon: PhosphorIconsRegular.bellRinging,
-      label: 'Notifications',
-      value: 'Push + Email',
-      routeName: RouteName.settingsNotifications,
-    ),
-  ];
+  List<_Row> _monAppRows(int? officinesCount) => [
+        _Row(
+          icon: PhosphorIconsFill.house,
+          label: 'Mes officines',
+          value: officinesCount?.toString(),
+          routeName: RouteName.officinesList,
+        ),
+        const _Row(
+          icon: PhosphorIconsRegular.prescription,
+          label: 'Ordonnances',
+          routeName: RouteName.ordonnances,
+        ),
+        const _Row(
+          icon: PhosphorIconsRegular.bellRinging,
+          label: 'Notifications',
+          routeName: RouteName.settingsNotifications,
+        ),
+      ];
 
   static const _prefs = [
     _Row(
@@ -85,6 +90,13 @@ class MoreScreen extends ConsumerWidget {
       value: 'Français',
       iconBg: PilooColors.surfaceSubtle,
       iconFg: PilooColors.textPrimary,
+    ),
+    _Row(
+      icon: PhosphorIconsRegular.database,
+      label: 'Base médicaments',
+      iconBg: PilooColors.surfaceSubtle,
+      iconFg: PilooColors.textPrimary,
+      routeName: RouteName.settingsBdpm,
     ),
   ];
 
@@ -105,6 +117,21 @@ class MoreScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final session = ref.watch(sessionProvider).value;
+    final officinesCount = ref.watch(officinesListProvider).maybeWhen(
+          data: (list) => list.length,
+          orElse: () => null,
+        );
+    final bdpmVersion = ref.watch(bdpmDbProvider).maybeWhen(
+          data: (db) => db?.version,
+          orElse: () => null,
+        );
+    final name = session?.name.trim().isNotEmpty == true
+        ? session!.name
+        : (session?.email.split('@').first ?? '');
+    final email = session?.email ?? '';
+    final initials = _computeInitials(name, email);
+
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -123,13 +150,16 @@ class MoreScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                 children: [
                   _ProfileCard(
-                    initials: 'MD',
-                    name: 'Maxime Durand',
-                    email: 'maxime@exemple.fr',
+                    initials: initials,
+                    name: name.isEmpty ? '—' : name,
+                    email: email,
                     onTap: () => context.push(RoutePath.settingsProfile),
                   ),
                   const SizedBox(height: 18),
-                  _Section(label: 'MON APP', rows: _monApp),
+                  _Section(
+                    label: 'MON APP',
+                    rows: _monAppRows(officinesCount),
+                  ),
                   const SizedBox(height: 18),
                   _Section(label: 'PRÉFÉRENCES', rows: _prefs),
                   const SizedBox(height: 18),
@@ -141,7 +171,7 @@ class MoreScreen extends ConsumerWidget {
                   }),
                   const SizedBox(height: 14),
                   Text(
-                    'Piloo v0.1.0 · BDPM 2026-04',
+                    _formatFooter(bdpmVersion),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.manrope(
                       fontSize: 11,
@@ -156,6 +186,20 @@ class MoreScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _computeInitials(String name, String email) {
+  final source = name.trim().isNotEmpty ? name : email;
+  if (source.isEmpty) return '?';
+  final parts = source.split(RegExp(r'[\s.@]+')).where((p) => p.isNotEmpty);
+  if (parts.isEmpty) return source.substring(0, 1).toUpperCase();
+  final letters = parts.take(2).map((p) => p.substring(0, 1).toUpperCase());
+  return letters.join();
+}
+
+String _formatFooter(String? bdpmVersion) {
+  final bdpm = bdpmVersion ?? '—';
+  return 'Piloo v$_kAppVersion · BDPM $bdpm';
 }
 
 class _ProfileCard extends StatelessWidget {
@@ -292,8 +336,12 @@ class _RowItem extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
+        // pushNamed() résout le name de route → path enregistré
+        // (cf. router.dart). `context.push('/${row.routeName!}')`
+        // construisait à tort un path depuis le name (ex. '/settings-bdpm')
+        // au lieu du vrai path (ex. '/settings/bdpm').
         if (row.routeName != null) {
-          context.push('/${row.routeName!}');
+          context.pushNamed(row.routeName!);
         }
       },
       child: Padding(

@@ -1,0 +1,1 @@
+ALTER TABLE "prises_planifiees" ADD COLUMN "notified_at" timestamp with time zone;

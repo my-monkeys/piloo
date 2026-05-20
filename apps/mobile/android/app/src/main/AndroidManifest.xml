@@ -7,6 +7,19 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
+    <!-- Notifications locales pour rappels de prise (#128).
+         - SCHEDULE_EXACT_ALARM : Android 12 (S, API 31). Sans ça
+           AndroidScheduleMode.exactAllowWhileIdle tombe sur un alarm
+           inexact (peut être différé de plusieurs minutes en doze).
+         - USE_EXACT_ALARM : Android 13+ (T, API 33). Auto-accordé pour
+           les apps "calendar/alarm/medication" — la nôtre est
+           legitimement medication. Pas de runtime prompt.
+         - RECEIVE_BOOT_COMPLETED : permet à
+           flutter_local_notifications de re-planifier les notifs
+           après reboot du téléphone. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Caméra utilisée mais pas obligatoire pour installer l'app
          (un user sans caméra peut quand même saisir manuellement). -->
@@ -52,6 +65,22 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Receivers de flutter_local_notifications (#128).
+             ScheduledNotificationBootReceiver re-planifie les notifs
+             après un reboot du téléphone. Sans ce receiver, toutes
+             les alarmes sont perdues à l'extinction. -->
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false"
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

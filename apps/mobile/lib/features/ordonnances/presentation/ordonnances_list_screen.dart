@@ -9,89 +9,40 @@
 //
 // Tap sur une card → push /ordonnances/:id (#10 epic).
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/ordonnances/data/ordonnances_provider.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
-
-enum _OrdoStatus { active, terminee }
 
 class _Ordonnance {
   const _Ordonnance({
     required this.id,
     required this.prescripteur,
-    required this.specialite,
     required this.date,
-    required this.status,
-    required this.medocs,
   });
 
   final String id;
   final String prescripteur;
-  final String specialite;
   final String date;
-  final _OrdoStatus status;
-  final List<String> medocs;
 }
 
-class OrdonnancesListScreen extends StatefulWidget {
+class OrdonnancesListScreen extends ConsumerWidget {
   const OrdonnancesListScreen({super.key});
 
   @override
-  State<OrdonnancesListScreen> createState() => _OrdonnancesListScreenState();
-}
-
-class _OrdonnancesListScreenState extends State<OrdonnancesListScreen> {
-  _OrdoStatus _filter = _OrdoStatus.active;
-
-  static const _all = [
-    _Ordonnance(
-      id: 'o1',
-      prescripteur: 'Dr Sophie Laurent',
-      specialite: 'Cardiologue',
-      date: '20 mars 2026',
-      status: _OrdoStatus.active,
-      medocs: [
-        'Ramipril 5 mg — 1 cp/j',
-        'Atorvastatine 20 mg — 1 cp le soir',
-        'Kardegic 75 mg — 1 sachet/j',
-      ],
-    ),
-    _Ordonnance(
-      id: 'o2',
-      prescripteur: 'Dr Thomas Martin',
-      specialite: 'Médecin traitant',
-      date: '10 avril 2026',
-      status: _OrdoStatus.active,
-      medocs: [
-        'Metformine 500 mg — 1 cp matin + soir',
-        'Doliprane 1000 mg — si douleur, max 4/j',
-      ],
-    ),
-    _Ordonnance(
-      id: 'o3',
-      prescripteur: 'Dr Julie Benoît',
-      specialite: 'ORL',
-      date: '28 février 2026',
-      status: _OrdoStatus.terminee,
-      medocs: [
-        'Amoxicilline 500 mg — 3/j pendant 7 jours',
-      ],
-    ),
-  ];
-
-  List<_Ordonnance> get _filtered =>
-      _all.where((o) => o.status == _filter).toList(growable: false);
-
-  @override
-  Widget build(BuildContext context) {
-    final actives = _all.where((o) => o.status == _OrdoStatus.active).length;
-    final terminees =
-        _all.where((o) => o.status == _OrdoStatus.terminee).length;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final officine = ref.watch(activeOfficineProvider).valueOrNull;
+    final listAsync = officine == null
+        ? const AsyncValue<List<api.Ordonnance>>.data([])
+        : ref.watch(ordonnancesProvider(officine.id));
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -103,36 +54,73 @@ class _OrdonnancesListScreenState extends State<OrdonnancesListScreen> {
               onAdd: () => Navigator.of(context)
                   .pushNamed(RoutePath.ordonnanceCreate),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-              child: Row(
-                children: [
-                  _FilterChip(
-                    label: 'Actives · $actives',
-                    selected: _filter == _OrdoStatus.active,
-                    onTap: () => setState(() => _filter = _OrdoStatus.active),
-                  ),
-                  const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Terminées · $terminees',
-                    selected: _filter == _OrdoStatus.terminee,
-                    onTap: () =>
-                        setState(() => _filter = _OrdoStatus.terminee),
-                  ),
-                ],
-              ),
-            ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                itemCount: _filtered.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, i) {
-                  final o = _filtered[i];
-                  return _OrdoCard(
-                    ordonnance: o,
-                    onTap: () =>
-                        context.push(RoutePath.ordonnanceDetail(o.id)),
+              child: listAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Text(
+                      'Impossible de charger les ordonnances.\n$e',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        color: PilooColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                ),
+                data: (rows) {
+                  if (rows.isEmpty) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              PhosphorIconsRegular.prescription,
+                              size: 48,
+                              color: PilooColors.textTertiary,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Aucune ordonnance',
+                              style: GoogleFonts.fraunces(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w500,
+                                color: PilooColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ajoute une ordonnance pour suivre tes prescriptions.',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.manrope(
+                                fontSize: 13,
+                                color: PilooColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  final mapped = rows.map(_mapApi).toList();
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    itemCount: mapped.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (_, i) {
+                      final o = mapped[i];
+                      return _OrdoCard(
+                        ordonnance: o,
+                        onTap: () =>
+                            context.push(RoutePath.ordonnanceDetail(o.id)),
+                      );
+                    },
                   );
                 },
               ),
@@ -142,6 +130,19 @@ class _OrdonnancesListScreenState extends State<OrdonnancesListScreen> {
       ),
     );
   }
+}
+
+_Ordonnance _mapApi(api.Ordonnance o) {
+  final d = o.datePrescription;
+  const months = [
+    'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+    'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
+  ];
+  return _Ordonnance(
+    id: o.id,
+    prescripteur: o.prescripteur ?? 'Sans prescripteur',
+    date: '${d.day} ${months[d.month - 1]} ${d.year}',
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -193,47 +194,6 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.center,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? PilooColors.primary : PilooColors.surface,
-            borderRadius: BorderRadius.circular(999),
-            border: selected ? null : Border.all(color: PilooColors.border),
-          ),
-          child: Text(
-            label,
-            style: GoogleFonts.manrope(
-              fontSize: 12,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              color: selected
-                  ? PilooColors.textOnPrimary
-                  : PilooColors.textPrimary,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _OrdoCard extends StatelessWidget {
   const _OrdoCard({required this.ordonnance, required this.onTap});
 
@@ -252,89 +212,39 @@ class _OrdoCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(PilooRadius.lg),
           border: Border.all(color: PilooColors.border),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        ordonnance.prescripteur,
-                        style: GoogleFonts.manrope(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: PilooColors.textPrimary,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        '${ordonnance.specialite} · ${ordonnance.date}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 12,
-                          color: PilooColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                _StatusBadge(status: ordonnance.status),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: PilooColors.background,
-                borderRadius: BorderRadius.circular(PilooRadius.md),
-              ),
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  for (var i = 0; i < ordonnance.medocs.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 4),
-                    Text(
-                      '• ${ordonnance.medocs[i]}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: PilooColors.textPrimary,
-                      ),
+                  Text(
+                    ordonnance.prescripteur,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: PilooColors.textPrimary,
                     ),
-                  ],
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    ordonnance.date,
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      color: PilooColors.textSecondary,
+                    ),
+                  ),
                 ],
               ),
             ),
+            const SizedBox(width: 10),
+            const Icon(
+              PhosphorIconsRegular.caretRight,
+              size: 14,
+              color: PilooColors.textTertiary,
+            ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _StatusBadge extends StatelessWidget {
-  const _StatusBadge({required this.status});
-
-  final _OrdoStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = status == _OrdoStatus.active;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: isActive ? PilooColors.success : PilooColors.surfaceSubtle,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        isActive ? 'Active' : 'Terminée',
-        style: GoogleFonts.manrope(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: isActive ? PilooColors.successOn : PilooColors.textSecondary,
         ),
       ),
     );

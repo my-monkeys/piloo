@@ -16,8 +16,10 @@ class PilooDayPicker extends StatelessWidget {
   });
 
   final DateTime date;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
+  /// `null` désactive le bouton (border + icône grisés, pas de tap).
+  /// Sert à montrer la borne min/max sans masquer le contrôle.
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
 
   static const _weekdays = [
     'LUNDI',
@@ -89,10 +91,11 @@ class _Chevron extends StatelessWidget {
   const _Chevron({required this.icon, required this.onTap});
 
   final IconData icon;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
@@ -100,12 +103,16 @@ class _Chevron extends StatelessWidget {
         width: 36,
         height: 36,
         decoration: BoxDecoration(
-          color: PilooColors.surface,
+          color: disabled ? PilooColors.surfaceSubtle : PilooColors.surface,
           shape: BoxShape.circle,
           border: Border.all(color: PilooColors.border),
         ),
         alignment: Alignment.center,
-        child: Icon(icon, size: 16, color: PilooColors.textPrimary),
+        child: Icon(
+          icon,
+          size: 16,
+          color: disabled ? PilooColors.textTertiary : PilooColors.textPrimary,
+        ),
       ),
     );
   }

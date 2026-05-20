@@ -1,56 +1,75 @@
 // Widget tests pour Fiche médicament (#99).
+//
+// Le screen est ConsumerWidget câblé à `bdpmLookupProvider` depuis
+// le refactor data-driven. On override avec une donnée fake pour
+// vérifier l'affichage, plus un test du chemin "non trouvé" qui
+// renvoie l'empty state.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piloo/features/inventory/presentation/medicament_info_screen.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 
-Widget _harness() {
-  return const MaterialApp(home: MedicamentInfoScreen(cip13: '3400934857188'));
+const _cip = '3400934857188';
+
+Widget _harness({BdpmMedicament? med}) {
+  return ProviderScope(
+    overrides: [
+      bdpmLookupProvider(_cip).overrideWith((ref) async => med),
+    ],
+    child: const MaterialApp(home: MedicamentInfoScreen(cip13: _cip)),
+  );
 }
 
 void main() {
   group('MedicamentInfoScreen', () {
-    testWidgets('rendu : header + hero + tags + table + résumé IA + notice',
-        (tester) async {
+    testWidgets('rendu : header + hero + table BDPM + notice', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 1300));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      await tester.pumpWidget(_harness());
+      await tester.pumpWidget(_harness(
+        med: const BdpmMedicament(
+          cis: '60002283',
+          cip13: _cip,
+          cip7: null,
+          denomination: 'DOLIPRANE 1000 mg, comprimé pelliculé',
+          forme: 'comprimé pelliculé',
+          dosage: '1000 mg',
+          voieAdministration: 'orale',
+          titulaire: 'SANOFI AVENTIS FRANCE',
+          statutAmm: 'Autorisation active',
+          tauxRemboursement: 65,
+        ),
+      ));
       await tester.pumpAndSettle();
 
       expect(find.text('Fiche médicament'), findsOneWidget);
-
-      // Hero
-      expect(find.text('Doliprane 1000 mg'), findsOneWidget);
-      expect(find.text('Comprimé pelliculé'), findsOneWidget);
-      expect(find.text('Non listé'), findsOneWidget);
-      expect(find.text('Remboursé 65%'), findsOneWidget);
-
-      // Table
-      expect(find.text('Principe actif'), findsOneWidget);
-      expect(find.text('Paracétamol'), findsOneWidget);
+      expect(
+        find.text('DOLIPRANE 1000 mg, comprimé pelliculé'),
+        findsOneWidget,
+      );
       expect(find.text('Laboratoire'), findsOneWidget);
-      expect(find.text('Sanofi'), findsOneWidget);
-      expect(find.text('CIP13'), findsOneWidget);
-      expect(find.text('3400934857188'), findsOneWidget);
+      expect(find.text('SANOFI AVENTIS FRANCE'), findsOneWidget);
+      expect(find.text('Dosage'), findsOneWidget);
+      expect(find.text('1000 mg'), findsOneWidget);
+      expect(find.text('Remboursement'), findsOneWidget);
+      expect(find.text('65%'), findsOneWidget);
+      expect(find.text(_cip), findsOneWidget);
+      expect(find.text('Copier le CIP13'), findsOneWidget);
+      expect(find.textContaining('À titre indicatif'), findsOneWidget);
+    });
 
-      // Résumé IA + footer "généré auto"
-      expect(find.text('À QUOI ÇA SERT'), findsOneWidget);
-      expect(
-        find.textContaining('soulager la fièvre'),
-        findsOneWidget,
-      );
-      expect(
-        find.textContaining('Résumé généré automatiquement'),
-        findsOneWidget,
-      );
+    testWidgets('empty state quand le CIP est inconnu', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(390, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-      // Notice + disclaimer
-      expect(find.text('Voir la notice officielle'), findsOneWidget);
-      expect(
-        find.textContaining('à titre indicatif'),
-        findsOneWidget,
-      );
+      await tester.pumpWidget(_harness(med: null));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Médicament inconnu'), findsOneWidget);
+      expect(find.textContaining(_cip), findsAtLeast(1));
     });
   });
 }

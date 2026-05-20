@@ -10,3 +10,4 @@ export * from './prises_planifiees.ts';
 export * from './alertes.ts';
 export * from './sync.ts';
 export * from './devices.ts';
+export * from './invitations.ts';

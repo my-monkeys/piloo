@@ -56,6 +56,7 @@ class RouteName {
   static const settingsNotifications = 'settings-notifications';
   static const settingsHoraires = 'settings-horaires';
   static const settingsSecurity = 'settings-security';
+  static const settingsBdpm = 'settings-bdpm';
 
   // Vue pro
   static const proDashboard = 'pro-dashboard';
@@ -120,6 +121,7 @@ class RoutePath {
   static const settingsNotifications = '/settings/notifications';
   static const settingsHoraires = '/settings/horaires';
   static const settingsSecurity = '/settings/security';
+  static const settingsBdpm = '/settings/bdpm';
 
   // Vue pro
   static const proDashboard = '/pro';

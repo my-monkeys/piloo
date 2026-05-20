@@ -42,6 +42,16 @@ mkdir -p "${OUTPUT_DIR}"
 
 echo "→ Dart client written to ${OUTPUT_DIR}"
 
+# Aligne la lang version du package généré sur celle de l'app mobile.
+# Sans ça, build_runner produit des .g.dart vus en lang 3.x tandis que
+# les .dart restent en 2.18 (constraint par défaut openapi-generator),
+# ce qui fait échouer la compilation iOS avec "language version
+# override has to be the same in the library and its part(s)".
+PUBSPEC="${OUTPUT_DIR}/pubspec.yaml"
+if [[ -f "${PUBSPEC}" ]]; then
+  sed -i.bak "s|sdk: '>=2.18.0 <4.0.0'|sdk: ^3.10.7|" "${PUBSPEC}" && rm -f "${PUBSPEC}.bak"
+fi
+
 # Build_runner : génère les .g.dart immutables (built_value + json_serializable)
 # pour les modèles. Étape obligatoire — sans ça les imports du package échouent.
 # `--delete-conflicting-outputs` peut surfaicher un warning dans les versions
