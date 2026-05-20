@@ -65,3 +65,7 @@ packages/api-contract/generated/
 apps/mobile/lib/generated/
 apps/mobile/lib/gen/openapi/
 .vercel
+**/.firebase-sa.local.json
+
+# Temp browser auto files
+.tmp-*

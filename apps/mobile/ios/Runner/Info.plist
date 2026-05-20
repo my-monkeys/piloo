@@ -70,6 +70,16 @@
 	<string>Piloo accède à ta photothèque pour transcrire automatiquement une photo d'ordonnance que tu as déjà prise.</string>
 	<key>NSContactsUsageDescription</key>
 	<string>Piloo accède à tes contacts pour t'aider à inviter tes proches plus facilement. Aucun contact n'est envoyé à nos serveurs.</string>
+	<!-- Background modes pour FCM (#122) :
+	     - remote-notification : permet de recevoir des push silencieux
+	       et de réveiller l'app pour le handler background.
+	     - fetch : permet à iOS de réveiller l'app périodiquement pour
+	       sync (utilisé indirectement par firebase_messaging). -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<!-- Déclaration export crypto : Piloo n'utilise que la crypto fournie par
 	     iOS (HTTPS via URLSession, Keychain via flutter_secure_storage), pas
 	     d'algorithmes propriétaires ni standards en plus. Voir
