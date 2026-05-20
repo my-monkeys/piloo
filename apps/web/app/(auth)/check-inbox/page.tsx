@@ -8,13 +8,34 @@
 
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { sendVerificationEmail, WebAuthError } from '@/lib/auth/client';
 
 export default function CheckInboxPage() {
+  // useSearchParams() exige un Suspense boundary en App Router pour
+  // permettre le prerender statique du shell — sinon `next build` plante
+  // au prérender (cf. /sign-in qui a la même structure).
+  return (
+    <Suspense fallback={<Fallback />}>
+      <CheckInboxBody />
+    </Suspense>
+  );
+}
+
+function Fallback() {
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <p className="text-sm text-muted-foreground">Chargement…</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CheckInboxBody() {
   const params = useSearchParams();
   const email = params.get('email') ?? '';
   const [resending, setResending] = useState(false);
