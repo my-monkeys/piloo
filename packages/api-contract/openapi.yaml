@@ -1610,6 +1610,103 @@ components:
       required:
         - officine_id
         - role
+    OcrOrdonnanceResponse:
+      type: object
+      properties:
+        prescripteur:
+          type:
+            - string
+            - "null"
+        specialite:
+          type:
+            - string
+            - "null"
+        date_prescription:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+        prescriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/OcrPrescription"
+      required:
+        - prescripteur
+        - specialite
+        - date_prescription
+        - notes
+        - prescriptions
+    OcrPrescription:
+      type: object
+      properties:
+        nom_texte:
+          type: string
+        unites_par_prise:
+          type:
+            - number
+            - "null"
+        unite:
+          type:
+            - string
+            - "null"
+        frequence:
+          type:
+            - string
+            - "null"
+        duree_jours:
+          type:
+            - integer
+            - "null"
+        indication:
+          type:
+            - string
+            - "null"
+      required:
+        - nom_texte
+        - unites_par_prise
+        - unite
+        - frequence
+        - duree_jours
+        - indication
+    OcrApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    OcrOrdonnanceInput:
+      type: object
+      properties:
+        image_base64:
+          type: string
+          minLength: 1
+          maxLength: 8388608
+        mime_type:
+          type: string
+          enum:
+            - image/jpeg
+            - image/png
+            - image/webp
+            - image/heic
+      required:
+        - image_base64
+        - mime_type
   parameters: {}
 paths:
   /health:
@@ -3117,4 +3214,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InvitationApiError"
+  /v1/ocr/ordonnance:
+    post:
+      summary: Extrait le contenu d'une photo d'ordonnance via vision LLM
+      description: "Reçoit une image base64 et retourne les prescripteur/date/médicaments parsés. L'utilisateur valide ensuite ligne par ligne avant POST officines/.../ordonnances. Aucune persistance serveur (RGPD : image possiblement nominative)."
+      tags:
+        - ocr
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OcrOrdonnanceInput"
+      responses:
+        "200":
+          description: Structure extraite
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrOrdonnanceResponse"
+        "400":
+          description: Body invalide ou image illisible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
+        "422":
+          description: Aucun contenu extractible (photo floue / non médicale)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OcrApiError"
 webhooks: {}
