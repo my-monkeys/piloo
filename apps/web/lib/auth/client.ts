@@ -78,6 +78,24 @@ export async function signOut(): Promise<void> {
   if (res.status !== 200) throw await parseError(res);
 }
 
+/** Déclenche l'envoi du mail de reset de mot de passe (#63). Better Auth
+ *  renvoie 200 même si l'email n'existe pas (anti-enumeration).
+ *  Le redirectTo doit être absolu pour passer l'originCheck Better Auth. */
+export async function forgetPassword(
+  email: string,
+  redirectPath = '/reset-password',
+): Promise<void> {
+  const redirectTo = `${window.location.origin}${redirectPath}`;
+  const res = await postJson('/api/auth/request-password-reset', { email, redirectTo });
+  if (res.status !== 200) throw await parseError(res);
+}
+
+/** Finalise le reset : token reçu par mail + nouveau mot de passe. */
+export async function resetPassword(token: string, newPassword: string): Promise<void> {
+  const res = await postJson('/api/auth/reset-password', { token, newPassword });
+  if (res.status !== 200) throw await parseError(res);
+}
+
 /**
  * Flow OAuth Google sur web : POST /api/auth/sign-in/social retourne
  * un body `{ url, redirect: true }` que le client doit suivre lui-même

@@ -203,6 +203,28 @@ class AuthApi {
     }
   }
 
+  /// Déclenche l'envoi du lien de reset de mot de passe (#63).
+  /// Better Auth renvoie systématiquement 200 même si l'email est
+  /// inconnu pour éviter l'énumération de comptes. Le `redirectTo`
+  /// doit être absolu pour passer l'originCheck Better Auth — on
+  /// renvoie vers la page web /reset-password (pas de deep-link mobile
+  /// tant que les Universal Links ne sont pas configurés).
+  Future<void> forgetPassword(String email) async {
+    final base = _dio.options.baseUrl;
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/request-password-reset',
+        data: {'email': email, 'redirectTo': '$base/reset-password'},
+        options: Options(validateStatus: (s) => s != null),
+      );
+      if (response.statusCode != 200) {
+        throw _exceptionFromError(response.data, response.statusCode);
+      }
+    } on DioException catch (e) {
+      throw _exceptionFromDio(e);
+    }
+  }
+
   AuthApiException _exceptionFromError(dynamic body, int? statusCode) {
     if (body is Map<String, dynamic>) {
       // Better Auth retourne soit { code, message } directement, soit
