@@ -10,12 +10,15 @@
 //
 //   TABLE bdpm_metadata(key TEXT PRIMARY KEY, value TEXT)
 //     'version'      → date de la BDPM (YYYY-MM-DD)
-//     'total_cis'    → nombre de lignes inscrites
+//     'total_cis'    → nombre de lignes inscrites (gardé pour compat
+//                       affichage Settings, équivaut au nombre de
+//                       présentations depuis le fix CIP-keyed)
 //     'generated_at' → ISO timestamp de génération
 //
 //   TABLE medicaments(
-//     cis TEXT PRIMARY KEY,
-//     cip13 TEXT, cip7 TEXT,
+//     cip13 TEXT PRIMARY KEY,
+//     cip7 TEXT,
+//     cis TEXT NOT NULL,
 //     denomination TEXT NOT NULL,
 //     forme TEXT, dosage TEXT,
 //     voie_administration TEXT,
@@ -25,7 +28,7 @@
 //     version_bdpm TEXT NOT NULL
 //   )
 //
-//   INDEX idx_cip13       (lookup post-scan)
+//   INDEX idx_cis          (lookup "toutes les présentations d'un médicament")
 //   INDEX idx_denomination (recherche fuzzy)
 //
 // Le fichier est VACUUMé en fin de génération pour compacter et
@@ -47,10 +50,11 @@ export async function generateBdpmSqlite(
 ): Promise<GenerateBdpmSqliteResult> {
   const t0 = Date.now();
 
-  // Lecture en streaming via select() ; le dataset complet (~14k lignes,
-  // ~3 Mo en mémoire) tient sans souci, donc on charge tout en mémoire
-  // pour ne pas avoir à gérer cursor + transaction Postgres.
-  const rows = await db.select().from(medicamentsBdpm).orderBy(medicamentsBdpm.cis);
+  // Lecture en streaming via select() ; le dataset complet (~37k lignes,
+  // ~6 Mo en mémoire après le passage à 1-ligne-par-CIP) tient sans
+  // souci, donc on charge tout en mémoire pour ne pas avoir à gérer
+  // cursor + transaction Postgres.
+  const rows = await db.select().from(medicamentsBdpm).orderBy(medicamentsBdpm.cip13);
 
   const sqlite = new DatabaseSync(outputPath);
   try {
@@ -66,9 +70,9 @@ export async function generateBdpmSqlite(
       ) WITHOUT ROWID;
 
       CREATE TABLE medicaments (
-        cis TEXT PRIMARY KEY,
-        cip13 TEXT,
+        cip13 TEXT PRIMARY KEY,
         cip7 TEXT,
+        cis TEXT NOT NULL,
         denomination TEXT NOT NULL,
         forme TEXT,
         dosage TEXT,
@@ -79,14 +83,14 @@ export async function generateBdpmSqlite(
         version_bdpm TEXT NOT NULL
       ) WITHOUT ROWID;
 
-      CREATE INDEX idx_cip13 ON medicaments(cip13) WHERE cip13 IS NOT NULL;
+      CREATE INDEX idx_cis ON medicaments(cis);
       CREATE INDEX idx_denomination ON medicaments(denomination COLLATE NOCASE);
     `);
 
     // Insert batch dans une transaction pour ne pas fsync à chaque ligne.
     const insert = sqlite.prepare(`
       INSERT INTO medicaments (
-        cis, cip13, cip7, denomination, forme, dosage,
+        cip13, cip7, cis, denomination, forme, dosage,
         voie_administration, titulaire, statut_amm,
         taux_remboursement, version_bdpm
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -94,9 +98,9 @@ export async function generateBdpmSqlite(
     sqlite.exec('BEGIN');
     for (const r of rows) {
       insert.run(
-        r.cis,
         r.cip13,
         r.cip7,
+        r.cis,
         r.denomination,
         r.forme,
         r.dosage,

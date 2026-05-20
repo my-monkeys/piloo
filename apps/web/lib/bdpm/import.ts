@@ -9,7 +9,11 @@
 // ~60k CIP). On batch 1000 lignes par INSERT → ~14 transactions, OK.
 import { medicamentsBdpm, type Db } from '@piloo/db-schema';
 
-import { combine, parseCipLine, parseCisLine, parseTsv, type MedicamentBdpmRow } from './parser';
+// Imports avec extension `.ts` : nécessaire pour le runtime Node CLI
+// (`node --experimental-strip-types scripts/import-bdpm.mjs`) qui ne
+// résout pas les extensions implicites en mode ESM. Next.js bundler
+// l'accepte sans problème (resolveExtensions tolère le .ts explicite).
+import { combine, parseCipLine, parseCisLine, parseTsv, type MedicamentBdpmRow } from './parser.ts';
 
 export interface ImportBdpmInput {
   /** Contenu UTF-8 (ou Latin-1 décodé) de `CIS_bdpm.txt`. */
@@ -54,17 +58,17 @@ export async function importBdpm(db: Db, opts: ImportBdpmInput): Promise<ImportB
 
 async function upsertChunk(db: Db, rows: MedicamentBdpmRow[]): Promise<void> {
   if (rows.length === 0) return;
-  // ON CONFLICT (cis) DO UPDATE : on met à jour tous les champs sauf la
-  // PK. Évite un TRUNCATE qui poserait un verrou exclusif et invaliderait
-  // les caches plan Postgres pour tous les autres clients.
+  // ON CONFLICT (cip13) DO UPDATE : la PK est maintenant CIP13 (1 ligne
+  // par présentation). Évite un TRUNCATE qui poserait un verrou exclusif
+  // et invaliderait les caches plan Postgres pour tous les autres clients.
   await db
     .insert(medicamentsBdpm)
     .values(rows)
     .onConflictDoUpdate({
-      target: medicamentsBdpm.cis,
+      target: medicamentsBdpm.cip13,
       set: {
-        cip13: sqlExcluded('cip13'),
         cip7: sqlExcluded('cip7'),
+        cis: sqlExcluded('cis'),
         denomination: sqlExcluded('denomination'),
         forme: sqlExcluded('forme'),
         dosage: sqlExcluded('dosage'),

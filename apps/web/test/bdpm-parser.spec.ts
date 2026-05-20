@@ -87,15 +87,17 @@ describe('parseTsv (streaming)', () => {
 });
 
 describe('combine', () => {
-  it('joint CIS et CIP en lignes prêtes à insérer', () => {
+  it('émet une ligne par CIP13 — Doliprane a 2 présentations', () => {
     const cisItems = [...parseTsv(CIS_FIXTURE, parseCisLine)];
     const cipItems = [...parseTsv(CIP_FIXTURE, parseCipLine)];
     const rows = combine(cisItems, cipItems, '2026-05-01');
-    expect(rows).toHaveLength(4);
-    const doliprane = rows.find((r) => r.cis === '60002283')!;
-    expect(doliprane).toMatchObject({
+    expect(rows).toHaveLength(5);
+    const doliprane = rows.filter((r) => r.cis === '60002283');
+    expect(doliprane).toHaveLength(2);
+    expect(doliprane.map((r) => r.cip13).sort()).toEqual(['3400934567890', '3400934567891']);
+    // La dénomination est partagée par les deux présentations.
+    expect(doliprane[0]).toMatchObject({
       cis: '60002283',
-      cip13: '3400934567890', // premier CIP rencontré
       denomination: 'DOLIPRANE 1000 mg, comprimé pelliculé',
       forme: 'comprimé pelliculé',
       dosage: '1000 mg',
@@ -107,10 +109,10 @@ describe('combine', () => {
     });
   });
 
-  it('retombe sur null pour cip13/cip7/taux si aucun CIP rattaché au CIS', () => {
+  it('aucune ligne émise si aucun CIP rattaché — les CIS sans présentation sont skip', () => {
     const cis = [...parseTsv(CIS_FIXTURE, parseCisLine)];
     const rows = combine(cis, [], '2026-05-01');
-    expect(rows.every((r) => r.cip13 === null && r.tauxRemboursement === null)).toBe(true);
+    expect(rows).toHaveLength(0);
   });
 
   it('un médicament non remboursé sort taux=null mais ligne créée', () => {

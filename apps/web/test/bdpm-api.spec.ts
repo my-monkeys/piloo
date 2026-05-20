@@ -32,9 +32,12 @@ async function seed(
 ) {
   await env.handle.db.insert(medicamentsBdpm).values(
     rows.map((r) => ({
-      cis: r.cis,
-      cip13: r.cip13 ?? null,
+      // PK = cip13 depuis le fix #48. Si non fourni, on dérive un CIP
+      // bidon stable depuis le CIS pour rester unique entre les rows
+      // d'un même seed().
+      cip13: r.cip13 ?? `34009${r.cis.padStart(8, '0')}`,
       cip7: null,
+      cis: r.cis,
       denomination: r.denomination ?? `MEDOC ${r.cis}`,
       forme: 'comprimé',
       dosage: '500 mg',

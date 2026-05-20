@@ -26,14 +26,14 @@ export async function getBdpmStats(db: Db): Promise<BdpmStats> {
   };
 }
 
-/// Médicaments dont `version_bdpm > from`. Le tri est par CIS pour
+/// Médicaments dont `version_bdpm > from`. Tri par CIP13 (PK) pour
 /// stabilité du résultat à des fins de tests et caching éventuel.
 export async function getBdpmDiffSince(db: Db, from: string): Promise<MedicamentBdpm[]> {
   return db
     .select()
     .from(medicamentsBdpm)
     .where(gt(medicamentsBdpm.versionBdpm, from))
-    .orderBy(medicamentsBdpm.cis);
+    .orderBy(medicamentsBdpm.cip13);
 }
 
 const SEARCH_LIMIT = 20;

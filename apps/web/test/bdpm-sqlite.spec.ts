@@ -31,11 +31,14 @@ afterEach(() => {
 });
 
 async function seedBdpm(rows: { cis: string; cip13?: string | null; version: string }[]) {
+  // PK = cip13 depuis le fix #48 — on skip les rows sans CIP, et on
+  // dérive un CIP unique par CIS à défaut pour rester déterministe.
+  const usable = rows.filter((r) => r.cip13 !== null);
   await env.handle.db.insert(medicamentsBdpm).values(
-    rows.map((r) => ({
-      cis: r.cis,
-      cip13: r.cip13 ?? null,
+    usable.map((r) => ({
+      cip13: r.cip13 ?? `34009${r.cis.padStart(8, '0')}`,
       cip7: null,
+      cis: r.cis,
       denomination: `MEDOC ${r.cis}`,
       forme: 'comprimé',
       dosage: '500 mg',
