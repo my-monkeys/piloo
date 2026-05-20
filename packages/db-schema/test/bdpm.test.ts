@@ -33,35 +33,38 @@ const baseRow = (overrides: Partial<NewMedicamentBdpm> = {}): NewMedicamentBdpm 
 });
 
 describe('medicaments_bdpm', () => {
-  it('insère une ligne BDPM minimale (denomination + cis + version requis)', async () => {
+  it('insère une ligne BDPM minimale (cip13 + cis + denomination + version requis)', async () => {
     const [row] = await env.handle.db
       .insert(medicamentsBdpm)
       .values({
+        cip13: '3400930000077',
         cis: '99999999',
         denomination: 'PARACETAMOL 500mg',
         versionBdpm: '2026-01-01',
       })
       .returning();
+    expect(row?.cip13).toBe('3400930000077');
     expect(row?.cis).toBe('99999999');
     expect(row?.denomination).toBe('PARACETAMOL 500mg');
     expect(row?.tauxRemboursement).toBeNull();
   });
 
-  it('rejette un CIS dupliqué (PK)', async () => {
+  it('rejette un CIP13 dupliqué (PK)', async () => {
     await env.handle.db.insert(medicamentsBdpm).values(baseRow());
     await expect(env.handle.db.insert(medicamentsBdpm).values(baseRow())).rejects.toMatchObject({
       cause: { message: expect.stringMatching(/duplicate key|medicaments_bdpm_pkey/) },
     });
   });
 
-  it('autorise plusieurs lignes avec même cip13 (cas génériques + branding)', async () => {
+  it('autorise plusieurs CIP13 distincts partageant le même CIS (présentations multiples)', async () => {
     await env.handle.db
       .insert(medicamentsBdpm)
-      .values(baseRow({ cis: '11111111', cip13: '3400930000099' }));
+      .values(baseRow({ cis: '60000099', cip13: '3400930000088' }));
     const [row2] = await env.handle.db
       .insert(medicamentsBdpm)
-      .values(baseRow({ cis: '22222222', cip13: '3400930000099' }))
+      .values(baseRow({ cis: '60000099', cip13: '3400930000095' }))
       .returning();
-    expect(row2?.cis).toBe('22222222');
+    expect(row2?.cip13).toBe('3400930000095');
+    expect(row2?.cis).toBe('60000099');
   });
 });
