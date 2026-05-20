@@ -299,7 +299,13 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
         ? const AsyncValue<List<api.Boite>>.data([])
         : ref.watch(boitesProvider(activeOfficine.id));
     final source = boitesAsync.maybeWhen(
-      data: (rows) => rows.map(_mapApiBoite).toList(growable: false),
+      data: (rows) => rows
+          // Boîtes vidées : on les retire de l'affichage — l'utilisateur
+          // a marqué la boîte épuisée, plus aucune action utile dessus.
+          // Elles restent en DB (historique, agrégats stock_bas).
+          .where((b) => b.statut != api.BoiteStatutEnum.vide && (b.unitesRestantes ?? 1) > 0)
+          .map(_mapApiBoite)
+          .toList(growable: false),
       orElse: () => const <_Boite>[],
     );
     final isLoading = boitesAsync.isLoading && source.isEmpty;

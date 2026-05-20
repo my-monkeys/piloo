@@ -134,12 +134,16 @@ function InventoryTable({
 
   const rows = useMemo(() => {
     if (!data) return [];
+    // Boîtes vidées : on les retire de l'affichage — l'utilisateur les a
+    // marquées épuisées, plus aucune action utile. Elles restent en DB
+    // (historique, agrégat alerte stock_bas).
+    const visible = data.items.filter((b) => b.statut !== 'vide' && (b.unites_restantes ?? 1) > 0);
     const q = query.trim().toLowerCase();
     const filtered = q
-      ? data.items.filter(
+      ? visible.filter(
           (b) => b.cip13.toLowerCase().includes(q) || (b.notes?.toLowerCase().includes(q) ?? false),
         )
-      : data.items;
+      : visible;
     const sorted = [...filtered].sort((a, b) => cmp(a, b, sortBy));
     return sortDir === 'asc' ? sorted : sorted.reverse();
   }, [data, query, sortBy, sortDir]);
