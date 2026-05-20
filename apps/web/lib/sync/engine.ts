@@ -14,6 +14,7 @@
 import {
   boites,
   partages,
+  prisesPlanifiees,
   syncOperationsLog,
   type Boite as BoiteRow,
   type Db,
@@ -58,6 +59,9 @@ export async function applyOperation(ctx: ApplyContext, op: SyncOperation): Prom
       break;
     case 'soft_delete_boite':
       ack = await applySoftDeleteBoite(ctx, op);
+      break;
+    case 'update_prise':
+      ack = await applyUpdatePrise(ctx, op);
       break;
   }
 
@@ -209,6 +213,55 @@ async function applySoftDeleteBoite(
     .set({ deletedAt: new Date(), updatedAt: new Date() })
     .where(eq(boites.id, op.entity_id));
   return applied(op);
+}
+
+async function applyUpdatePrise(
+  ctx: ApplyContext,
+  op: Extract<SyncOperation, { type: 'update_prise' }>,
+): Promise<SyncAck> {
+  const [prise] = await ctx.db
+    .select()
+    .from(prisesPlanifiees)
+    .where(and(eq(prisesPlanifiees.id, op.entity_id), isNull(prisesPlanifiees.deletedAt)))
+    .limit(1);
+  if (!prise) {
+    return rejected(op, 'not_found');
+  }
+  if (!(await userHasWriteRoleOn(ctx.db, ctx.userId, prise.officineId))) {
+    return rejected(op, 'forbidden');
+  }
+  // LWW : si le serveur a une version plus récente que la modification
+  // que le client a tenté de faire, l'op perd. Pas de server_version
+  // dans l'ack (le SyncAckSchema ne couvre que les Boite — l'UI mobile
+  // refera un GET /v1/prises pour resync l'état).
+  if (prise.updatedAt.getTime() > op.timestamp_local) {
+    return {
+      operation_id: op.id,
+      entity_id: op.entity_id,
+      status: 'conflict',
+    };
+  }
+
+  const now = new Date();
+  const patch: Partial<typeof prisesPlanifiees.$inferInsert> & {
+    updatedAt: Date;
+  } = { updatedAt: now };
+  if (op.payload.statut !== undefined) {
+    patch.statut = op.payload.statut;
+    patch.datetimeValidation = op.payload.statut === 'prevue' ? null : now;
+    patch.valideePar = op.payload.statut === 'prevue' ? null : ctx.userId;
+  }
+  if (op.payload.notes !== undefined) patch.notes = op.payload.notes;
+  if (op.payload.datetime_prevue !== undefined) {
+    patch.datetimePrevue = new Date(op.payload.datetime_prevue);
+  }
+
+  const [row] = await ctx.db
+    .update(prisesPlanifiees)
+    .set(patch)
+    .where(and(eq(prisesPlanifiees.id, op.entity_id), isNull(prisesPlanifiees.deletedAt)))
+    .returning();
+  return row ? applied(op) : rejected(op, 'update_failed');
 }
 
 function applied(op: SyncOperation): SyncAck {

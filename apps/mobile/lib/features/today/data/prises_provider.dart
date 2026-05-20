@@ -2,11 +2,14 @@
 //
 // Lit GET /v1/prises?officine_id=...&date=YYYY-MM-DD (#114).
 // Le format `date` attendu est YYYY-MM-DD strict — pas de DateTime.
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/shared/api/api_client_provider.dart';
+import 'package:piloo/shared/db/db_provider.dart';
 import 'package:piloo/shared/notifications/notifications_service.dart';
+import 'package:piloo/shared/sync/enqueue.dart';
 
 class PrisesDayKey {
   const PrisesDayKey({required this.officineId, required this.date});
@@ -58,8 +61,9 @@ String isoDate(DateTime d) {
 }
 
 /// PATCH /v1/prises/{id} avec un nouveau statut. Invalide la query
-/// du jour concerné pour rafraîchir la liste immédiatement.
-Future<api.PriseTimelineItem> updatePriseStatut(
+/// du jour concerné pour rafraîchir la liste immédiatement. Fallback
+/// enqueue dans pending_operations si le réseau est down (#56/#57).
+Future<void> updatePriseStatut(
   WidgetRef ref, {
   required String priseId,
   required String officineId,
@@ -68,27 +72,39 @@ Future<api.PriseTimelineItem> updatePriseStatut(
 }) async {
   final client = ref.read(pilooApiClientProvider).getPrisesApi();
   final builder = api.UpdatePriseInputBuilder()..statut = statut;
-  final res = await client.v1PrisesIdPatch(
-    id: priseId,
-    updatePriseInput: builder.build(),
-  );
-  if (res.statusCode != 200 || res.data == null) {
-    throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
+  try {
+    final res = await client.v1PrisesIdPatch(
+      id: priseId,
+      updatePriseInput: builder.build(),
+    );
+    if (res.statusCode != 200 || res.data == null) {
+      throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
+    }
+  } on DioException catch (e) {
+    if (!_isTransient(e)) rethrow;
+    await enqueueOperation(
+      ref.read(localDatabaseProvider),
+      EnqueueOp(
+        type: 'update_prise',
+        entityType: 'prise',
+        entityId: priseId,
+        payload: {'statut': _statutToWire(statut)},
+      ),
+    );
   }
   // Annule la notif locale associée — la prise n'a plus besoin de
-  // rappel puisqu'elle vient d'être validée/sautée.
+  // rappel puisqu'elle vient d'être validée/sautée (ou queue de l'être).
   // ignore: unawaited_futures
   ref.read(notificationsServiceProvider).cancelForPrise(priseId);
   ref.invalidate(
     prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
   );
-  return res.data!;
 }
 
 /// PATCH /v1/prises/{id} avec un nouvel horaire prévu (#120). Sert
-/// au tap long pour déplacer ponctuellement une prise (l'ordo reste
-/// la source de vérité pour les futures occurrences).
-Future<api.PriseTimelineItem> updatePriseDatetime(
+/// au tap long pour déplacer ponctuellement une prise. Fallback
+/// enqueue offline (#57).
+Future<void> updatePriseDatetime(
   WidgetRef ref, {
   required String priseId,
   required String officineId,
@@ -96,21 +112,59 @@ Future<api.PriseTimelineItem> updatePriseDatetime(
   required DateTime datetimePrevue,
 }) async {
   final client = ref.read(pilooApiClientProvider).getPrisesApi();
-  final builder = api.UpdatePriseInputBuilder()
-    ..datetimePrevue = datetimePrevue.toUtc();
-  final res = await client.v1PrisesIdPatch(
-    id: priseId,
-    updatePriseInput: builder.build(),
-  );
-  if (res.statusCode != 200 || res.data == null) {
-    throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
+  final utc = datetimePrevue.toUtc();
+  final builder = api.UpdatePriseInputBuilder()..datetimePrevue = utc;
+  try {
+    final res = await client.v1PrisesIdPatch(
+      id: priseId,
+      updatePriseInput: builder.build(),
+    );
+    if (res.statusCode != 200 || res.data == null) {
+      throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
+    }
+  } on DioException catch (e) {
+    if (!_isTransient(e)) rethrow;
+    await enqueueOperation(
+      ref.read(localDatabaseProvider),
+      EnqueueOp(
+        type: 'update_prise',
+        entityType: 'prise',
+        entityId: priseId,
+        payload: {'datetime_prevue': utc.toIso8601String()},
+      ),
+    );
   }
   // Annule la notif locale et laisse `scheduleForPrises` (déclenché
-  // par invalidate ci-dessous) reposer la notification au nouveau créneau.
+  // par invalidate) reposer la notification au nouveau créneau.
   // ignore: unawaited_futures
   ref.read(notificationsServiceProvider).cancelForPrise(priseId);
   ref.invalidate(
     prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
   );
-  return res.data!;
+}
+
+/// Vrai pour les erreurs réseau (offline, timeout, DNS, conn refused).
+/// Faux pour les 4xx/5xx serveur (à propager comme exception).
+/// Aligné sur boites_provider._isTransient — dupliqué localement pour
+/// éviter une dépendance croisée entre features.
+bool _isTransient(DioException e) {
+  switch (e.type) {
+    case DioExceptionType.connectionTimeout:
+    case DioExceptionType.sendTimeout:
+    case DioExceptionType.receiveTimeout:
+    case DioExceptionType.connectionError:
+    case DioExceptionType.unknown:
+      return true;
+    case DioExceptionType.badResponse:
+    case DioExceptionType.cancel:
+    case DioExceptionType.badCertificate:
+      return false;
+  }
+}
+
+String _statutToWire(api.UpdatePriseInputStatutEnum s) {
+  if (s == api.UpdatePriseInputStatutEnum.prise) return 'prise';
+  if (s == api.UpdatePriseInputStatutEnum.sautee) return 'sautee';
+  if (s == api.UpdatePriseInputStatutEnum.prevue) return 'prevue';
+  return s.name;
 }

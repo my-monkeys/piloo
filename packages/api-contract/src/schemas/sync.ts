@@ -10,6 +10,7 @@ import { z } from 'zod';
 
 import { registry } from '../openapi.ts';
 import { BoiteSchema, CreateBoiteInputSchema, UpdateBoiteInputSchema } from './boites.ts';
+import { UpdatePriseInputSchema } from './prises.ts';
 
 // Ack par opération
 export const SyncAckStatusEnum = z.enum(['applied', 'conflict', 'rejected']);
@@ -45,10 +46,25 @@ const OperationSoftDeleteBoiteSchema = z.object({
   timestamp_local: z.number().int().nonnegative(),
 });
 
+// #57 : sync des validations de prise (Prise/Sautée/Reset + déplacement
+// d'horaire ponctuel via datetime_prevue). Permet à l'app mobile de
+// valider une prise en mode avion → enqueue → SyncWorker rejoue.
+// Re-use UpdatePriseInputSchema directement — mêmes règles : `oubliee`
+// reste interdit (transition serveur-only via cron #118).
+const OperationUpdatePriseSchema = z.object({
+  id: z.uuid(),
+  type: z.literal('update_prise'),
+  entity_type: z.literal('prise'),
+  entity_id: z.uuid(),
+  payload: UpdatePriseInputSchema,
+  timestamp_local: z.number().int().nonnegative(),
+});
+
 export const SyncOperationSchema = z.discriminatedUnion('type', [
   OperationCreateBoiteSchema,
   OperationUpdateBoiteSchema,
   OperationSoftDeleteBoiteSchema,
+  OperationUpdatePriseSchema,
 ]);
 
 const MAX_BATCH = 100;
