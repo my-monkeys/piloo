@@ -906,6 +906,10 @@ components:
             - "null"
           minimum: 0
           maximum: 100
+        ai_summary:
+          type:
+            - string
+            - "null"
         version_bdpm:
           type: string
           format: date

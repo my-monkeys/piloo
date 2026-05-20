@@ -58,5 +58,6 @@ BdpmMedicament _fromApi(api.BdpmMedicament m) {
     titulaire: m.titulaire,
     statutAmm: m.statutAmm,
     tauxRemboursement: m.tauxRemboursement,
+    aiSummary: m.aiSummary,
   );
 }

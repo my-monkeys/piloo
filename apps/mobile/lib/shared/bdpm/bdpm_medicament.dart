@@ -16,6 +16,7 @@ class BdpmMedicament {
     this.titulaire,
     this.statutAmm,
     this.tauxRemboursement,
+    this.aiSummary,
   });
 
   final String cis;
@@ -28,6 +29,10 @@ class BdpmMedicament {
   final String? titulaire;
   final String? statutAmm;
   final int? tauxRemboursement;
+  /// Résumé IA pré-généré (#167). Null tant que la pipeline LLM
+  /// (#165) ne l'a pas rempli — l'UI affiche dans ce cas un
+  /// placeholder "résumé bientôt disponible".
+  final String? aiSummary;
 
   @override
   String toString() => 'BdpmMedicament($cis, $denomination)';

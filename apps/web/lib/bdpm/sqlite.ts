@@ -25,6 +25,7 @@
 //     titulaire TEXT,
 //     statut_amm TEXT,
 //     taux_remboursement INTEGER,
+//     ai_summary TEXT,       -- résumé IA pré-généré (#167), peut être null
 //     version_bdpm TEXT NOT NULL
 //   )
 //
@@ -80,6 +81,7 @@ export async function generateBdpmSqlite(
         titulaire TEXT,
         statut_amm TEXT,
         taux_remboursement INTEGER,
+        ai_summary TEXT,
         version_bdpm TEXT NOT NULL
       ) WITHOUT ROWID;
 
@@ -92,8 +94,8 @@ export async function generateBdpmSqlite(
       INSERT INTO medicaments (
         cip13, cip7, cis, denomination, forme, dosage,
         voie_administration, titulaire, statut_amm,
-        taux_remboursement, version_bdpm
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        taux_remboursement, ai_summary, version_bdpm
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     sqlite.exec('BEGIN');
     for (const r of rows) {
@@ -108,6 +110,7 @@ export async function generateBdpmSqlite(
         r.titulaire,
         r.statutAmm,
         r.tauxRemboursement,
+        r.aiSummary,
         r.versionBdpm,
       );
     }

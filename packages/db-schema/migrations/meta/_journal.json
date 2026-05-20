@@ -71,6 +71,13 @@
       "when": 1779255509276,
       "tag": "0009_harsh_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1779272309987,
+      "tag": "0010_dazzling_lionheart",
+      "breakpoints": true
     }
   ]
 }

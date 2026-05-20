@@ -32,6 +32,16 @@ export const medicamentsBdpm = pgTable(
     titulaire: text(),
     statutAmm: text(),
     tauxRemboursement: integer(),
+    /// Résumé IA pré-généré (#167 / EPIC #22). Court paragraphe de
+    /// 2-3 phrases : "à quoi ça sert + précautions générales".
+    /// Régénéré par le cron LLM (#165) ; les nouveaux médocs BDPM
+    /// l'auront null tant que la prochaine passe n'a pas tourné.
+    /// L'UI affiche un placeholder "résumé bientôt disponible" dans
+    /// ce cas. Indexé dans le SQLite mobile (cf. lib/bdpm/sqlite.ts).
+    aiSummary: text(),
+    /// Version IA → permet de re-générer si on change le modèle ou le
+    /// prompt (ex: "claude-haiku-4-5/v1"). Null tant que pas de résumé.
+    aiSummaryVersion: text(),
     versionBdpm: date().notNull(),
   },
   (table) => [

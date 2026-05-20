@@ -29,6 +29,9 @@ export const BdpmMedicamentSchema = z
     titulaire: z.string().nullable(),
     statut_amm: z.string().nullable(),
     taux_remboursement: z.number().int().min(0).max(100).nullable(),
+    /// Résumé IA pré-généré (#167). Null tant que la pipeline LLM
+    /// n'a pas encore traité ce CIP — l'UI affiche un placeholder.
+    ai_summary: z.string().nullable().optional(),
     version_bdpm: z.iso.date(),
   })
   .openapi('BdpmMedicament');

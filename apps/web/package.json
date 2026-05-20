@@ -12,9 +12,11 @@
     "test": "vitest run",
     "audit:logs": "node scripts/audit-logs.mjs",
     "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs",
-    "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs"
+    "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs",
+    "bdpm:summaries": "node --experimental-strip-types scripts/generate-bdpm-summaries.mjs"
   },
   "dependencies": {
+    "@google/genai": "^2.4.0",
     "@piloo/api-client": "workspace:*",
     "@piloo/api-contract": "workspace:*",
     "@piloo/db-schema": "workspace:*",

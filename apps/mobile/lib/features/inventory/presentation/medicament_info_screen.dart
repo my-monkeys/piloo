@@ -77,12 +77,83 @@ class _LoadedView extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _Hero(med: med),
+          if (med.aiSummary != null && med.aiSummary!.trim().isNotEmpty) ...[
+            const SizedBox(height: 20),
+            _AiSummary(text: med.aiSummary!),
+          ],
           const SizedBox(height: 20),
           _InfosTable(med: med),
           const SizedBox(height: 20),
           _NoticeButton(cip13: med.cip13),
           const SizedBox(height: 20),
           _Disclaimer(),
+        ],
+      ),
+    );
+  }
+}
+
+class _AiSummary extends StatelessWidget {
+  const _AiSummary({required this.text});
+
+  final String text;
+
+  /// Bord plus marqué que l'accentSoft pur pour distinguer la card —
+  /// approche la teinte #d9ad9c en assombrissant accent-soft.
+  static final _border = Color.alphaBlend(
+    PilooColors.accent.withValues(alpha: 0.25),
+    PilooColors.accentSoft,
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: PilooColors.accentSoft,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+        border: Border.all(color: _border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                PhosphorIconsFill.sparkle,
+                size: 16,
+                color: PilooColors.accent,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'À QUOI ÇA SERT',
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                  color: PilooColors.accent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            text,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              color: PilooColors.textPrimary,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "Résumé généré automatiquement · à vérifier auprès d'un professionnel",
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+              color: PilooColors.textTertiary,
+            ),
+          ),
         ],
       ),
     );

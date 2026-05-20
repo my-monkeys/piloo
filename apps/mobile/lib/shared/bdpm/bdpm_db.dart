@@ -85,16 +85,22 @@ class BdpmDb {
 
   void close() => _db.dispose();
 
-  static BdpmMedicament _rowToMedicament(Row row) => BdpmMedicament(
-        cis: row['cis'] as String,
-        denomination: row['denomination'] as String,
-        cip13: row['cip13'] as String?,
-        cip7: row['cip7'] as String?,
-        forme: row['forme'] as String?,
-        dosage: row['dosage'] as String?,
-        voieAdministration: row['voie_administration'] as String?,
-        titulaire: row['titulaire'] as String?,
-        statutAmm: row['statut_amm'] as String?,
-        tauxRemboursement: row['taux_remboursement'] as int?,
-      );
+  static BdpmMedicament _rowToMedicament(Row row) {
+    // `ai_summary` peut ne pas exister dans les vieux SQLite (avant
+    // distribution #167) — on tolère via columnNames check.
+    final hasAi = row.keys.contains('ai_summary');
+    return BdpmMedicament(
+      cis: row['cis'] as String,
+      denomination: row['denomination'] as String,
+      cip13: row['cip13'] as String?,
+      cip7: row['cip7'] as String?,
+      forme: row['forme'] as String?,
+      dosage: row['dosage'] as String?,
+      voieAdministration: row['voie_administration'] as String?,
+      titulaire: row['titulaire'] as String?,
+      statutAmm: row['statut_amm'] as String?,
+      tauxRemboursement: row['taux_remboursement'] as int?,
+      aiSummary: hasAi ? row['ai_summary'] as String? : null,
+    );
+  }
 }
