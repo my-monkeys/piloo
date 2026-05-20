@@ -84,3 +84,33 @@ Future<api.PriseTimelineItem> updatePriseStatut(
   );
   return res.data!;
 }
+
+/// PATCH /v1/prises/{id} avec un nouvel horaire prévu (#120). Sert
+/// au tap long pour déplacer ponctuellement une prise (l'ordo reste
+/// la source de vérité pour les futures occurrences).
+Future<api.PriseTimelineItem> updatePriseDatetime(
+  WidgetRef ref, {
+  required String priseId,
+  required String officineId,
+  required String date,
+  required DateTime datetimePrevue,
+}) async {
+  final client = ref.read(pilooApiClientProvider).getPrisesApi();
+  final builder = api.UpdatePriseInputBuilder()
+    ..datetimePrevue = datetimePrevue.toUtc();
+  final res = await client.v1PrisesIdPatch(
+    id: priseId,
+    updatePriseInput: builder.build(),
+  );
+  if (res.statusCode != 200 || res.data == null) {
+    throw Exception('PATCH /v1/prises/{id} : statut ${res.statusCode}');
+  }
+  // Annule la notif locale et laisse `scheduleForPrises` (déclenché
+  // par invalidate ci-dessous) reposer la notification au nouveau créneau.
+  // ignore: unawaited_futures
+  ref.read(notificationsServiceProvider).cancelForPrise(priseId);
+  ref.invalidate(
+    prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
+  );
+  return res.data!;
+}

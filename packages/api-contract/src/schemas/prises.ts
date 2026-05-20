@@ -56,11 +56,21 @@ export const ListPrisesResponseSchema = z
 // settable manuellement — c'est l'état terminal posé par le cron #118
 // quand on dépasse +1h sans action ; le repasser à `prevue` revient à
 // "j'oublie d'avoir oublié", ce qu'on ne veut pas tracer.
+//
+// `datetime_prevue` (#120) : permet le tap-long sur une card prise pour
+// déplacer ponctuellement l'horaire (ex: "je prends mon ramipril à 20h
+// plutôt qu'à 19h aujourd'hui"). N'altère pas la posologie de l'ordo
+// — uniquement l'occurrence concernée.
 export const UpdatePriseInputSchema = z
   .object({
-    statut: z.enum(['prevue', 'prise', 'sautee']),
+    statut: z.enum(['prevue', 'prise', 'sautee']).optional(),
     notes: z.string().max(2000).nullable().optional(),
+    datetime_prevue: z.iso.datetime().optional(),
   })
+  .refine(
+    (v) => v.statut !== undefined || v.notes !== undefined || v.datetime_prevue !== undefined,
+    { message: 'Au moins un champ doit être fourni.' },
+  )
   .openapi('UpdatePriseInput');
 
 export type PriseTimelineItem = z.infer<typeof PriseTimelineItemSchema>;

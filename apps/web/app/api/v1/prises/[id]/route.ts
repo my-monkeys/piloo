@@ -49,6 +49,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   const updated = await updatePrise(db, parsedParams.data.id, {
     statut: parsedBody.data.statut,
     notes: parsedBody.data.notes,
+    datetimePrevue: parsedBody.data.datetime_prevue
+      ? new Date(parsedBody.data.datetime_prevue)
+      : undefined,
     userId: auth.user.id,
   });
   if (!updated) return apiErrorResponse('not_found', 'Prise introuvable.');

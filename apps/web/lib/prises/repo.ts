@@ -59,8 +59,12 @@ export async function findPriseById(db: Db, id: string): Promise<PriseWithPrescr
 }
 
 export interface UpdatePriseParams {
-  statut: 'prevue' | 'prise' | 'sautee';
+  statut?: 'prevue' | 'prise' | 'sautee';
   notes?: string | null;
+  /// Nouvel horaire prévu (#120). Sert à déplacer ponctuellement une
+  /// prise — ne touche pas à la posologie de l'ordo (qui reste source
+  /// de vérité pour les futures occurrences).
+  datetimePrevue?: Date;
   /** Auteur de la validation, écrit dans `valideePar`. */
   userId: string;
 }
@@ -68,25 +72,30 @@ export interface UpdatePriseParams {
 /// Marque ou démarque une prise. `prise`/`sautee` posent
 /// `datetimeValidation` = maintenant ; `prevue` la remet à null pour
 /// signifier "non validée". On NE supporte PAS la transition vers
-/// `oubliee` côté API (terminal, posé par cron #118).
+/// `oubliee` côté API (terminal, posé par cron #118). `statut` est
+/// optionnel : on peut PATCHer juste `notes` ou `datetime_prevue`.
 export async function updatePrise(
   db: Db,
   id: string,
   params: UpdatePriseParams,
 ): Promise<PriseWithPrescription | null> {
   const now = new Date();
-  const validation = params.statut === 'prevue' ? null : now;
-  const valideePar = params.statut === 'prevue' ? null : params.userId;
+  const patch: Partial<typeof prisesPlanifiees.$inferInsert> & {
+    updatedAt: Date;
+  } = { updatedAt: now };
+  if (params.statut !== undefined) {
+    patch.statut = params.statut;
+    patch.datetimeValidation = params.statut === 'prevue' ? null : now;
+    patch.valideePar = params.statut === 'prevue' ? null : params.userId;
+  }
+  if (params.notes !== undefined) patch.notes = params.notes;
+  if (params.datetimePrevue !== undefined) {
+    patch.datetimePrevue = params.datetimePrevue;
+  }
 
   const updated = await db
     .update(prisesPlanifiees)
-    .set({
-      statut: params.statut,
-      datetimeValidation: validation,
-      valideePar,
-      ...(params.notes !== undefined && { notes: params.notes }),
-      updatedAt: now,
-    })
+    .set(patch)
     .where(and(eq(prisesPlanifiees.id, id), isNull(prisesPlanifiees.deletedAt)))
     .returning();
   if (updated.length === 0) return null;

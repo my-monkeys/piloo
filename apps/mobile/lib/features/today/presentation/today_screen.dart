@@ -146,6 +146,48 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     return parts.isEmpty ? null : parts.join(' · ');
   }
 
+  /// Long press → bottom sheet date/time picker → PATCH datetime_prevue
+  /// (#120). Permet de déplacer ponctuellement une prise sans toucher
+  /// à la posologie de l'ordo (qui régit les futures occurrences).
+  Future<void> _onPriseLongPress(_Prise prise) async {
+    final apiPrise = prise.apiPrise;
+    if (apiPrise == null) return;
+    final initial = apiPrise.datetimePrevue.toLocal();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: initial.subtract(const Duration(days: 1)),
+      lastDate: initial.add(const Duration(days: 1)),
+      helpText: 'Déplacer la prise',
+    );
+    if (pickedDate == null || !mounted) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: initial.hour, minute: initial.minute),
+      helpText: 'Nouvel horaire',
+    );
+    if (pickedTime == null || !mounted) return;
+    final next = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+    try {
+      await updatePriseDatetime(
+        ref,
+        priseId: apiPrise.id,
+        officineId: apiPrise.officineId,
+        date: isoDate(_date),
+        datetimePrevue: next,
+      );
+      if (mounted) PilooToast.success(context, 'Horaire déplacé.');
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Échec : $e');
+    }
+  }
+
   Future<void> _onPriseTap(_Prise prise) async {
     final apiPrise = prise.apiPrise;
     if (apiPrise == null) return;
@@ -253,6 +295,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                                 countColor: _countColor(matin),
                                 prises: matin,
                                 onPriseTap: _onPriseTap,
+                                onPriseLongPress: _onPriseLongPress,
                               ),
                               const SizedBox(height: 16),
                               _Section(
@@ -262,6 +305,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                                 countColor: _countColor(midi),
                                 prises: midi,
                                 onPriseTap: _onPriseTap,
+                                onPriseLongPress: _onPriseLongPress,
                               ),
                               const SizedBox(height: 16),
                               _Section(
@@ -271,6 +315,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                                 countColor: _countColor(soir),
                                 prises: soir,
                                 onPriseTap: _onPriseTap,
+                                onPriseLongPress: _onPriseLongPress,
                               ),
                               const SizedBox(height: 16),
                               _Section(
@@ -280,6 +325,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                                 countColor: _countColor(coucher),
                                 prises: coucher,
                                 onPriseTap: _onPriseTap,
+                                onPriseLongPress: _onPriseLongPress,
                               ),
                             ],
                           ),
@@ -312,6 +358,7 @@ class _Section extends StatelessWidget {
     required this.countColor,
     required this.prises,
     required this.onPriseTap,
+    required this.onPriseLongPress,
   });
 
   final IconData icon;
@@ -320,6 +367,7 @@ class _Section extends StatelessWidget {
   final Color countColor;
   final List<_Prise> prises;
   final Future<void> Function(_Prise) onPriseTap;
+  final Future<void> Function(_Prise) onPriseLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -361,7 +409,11 @@ class _Section extends StatelessWidget {
         ...List.generate(prises.length, (i) {
           return Padding(
             padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
-            child: _PriseCard(prise: prises[i], onTap: onPriseTap),
+            child: _PriseCard(
+              prise: prises[i],
+              onTap: onPriseTap,
+              onLongPress: onPriseLongPress,
+            ),
           );
         }),
       ],
@@ -370,10 +422,15 @@ class _Section extends StatelessWidget {
 }
 
 class _PriseCard extends StatelessWidget {
-  const _PriseCard({required this.prise, required this.onTap});
+  const _PriseCard({
+    required this.prise,
+    required this.onTap,
+    required this.onLongPress,
+  });
 
   final _Prise prise;
   final Future<void> Function(_Prise) onTap;
+  final Future<void> Function(_Prise) onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -391,6 +448,7 @@ class _PriseCard extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onTap(prise),
+      onLongPress: () => onLongPress(prise),
       child: Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

@@ -34,7 +34,7 @@ import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
 /// Version produit côté UI. Synchronisée manuellement avec `pubspec.yaml`
 /// au moment des releases — voir Codemagic. Mise dans le footer du Plus.
-const String _kAppVersion = '0.1.19';
+const String _kAppVersion = '0.1.20';
 
 class _Row {
   const _Row({

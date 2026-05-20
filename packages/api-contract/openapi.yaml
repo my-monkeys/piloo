@@ -917,8 +917,9 @@ components:
             - string
             - "null"
           maxLength: 2000
-      required:
-        - statut
+        datetime_prevue:
+          type: string
+          format: date-time
     ListDevicesResponse:
       type: object
       properties:
