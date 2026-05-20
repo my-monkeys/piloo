@@ -11,14 +11,15 @@
 //  - Bouton "J'ai cliqué sur le lien"
 //  - "Pas reçu ? Renvoyer dans Xs" — countdown 60s puis lien actif
 //
-// Scope POC : Brevo n'est pas encore branché (#62 ticket le mentionne
-// mais la stack notif est posée séparément). Pour la review :
-//  - Email passé en argument constructor (default placeholder).
-//  - "J'ai cliqué" simule la vérification → navigue vers /today.
-//  - "Renvoyer" no-op, juste reset le countdown + toast info.
+// Branchement #62 : "Renvoyer" appelle réellement
+// POST /api/auth/send-verification-email (Better Auth). "J'ai cliqué"
+// renvoie vers /sign-in : la session n'est créée que par un signIn
+// post-vérification (le lien magique ouvre le navigateur, pas l'app —
+// les Universal Links seront ajoutés une fois le domaine piloo.fr posé).
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -26,11 +27,13 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/auth/data/auth_api.dart';
+import 'package:piloo/features/auth/data/auth_api_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-class VerifyEmailScreen extends StatefulWidget {
+class VerifyEmailScreen extends ConsumerStatefulWidget {
   const VerifyEmailScreen({this.email = 'votre@email.fr', super.key});
 
   final String email;
@@ -38,12 +41,13 @@ class VerifyEmailScreen extends StatefulWidget {
   static const int _resendCooldownSeconds = 60;
 
   @override
-  State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
+  ConsumerState<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
 }
 
-class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
+class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
   late int _secondsLeft = VerifyEmailScreen._resendCooldownSeconds;
   Timer? _ticker;
+  bool _resending = false;
 
   @override
   void initState() {
@@ -74,15 +78,27 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
   }
 
   void _onVerified() {
-    // Scope POC : on simule. Quand Brevo + magic link seront branchés,
-    // ici on appellera AuthApi.getSession() et on lira user.emailVerified.
-    context.go(RoutePath.today);
+    // Le lien magique ouvre la page web /email-verified : il n'y a pas
+    // de cookie partagé avec l'app native, donc on ne peut pas auto-
+    // logger l'utilisateur ici. On le renvoie sur sign-in avec son
+    // email pré-rempli — le signIn passera maintenant que `emailVerified`
+    // est vrai côté serveur.
+    context.go(RoutePath.signIn);
   }
 
-  void _onResend() {
-    if (_secondsLeft > 0) return;
-    PilooToast.info(context, "Email renvoyé.");
-    _startCountdown();
+  Future<void> _onResend() async {
+    if (_secondsLeft > 0 || _resending) return;
+    setState(() => _resending = true);
+    try {
+      await ref.read(authApiProvider).sendVerificationEmail(widget.email);
+      if (!mounted) return;
+      PilooToast.info(context, "Email renvoyé.");
+      _startCountdown();
+    } on AuthApiException catch (e) {
+      if (mounted) PilooToast.error(context, e.message);
+    } finally {
+      if (mounted) setState(() => _resending = false);
+    }
   }
 
   @override
@@ -118,7 +134,9 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
                     const SizedBox(height: 20),
                     _ResendRow(
                       secondsLeft: _secondsLeft,
-                      onResend: _onResend,
+                      onResend: () {
+                        unawaited(_onResend());
+                      },
                     ),
                   ],
                 ),

@@ -24,6 +24,26 @@ class AuthApiException implements Exception {
   String toString() => 'AuthApiException($code, $statusCode): $message';
 }
 
+/// Résultat d'un signUp email avec vérification obligatoire (#62).
+///
+/// Si Better Auth a `requireEmailVerification: true`, le signUp réussit
+/// mais ne renvoie pas de session : il faut que l'utilisateur clique sur
+/// le lien magique reçu par email. On modélise ça par deux variants
+/// plutôt qu'un Session nullable pour forcer l'UI à traiter le cas.
+sealed class SignUpResult {
+  const SignUpResult();
+}
+
+class SignUpVerified extends SignUpResult {
+  const SignUpVerified(this.session);
+  final Session session;
+}
+
+class SignUpPendingVerification extends SignUpResult {
+  const SignUpPendingVerification(this.email);
+  final String email;
+}
+
 class AuthApi {
   AuthApi(this._dio);
 
@@ -115,7 +135,7 @@ class AuthApi {
     }
   }
 
-  Future<Session> signUpEmail({
+  Future<SignUpResult> signUpEmail({
     required String email,
     required String password,
     required String name,
@@ -148,18 +168,36 @@ class AuthApi {
       final body = response.data!;
       final user = body['user'] as Map<String, dynamic>;
       final token = response.headers.value('set-auth-token');
+      // Quand requireEmailVerification est ON côté serveur, Better Auth
+      // ne pose pas de session : l'user est créé, le mail magic link
+      // est parti, on attend la confirmation.
       if (token == null || token.isEmpty) {
-        throw AuthApiException(
-          'missing_bearer',
-          "Réponse signup sans header set-auth-token (plugin bearer() absent ?)",
-        );
+        return SignUpPendingVerification(user['email'] as String);
       }
-      return Session(
-        token: token,
-        userId: user['id'] as String,
-        email: user['email'] as String,
-        name: (user['name'] as String?) ?? '',
+      return SignUpVerified(
+        Session(
+          token: token,
+          userId: user['id'] as String,
+          email: user['email'] as String,
+          name: (user['name'] as String?) ?? '',
+        ),
       );
+    } on DioException catch (e) {
+      throw _exceptionFromDio(e);
+    }
+  }
+
+  /// Re-déclenche l'envoi du lien magique de vérification (#62).
+  Future<void> sendVerificationEmail(String email) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/api/auth/send-verification-email',
+        data: {'email': email},
+        options: Options(validateStatus: (s) => s != null),
+      );
+      if (response.statusCode != 200) {
+        throw _exceptionFromError(response.data, response.statusCode);
+      }
     } on DioException catch (e) {
       throw _exceptionFromDio(e);
     }

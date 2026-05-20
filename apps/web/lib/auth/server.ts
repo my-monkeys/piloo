@@ -12,6 +12,8 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { bearer } from 'better-auth/plugins';
 
 import { getDb } from '@/lib/db';
+import { sendEmail } from '@/lib/email/client';
+import { renderVerifyEmail } from '@/lib/email/templates/verify-email';
 
 import { createPersonalOfficineFor } from './hooks.ts';
 import {
@@ -27,9 +29,23 @@ interface BuildAuthOptions {
   baseURL: string;
   apple?: AppleProviderConfig;
   google?: GoogleProviderConfig;
+  /**
+   * #62 — quand `true`, exige le clic sur le magic link 1h avant tout
+   * signin email/password. La prod (`getAuth`) active toujours ce flag ;
+   * les tests d'intégration sur les autres flows le gardent à `false`
+   * (défaut) pour éviter d'avoir à orchestrer le magic link.
+   */
+  requireEmailVerification?: boolean;
 }
 
-function buildAuth({ db, secret, baseURL, apple, google }: BuildAuthOptions) {
+function buildAuth({
+  db,
+  secret,
+  baseURL,
+  apple,
+  google,
+  requireEmailVerification = false,
+}: BuildAuthOptions) {
   const socialProviders: Record<string, unknown> = {};
   if (apple) socialProviders['apple'] = apple;
   if (google) socialProviders['google'] = google;
@@ -55,9 +71,24 @@ function buildAuth({ db, secret, baseURL, apple, google }: BuildAuthOptions) {
     }),
     emailAndPassword: {
       enabled: true,
-      // Pas de vérification d'email obligatoire pour le POC #40 ; activé via
-      // le ticket #62 (magic link 1h).
-      requireEmailVerification: false,
+      requireEmailVerification,
+    },
+    emailVerification: {
+      sendOnSignUp: requireEmailVerification,
+      autoSignInAfterVerification: true,
+      // Expiration alignée sur l'AC #62 (1h).
+      expiresIn: 60 * 60,
+      sendVerificationEmail: async ({ user, url }) => {
+        const prenom = (user as { prenom?: string }).prenom ?? user.name;
+        const rendered = renderVerifyEmail({ prenom, verifyUrl: url });
+        await sendEmail({
+          to: user.email,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text,
+          tag: 'verify-email',
+        });
+      },
     },
     user: {
       // Mapping vers notre table `users` (plurielle) au lieu du `user` par
@@ -123,6 +154,8 @@ export function getAuth(): AuthInstance {
     baseURL: process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3000',
     apple: APPLE_CONFIG,
     google: GOOGLE_CONFIG,
+    // Prod : magic link 1h obligatoire (#62).
+    requireEmailVerification: true,
   });
   return cached;
 }
