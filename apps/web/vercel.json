@@ -33,7 +33,7 @@
     },
     {
       "path": "/api/v1/cron/rappels-retard",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 12 * * *"
     },
     {
       "path": "/api/v1/cron/stock-bas",

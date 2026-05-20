@@ -1,6 +1,16 @@
 // Cron rappels prises en retard (#130).
 //
-// Tourne en cron (cf. apps/web/vercel.json). À chaque run :
+// IMPORTANT — fréquence cible : toutes les 15 min pour rattraper
+// finement entre +30 min et +1 h après l'heure prévue. Vercel Hobby
+// limite les crons au quotidien (l'expression `*/15 * * * *` est
+// rejetée). En attendant un upgrade Pro OU un scheduler externe
+// (cookie-server cron, GitHub Actions), le cron Vercel tourne juste
+// 1× par jour à 12:00 — l'usage réel passe par un curl externe :
+//
+//   curl -H "Authorization: Bearer $CRON_SECRET" \
+//     https://piloo.vercel.app/api/v1/cron/rappels-retard
+//
+// À chaque run :
 //   1. Sélectionne les prises_planifiees dont datetime_prevue est
 //      dans la fenêtre [now - 45min, now - 30min[, statut='prevue',
 //      late_reminded_at IS NULL, non soft-deleted.
