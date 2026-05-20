@@ -23,10 +23,12 @@
 // Inventory (#11) avancera.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/inventory/data/boites_provider.dart';
@@ -166,56 +168,103 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
             PilooToast.error(context, 'Échec : statut ${res.statusCode ?? 0}');
           }
         case QuickAction.seeInfo:
-          // Renvoie vers la fiche médicament (#99) — pas encore implémentée.
-          if (mounted) PilooToast.info(context, 'Bientôt disponible.');
+          if (mounted) context.push(RoutePath.medicamentInfo(boite.cip13));
+        case QuickAction.rename:
+          await _runRename(boite);
       }
     } catch (e) {
       if (mounted) PilooToast.error(context, 'Action échouée : $e');
     }
   }
 
-  /// Dialog input pour saisie précise du stock (#103). Retourne le
-  /// nouveau nombre d'unités, ou null si annulé.
-  Future<int?> _askStock(int? current) {
-    final ctrl = TextEditingController(text: current?.toString() ?? '');
-    return showDialog<int?>(
+  /// Renomme une boîte en éditant le préfixe `NOM // notes` de la
+  /// colonne `notes`. Sert principalement quand la boîte scannée n'est
+  /// pas reconnue dans BDPM — au lieu d'afficher "CIP 3400…", l'user
+  /// met le nom imprimé sur la boîte.
+  Future<void> _runRename(api.Boite boite) async {
+    final parts = _splitNotes(boite.notes);
+    final currentName = parts.name ?? '';
+    final newName = await _askRename(currentName);
+    if (newName == null || !mounted) return;
+    final trimmed = newName.trim();
+    final newNotes = trimmed.isEmpty
+        ? parts.rest // l'user efface le nom → on garde juste les notes libres
+        : (parts.rest == null || parts.rest!.isEmpty
+            ? trimmed
+            : '$trimmed // ${parts.rest}');
+    await updateBoite(
+      ref,
+      boiteId: boite.id,
+      officineId: boite.officineId,
+      notes: newNotes,
+    );
+    if (mounted) PilooToast.success(context, 'Renommée.');
+  }
+
+  Future<String?> _askRename(String current) {
+    final ctrl = TextEditingController(text: current);
+    return showDialog<String?>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          backgroundColor: PilooColors.surface,
-          title: Text(
-            'Stock restant',
-            style: GoogleFonts.fraunces(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: PilooColors.textPrimary,
-            ),
+      builder: (ctx) => AlertDialog(
+        backgroundColor: PilooColors.surface,
+        title: Text(
+          'Renommer',
+          style: GoogleFonts.fraunces(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: PilooColors.textPrimary,
           ),
-          content: TextField(
-            controller: ctrl,
-            autofocus: true,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              hintText: 'Nombre d’unités',
-              border: OutlineInputBorder(),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Nom du médicament tel qu\'il apparaît sur la boîte.',
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: PilooColors.textSecondary,
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Annuler'),
-            ),
-            TextButton(
-              onPressed: () {
-                final n = int.tryParse(ctrl.text.trim());
-                if (n == null || n < 0) return;
-                Navigator.of(ctx).pop(n);
-              },
-              child: const Text('Enregistrer'),
+            const SizedBox(height: 10),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              decoration: const InputDecoration(
+                hintText: 'ex. Doliprane 1000 mg',
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(ctrl.text),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Sheet de saisie du stock (#102 + #103). Combine :
+  ///   - 5 chips "Plein / 3-4 / Moitié / 1-4 / Vide" pour estimation rapide
+  ///   - un champ numérique pour comptage précis
+  /// Les chips pré-remplissent le champ, l'utilisateur valide. Retourne
+  /// le nombre d'unités, ou null si annulé.
+  Future<int?> _askStock(int? current) {
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _StockAdjustSheet(initial: current),
     );
   }
 
@@ -990,6 +1039,158 @@ class _EmptyOfficine extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StockAdjustSheet extends StatefulWidget {
+  const _StockAdjustSheet({required this.initial});
+
+  /// Stock actuel (= unitesRestantes courant). Sert à pré-remplir le
+  /// champ texte et à indiquer où on en est. Peut être null (boîte
+  /// dont on n'a jamais compté précisément, ex: marquée "Plein" à la
+  /// création).
+  final int? initial;
+
+  @override
+  State<_StockAdjustSheet> createState() => _StockAdjustSheetState();
+}
+
+class _StockAdjustSheetState extends State<_StockAdjustSheet> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.initial?.toString() ?? '');
+
+  /// Valeurs chips standards (alignées avec boite_add_screen `_stockToUnits`).
+  /// Plein = 32 (typique blister 2×16), 3/4 = 24, Moitié = 16, 1/4 = 8, Vide = 0.
+  /// Estimation grossière — l'utilisateur ajuste ensuite si besoin.
+  static const _chips = <({String label, int units})>[
+    (label: 'Plein', units: 32),
+    (label: '3/4', units: 24),
+    (label: 'Moitié', units: 16),
+    (label: '1/4', units: 8),
+    (label: 'Vide', units: 0),
+  ];
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final n = int.tryParse(_ctrl.text.trim());
+    if (n == null || n < 0) return;
+    Navigator.of(context).pop(n);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Comprimés restants',
+                style: GoogleFonts.fraunces(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Nombre d’unités dans la boîte (comprimés, gélules, sachets…).',
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  color: PilooColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  for (var i = 0; i < _chips.length; i++) ...[
+                    if (i > 0) const SizedBox(width: 6),
+                    Expanded(
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          setState(() {
+                            _ctrl.text = _chips[i].units.toString();
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: PilooColors.surface,
+                            borderRadius: BorderRadius.circular(PilooRadius.md),
+                            border: Border.all(color: PilooColors.border),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            _chips[i].label,
+                            style: GoogleFonts.manrope(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: PilooColors.textPrimary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: _ctrl,
+                autofocus: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nombre exact',
+                  hintText: 'ex. 14',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Annuler'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _save,
+                      child: const Text('Enregistrer'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
