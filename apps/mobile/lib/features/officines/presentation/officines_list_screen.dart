@@ -19,6 +19,7 @@ import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/officines/data/pending_invitations_provider.dart';
 import 'package:piloo/features/officines/presentation/officine_edit_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -165,32 +166,45 @@ class _OfficinesListScreenState extends ConsumerState<OfficinesListScreen> {
                   ),
                 ),
                 data: (rows) {
-                  if (rows.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'Aucune officine.',
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          color: PilooColors.textTertiary,
-                        ),
+                  return CustomScrollView(
+                    slivers: [
+                      const SliverPadding(
+                        padding: EdgeInsets.fromLTRB(20, 8, 20, 0),
+                        sliver: SliverToBoxAdapter(child: _PendingInvitationsSection()),
                       ),
-                    );
-                  }
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                    itemCount: rows.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (_, i) {
-                      final o = _mapApi(rows[i]);
-                      return _OfficineCard(
-                        officine: o,
-                        active: o.id == activeId,
-                        onTap: () => ref
-                            .read(activeOfficineProvider.notifier)
-                            .select(o.id),
-                        onActions: () => _showActions(context, o),
-                      );
-                    },
+                      if (rows.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(
+                            child: Text(
+                              'Aucune officine.',
+                              style: GoogleFonts.manrope(
+                                fontSize: 14,
+                                color: PilooColors.textTertiary,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                          sliver: SliverList.separated(
+                            itemCount: rows.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 10),
+                            itemBuilder: (_, i) {
+                              final o = _mapApi(rows[i]);
+                              return _OfficineCard(
+                                officine: o,
+                                active: o.id == activeId,
+                                onTap: () => ref
+                                    .read(activeOfficineProvider.notifier)
+                                    .select(o.id),
+                                onActions: () => _showActions(context, o),
+                              );
+                            },
+                          ),
+                        ),
+                    ],
                   );
                 },
               ),
@@ -520,6 +534,146 @@ class _SheetAction extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Section "Invitations en attente" (#129). Affichée au-dessus de la liste
+/// des officines quand au moins une invitation pending matche l'email de
+/// l'user. Permet l'accept inline sans passer par le lien dédié.
+class _PendingInvitationsSection extends ConsumerWidget {
+  const _PendingInvitationsSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final asyncList = ref.watch(pendingInvitationsProvider);
+    return asyncList.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (items) {
+        if (items.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 6, top: 4),
+                child: Text(
+                  'Invitations en attente',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: PilooColors.textSecondary,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ),
+              for (final inv in items) ...[
+                _PendingInvitationCard(invitation: inv),
+                const SizedBox(height: 8),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _PendingInvitationCard extends ConsumerStatefulWidget {
+  const _PendingInvitationCard({required this.invitation});
+
+  final api.PendingInvitation invitation;
+
+  @override
+  ConsumerState<_PendingInvitationCard> createState() => _PendingInvitationCardState();
+}
+
+class _PendingInvitationCardState extends ConsumerState<_PendingInvitationCard> {
+  bool _accepting = false;
+
+  String _roleLabel(api.PendingInvitationRoleEnum r) {
+    if (r == api.PendingInvitationRoleEnum.owner) return 'Propriétaire';
+    if (r == api.PendingInvitationRoleEnum.editor) return 'Éditeur';
+    return 'Lecteur';
+  }
+
+  Future<void> _onAccept() async {
+    setState(() => _accepting = true);
+    try {
+      await acceptInvitation(ref, widget.invitation.token);
+      if (!mounted) return;
+      PilooToast.success(context, 'Tu as rejoint "${widget.invitation.officineNom}".');
+      ref.invalidate(pendingInvitationsProvider);
+      ref.invalidate(officinesListProvider);
+    } catch (_) {
+      if (mounted) PilooToast.error(context, "Impossible d'accepter l'invitation.");
+    } finally {
+      if (mounted) setState(() => _accepting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = widget.invitation;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PilooColors.surface,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+        border: Border.all(color: PilooColors.primary),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(PhosphorIconsFill.envelopeOpen, size: 28, color: PilooColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  inv.officineNom,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: PilooColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '${inv.invitedByName} · ${_roleLabel(inv.role)}',
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: PilooColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: _accepting ? null : _onAccept,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _accepting ? PilooColors.primarySoft : PilooColors.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                _accepting ? '…' : 'Accepter',
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _accepting ? PilooColors.primary : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

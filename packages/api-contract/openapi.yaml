@@ -1595,6 +1595,44 @@ components:
         - invited_by_name
         - expires_at
         - status
+    PendingInvitationsList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingInvitation"
+      required:
+        - items
+    PendingInvitation:
+      type: object
+      properties:
+        token:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        officine_nom:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_by_name:
+          type: string
+        expires_at:
+          type: string
+          format: date-time
+      required:
+        - token
+        - officine_id
+        - officine_nom
+        - role
+        - invited_by_name
+        - expires_at
     AcceptInvitationResponse:
       type: object
       properties:
@@ -3172,6 +3210,25 @@ paths:
                 $ref: "#/components/schemas/InvitationPreview"
         "404":
           description: Token inconnu
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvitationApiError"
+  /v1/me/invitations:
+    get:
+      summary: Liste les invitations en attente adressées à l'utilisateur courant
+      description: Filtre par email de l'user authentifié + statut pending (acceptedAt null, deletedAt null, expiresAt > now). Utilisé pour le badge "Invitation en attente" de l'écran Mes officines (#129).
+      tags:
+        - invitations
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingInvitationsList"
+        "401":
+          description: Non authentifié
           content:
             application/json:
               schema:

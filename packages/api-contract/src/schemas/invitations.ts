@@ -61,6 +61,29 @@ export type CreateInvitationInput = z.infer<typeof CreateInvitationInputSchema>;
 export type InvitationPreview = z.infer<typeof InvitationPreviewSchema>;
 export type AcceptInvitationResponse = z.infer<typeof AcceptInvitationResponseSchema>;
 
+/// Élément de la liste retournée par GET /v1/me/invitations (#129).
+/// Inclut le token (= id) pour autoriser un accept inline depuis la
+/// liste des officines, sans roundtrip preview.
+export const PendingInvitationSchema = z
+  .object({
+    token: z.uuid(),
+    officine_id: z.uuid(),
+    officine_nom: z.string(),
+    role: RoleEnum,
+    invited_by_name: z.string(),
+    expires_at: z.iso.datetime(),
+  })
+  .openapi('PendingInvitation');
+
+export const PendingInvitationsListSchema = z
+  .object({
+    items: z.array(PendingInvitationSchema),
+  })
+  .openapi('PendingInvitationsList');
+
+export type PendingInvitation = z.infer<typeof PendingInvitationSchema>;
+export type PendingInvitationsList = z.infer<typeof PendingInvitationsListSchema>;
+
 const ApiErrorSchema = z
   .object({
     error: z.object({
@@ -111,6 +134,22 @@ registry.registerPath({
       content: { 'application/json': { schema: InvitationPreviewSchema } },
     },
     404: errorResponse('Token inconnu'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/me/invitations',
+  summary: "Liste les invitations en attente adressées à l'utilisateur courant",
+  description:
+    'Filtre par email de l\'user authentifié + statut pending (acceptedAt null, deletedAt null, expiresAt > now). Utilisé pour le badge "Invitation en attente" de l\'écran Mes officines (#129).',
+  tags: ['invitations'],
+  responses: {
+    200: {
+      description: 'Liste',
+      content: { 'application/json': { schema: PendingInvitationsListSchema } },
+    },
+    401: errorResponse('Non authentifié'),
   },
 });
 
