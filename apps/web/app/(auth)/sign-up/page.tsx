@@ -32,15 +32,19 @@ export default function SignUpPage() {
     setError(null);
     setSubmitting(true);
     try {
+      const trimmedEmail = email.trim();
       await signUpEmail({
-        email: email.trim(),
+        email: trimmedEmail,
         password,
         name: `${prenom.trim()} ${nom.trim()}`.trim(),
         nom: nom.trim(),
         prenom: prenom.trim(),
         typeCompte,
       });
-      router.push('/dashboard');
+      // #62 — email non vérifié à ce stade : Better Auth a déjà envoyé
+      // le magic link 1h. On envoie vers la page d'attente plutôt que
+      // dashboard (la session n'est créée qu'après vérification).
+      router.push(`/check-inbox?email=${encodeURIComponent(trimmedEmail)}`);
       router.refresh();
     } catch (err) {
       setError(err instanceof WebAuthError ? err.message : 'Inscription impossible.');

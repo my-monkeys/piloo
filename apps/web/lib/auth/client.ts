@@ -64,6 +64,15 @@ export async function signInEmail(email: string, password: string): Promise<void
   if (res.status !== 200) throw await parseError(res);
 }
 
+/** Re-déclenche l'envoi du mail de vérification (#62). */
+export async function sendVerificationEmail(
+  email: string,
+  callbackURL = '/email-verified',
+): Promise<void> {
+  const res = await postJson('/api/auth/send-verification-email', { email, callbackURL });
+  if (res.status !== 200) throw await parseError(res);
+}
+
 export async function signOut(): Promise<void> {
   const res = await postJson('/api/auth/sign-out', {});
   if (res.status !== 200) throw await parseError(res);

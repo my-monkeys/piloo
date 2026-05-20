@@ -66,12 +66,21 @@ function SignInForm() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+    const trimmedEmail = email.trim();
     try {
-      await signInEmail(email.trim(), password);
+      await signInEmail(trimmedEmail, password);
       router.push(redirectTo);
       router.refresh();
     } catch (err) {
       if (err instanceof WebAuthError) {
+        // #62 — quand requireEmailVerification est ON, Better Auth
+        // refuse le sign-in tant que l'email n'est pas validé. On
+        // route l'utilisateur vers la page d'attente (qui propose
+        // un renvoi).
+        if (err.code === 'EMAIL_NOT_VERIFIED') {
+          router.push(`/check-inbox?email=${encodeURIComponent(trimmedEmail)}`);
+          return;
+        }
         setError(err.message);
       } else {
         setError('Connexion impossible.');
