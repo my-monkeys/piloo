@@ -31,6 +31,7 @@ class RouteName {
   // Actions globales
   static const scan = 'scan';
   static const alertes = 'alertes';
+  static const rappels = 'rappels';
 
   // Boîtes
   static const boiteAdd = 'boite-add';
@@ -92,6 +93,7 @@ class RoutePath {
   // Actions globales
   static const scan = '/scan';
   static const alertes = '/alertes';
+  static const rappels = '/rappels';
 
   // Boîtes — paramètre id requis
   static const boiteAdd = '/boites/add';

@@ -1745,6 +1745,136 @@ components:
       required:
         - image_base64
         - mime_type
+    ListRappelsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rappel"
+      required:
+        - items
+    Rappel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        officine_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        boite_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        heure:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$
+        recurrence_type:
+          type: string
+          enum:
+            - daily
+        actif:
+          type: boolean
+        notes:
+          type:
+            - string
+            - "null"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - user_id
+        - officine_id
+        - boite_id
+        - label
+        - heure
+        - recurrence_type
+        - actif
+        - notes
+        - created_at
+        - updated_at
+    RappelsApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    CreateRappelInput:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        heure:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$
+        officine_id:
+          type: string
+          format: uuid
+        boite_id:
+          type: string
+          format: uuid
+        recurrence_type:
+          type: string
+          enum:
+            - daily
+          default: daily
+        notes:
+          type: string
+          maxLength: 500
+      required:
+        - label
+        - heure
+    UpdateRappelInput:
+      type: object
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 120
+        heure:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$
+        actif:
+          type: boolean
+        boite_id:
+          type:
+            - string
+            - "null"
+          format: uuid
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 500
   parameters: {}
 paths:
   /health:
@@ -3307,4 +3437,118 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OcrApiError"
+  /v1/rappels:
+    get:
+      summary: Liste les rappels (actifs et inactifs) de l'utilisateur courant
+      tags:
+        - rappels
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRappelsResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+    post:
+      summary: Crée un nouveau rappel
+      tags:
+        - rappels
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRappelInput"
+      responses:
+        "201":
+          description: Rappel créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rappel"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+  /v1/rappels/{id}:
+    patch:
+      summary: Met à jour un rappel (toggle actif, change heure, etc.)
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRappelInput"
+      responses:
+        "200":
+          description: Rappel mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rappel"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+        "404":
+          description: Rappel inconnu ou pas au user courant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+    delete:
+      summary: Supprime (soft-delete) un rappel
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimé
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
+        "404":
+          description: Rappel inconnu ou pas au user courant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelsApiError"
 webhooks: {}

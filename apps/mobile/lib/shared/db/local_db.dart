@@ -18,7 +18,7 @@ import 'tables.dart';
 
 part 'local_db.g.dart';
 
-@DriftDatabase(tables: [Boites, PrisesPlanifiees, PendingOperations])
+@DriftDatabase(tables: [Boites, PrisesPlanifiees, PendingOperations, Rappels])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(driftDatabase(name: 'piloo_local'));
 
@@ -27,7 +27,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -41,6 +41,11 @@ class LocalDatabase extends _$LocalDatabase {
             // worker de sync (#91) — il interroge en boucle les ops
             // `pending`, un scan full-table à chaque tick coûte cher.
             await _createPendingOpsIndex(m);
+          }
+          if (from < 3) {
+            // v3 (#327) : nouvelle table rappels pour les rappels
+            // simples sans ordonnance (pilule, vitamine, etc.).
+            await m.createTable(rappels);
           }
         },
       );

@@ -21,10 +21,21 @@ LocalDatabase makeDb() {
 }
 
 void main() {
-  group('LocalDatabase v2', () {
-    test('schemaVersion vaut 2', () {
+  group('LocalDatabase v3', () {
+    test('schemaVersion vaut 3', () {
       final db = makeDb();
-      expect(db.schemaVersion, 2);
+      expect(db.schemaVersion, 3);
+    });
+
+    test('table rappels créée par onCreate (v3)', () async {
+      final db = makeDb();
+      await db.customSelect('SELECT 1').get();
+      final tables = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='rappels'",
+          )
+          .get();
+      expect(tables, isNotEmpty);
     });
 
     test('index idx_pending_ops_statut existe après migration', () async {

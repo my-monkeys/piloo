@@ -56,6 +56,7 @@ export async function truncateAll(handle: DbHandle): Promise<void> {
     TRUNCATE TABLE
       sync_operations_log,
       alertes,
+      rappels,
       prises_planifiees,
       prescriptions,
       ordonnances,

@@ -2158,6 +2158,709 @@ class PendingOperationsCompanion extends UpdateCompanion<PendingOperationRow> {
   }
 }
 
+class $RappelsTable extends Rappels with TableInfo<$RappelsTable, RappelRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RappelsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _userIdMeta = const VerificationMeta('userId');
+  @override
+  late final GeneratedColumn<String> userId = GeneratedColumn<String>(
+    'user_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _officineIdMeta = const VerificationMeta(
+    'officineId',
+  );
+  @override
+  late final GeneratedColumn<String> officineId = GeneratedColumn<String>(
+    'officine_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _boiteIdMeta = const VerificationMeta(
+    'boiteId',
+  );
+  @override
+  late final GeneratedColumn<String> boiteId = GeneratedColumn<String>(
+    'boite_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _heureMeta = const VerificationMeta('heure');
+  @override
+  late final GeneratedColumn<String> heure = GeneratedColumn<String>(
+    'heure',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _recurrenceTypeMeta = const VerificationMeta(
+    'recurrenceType',
+  );
+  @override
+  late final GeneratedColumn<String> recurrenceType = GeneratedColumn<String>(
+    'recurrence_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('daily'),
+  );
+  static const VerificationMeta _actifMeta = const VerificationMeta('actif');
+  @override
+  late final GeneratedColumn<bool> actif = GeneratedColumn<bool>(
+    'actif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("actif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<String> createdAt = GeneratedColumn<String>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<String> updatedAt = GeneratedColumn<String>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMeta = const VerificationMeta(
+    'deletedAt',
+  );
+  @override
+  late final GeneratedColumn<String> deletedAt = GeneratedColumn<String>(
+    'deleted_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    userId,
+    officineId,
+    boiteId,
+    label,
+    heure,
+    recurrenceType,
+    actif,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'rappels';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RappelRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('user_id')) {
+      context.handle(
+        _userIdMeta,
+        userId.isAcceptableOrUnknown(data['user_id']!, _userIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_userIdMeta);
+    }
+    if (data.containsKey('officine_id')) {
+      context.handle(
+        _officineIdMeta,
+        officineId.isAcceptableOrUnknown(data['officine_id']!, _officineIdMeta),
+      );
+    }
+    if (data.containsKey('boite_id')) {
+      context.handle(
+        _boiteIdMeta,
+        boiteId.isAcceptableOrUnknown(data['boite_id']!, _boiteIdMeta),
+      );
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('heure')) {
+      context.handle(
+        _heureMeta,
+        heure.isAcceptableOrUnknown(data['heure']!, _heureMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_heureMeta);
+    }
+    if (data.containsKey('recurrence_type')) {
+      context.handle(
+        _recurrenceTypeMeta,
+        recurrenceType.isAcceptableOrUnknown(
+          data['recurrence_type']!,
+          _recurrenceTypeMeta,
+        ),
+      );
+    }
+    if (data.containsKey('actif')) {
+      context.handle(
+        _actifMeta,
+        actif.isAcceptableOrUnknown(data['actif']!, _actifMeta),
+      );
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('deleted_at')) {
+      context.handle(
+        _deletedAtMeta,
+        deletedAt.isAcceptableOrUnknown(data['deleted_at']!, _deletedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RappelRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RappelRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      userId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}user_id'],
+      )!,
+      officineId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}officine_id'],
+      ),
+      boiteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}boite_id'],
+      ),
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      heure: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}heure'],
+      )!,
+      recurrenceType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurrence_type'],
+      )!,
+      actif: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}actif'],
+      )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      deletedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}deleted_at'],
+      ),
+    );
+  }
+
+  @override
+  $RappelsTable createAlias(String alias) {
+    return $RappelsTable(attachedDatabase, alias);
+  }
+}
+
+class RappelRow extends DataClass implements Insertable<RappelRow> {
+  final String id;
+  final String userId;
+  final String? officineId;
+  final String? boiteId;
+  final String label;
+  final String heure;
+  final String recurrenceType;
+  final bool actif;
+  final String? notes;
+  final String createdAt;
+  final String updatedAt;
+  final String? deletedAt;
+  const RappelRow({
+    required this.id,
+    required this.userId,
+    this.officineId,
+    this.boiteId,
+    required this.label,
+    required this.heure,
+    required this.recurrenceType,
+    required this.actif,
+    this.notes,
+    required this.createdAt,
+    required this.updatedAt,
+    this.deletedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['user_id'] = Variable<String>(userId);
+    if (!nullToAbsent || officineId != null) {
+      map['officine_id'] = Variable<String>(officineId);
+    }
+    if (!nullToAbsent || boiteId != null) {
+      map['boite_id'] = Variable<String>(boiteId);
+    }
+    map['label'] = Variable<String>(label);
+    map['heure'] = Variable<String>(heure);
+    map['recurrence_type'] = Variable<String>(recurrenceType);
+    map['actif'] = Variable<bool>(actif);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['created_at'] = Variable<String>(createdAt);
+    map['updated_at'] = Variable<String>(updatedAt);
+    if (!nullToAbsent || deletedAt != null) {
+      map['deleted_at'] = Variable<String>(deletedAt);
+    }
+    return map;
+  }
+
+  RappelsCompanion toCompanion(bool nullToAbsent) {
+    return RappelsCompanion(
+      id: Value(id),
+      userId: Value(userId),
+      officineId: officineId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(officineId),
+      boiteId: boiteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(boiteId),
+      label: Value(label),
+      heure: Value(heure),
+      recurrenceType: Value(recurrenceType),
+      actif: Value(actif),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      deletedAt: deletedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAt),
+    );
+  }
+
+  factory RappelRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RappelRow(
+      id: serializer.fromJson<String>(json['id']),
+      userId: serializer.fromJson<String>(json['userId']),
+      officineId: serializer.fromJson<String?>(json['officineId']),
+      boiteId: serializer.fromJson<String?>(json['boiteId']),
+      label: serializer.fromJson<String>(json['label']),
+      heure: serializer.fromJson<String>(json['heure']),
+      recurrenceType: serializer.fromJson<String>(json['recurrenceType']),
+      actif: serializer.fromJson<bool>(json['actif']),
+      notes: serializer.fromJson<String?>(json['notes']),
+      createdAt: serializer.fromJson<String>(json['createdAt']),
+      updatedAt: serializer.fromJson<String>(json['updatedAt']),
+      deletedAt: serializer.fromJson<String?>(json['deletedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'userId': serializer.toJson<String>(userId),
+      'officineId': serializer.toJson<String?>(officineId),
+      'boiteId': serializer.toJson<String?>(boiteId),
+      'label': serializer.toJson<String>(label),
+      'heure': serializer.toJson<String>(heure),
+      'recurrenceType': serializer.toJson<String>(recurrenceType),
+      'actif': serializer.toJson<bool>(actif),
+      'notes': serializer.toJson<String?>(notes),
+      'createdAt': serializer.toJson<String>(createdAt),
+      'updatedAt': serializer.toJson<String>(updatedAt),
+      'deletedAt': serializer.toJson<String?>(deletedAt),
+    };
+  }
+
+  RappelRow copyWith({
+    String? id,
+    String? userId,
+    Value<String?> officineId = const Value.absent(),
+    Value<String?> boiteId = const Value.absent(),
+    String? label,
+    String? heure,
+    String? recurrenceType,
+    bool? actif,
+    Value<String?> notes = const Value.absent(),
+    String? createdAt,
+    String? updatedAt,
+    Value<String?> deletedAt = const Value.absent(),
+  }) => RappelRow(
+    id: id ?? this.id,
+    userId: userId ?? this.userId,
+    officineId: officineId.present ? officineId.value : this.officineId,
+    boiteId: boiteId.present ? boiteId.value : this.boiteId,
+    label: label ?? this.label,
+    heure: heure ?? this.heure,
+    recurrenceType: recurrenceType ?? this.recurrenceType,
+    actif: actif ?? this.actif,
+    notes: notes.present ? notes.value : this.notes,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
+  );
+  RappelRow copyWithCompanion(RappelsCompanion data) {
+    return RappelRow(
+      id: data.id.present ? data.id.value : this.id,
+      userId: data.userId.present ? data.userId.value : this.userId,
+      officineId: data.officineId.present
+          ? data.officineId.value
+          : this.officineId,
+      boiteId: data.boiteId.present ? data.boiteId.value : this.boiteId,
+      label: data.label.present ? data.label.value : this.label,
+      heure: data.heure.present ? data.heure.value : this.heure,
+      recurrenceType: data.recurrenceType.present
+          ? data.recurrenceType.value
+          : this.recurrenceType,
+      actif: data.actif.present ? data.actif.value : this.actif,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RappelRow(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('officineId: $officineId, ')
+          ..write('boiteId: $boiteId, ')
+          ..write('label: $label, ')
+          ..write('heure: $heure, ')
+          ..write('recurrenceType: $recurrenceType, ')
+          ..write('actif: $actif, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    userId,
+    officineId,
+    boiteId,
+    label,
+    heure,
+    recurrenceType,
+    actif,
+    notes,
+    createdAt,
+    updatedAt,
+    deletedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RappelRow &&
+          other.id == this.id &&
+          other.userId == this.userId &&
+          other.officineId == this.officineId &&
+          other.boiteId == this.boiteId &&
+          other.label == this.label &&
+          other.heure == this.heure &&
+          other.recurrenceType == this.recurrenceType &&
+          other.actif == this.actif &&
+          other.notes == this.notes &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.deletedAt == this.deletedAt);
+}
+
+class RappelsCompanion extends UpdateCompanion<RappelRow> {
+  final Value<String> id;
+  final Value<String> userId;
+  final Value<String?> officineId;
+  final Value<String?> boiteId;
+  final Value<String> label;
+  final Value<String> heure;
+  final Value<String> recurrenceType;
+  final Value<bool> actif;
+  final Value<String?> notes;
+  final Value<String> createdAt;
+  final Value<String> updatedAt;
+  final Value<String?> deletedAt;
+  final Value<int> rowid;
+  const RappelsCompanion({
+    this.id = const Value.absent(),
+    this.userId = const Value.absent(),
+    this.officineId = const Value.absent(),
+    this.boiteId = const Value.absent(),
+    this.label = const Value.absent(),
+    this.heure = const Value.absent(),
+    this.recurrenceType = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RappelsCompanion.insert({
+    required String id,
+    required String userId,
+    this.officineId = const Value.absent(),
+    this.boiteId = const Value.absent(),
+    required String label,
+    required String heure,
+    this.recurrenceType = const Value.absent(),
+    this.actif = const Value.absent(),
+    this.notes = const Value.absent(),
+    required String createdAt,
+    required String updatedAt,
+    this.deletedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       userId = Value(userId),
+       label = Value(label),
+       heure = Value(heure),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<RappelRow> custom({
+    Expression<String>? id,
+    Expression<String>? userId,
+    Expression<String>? officineId,
+    Expression<String>? boiteId,
+    Expression<String>? label,
+    Expression<String>? heure,
+    Expression<String>? recurrenceType,
+    Expression<bool>? actif,
+    Expression<String>? notes,
+    Expression<String>? createdAt,
+    Expression<String>? updatedAt,
+    Expression<String>? deletedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (userId != null) 'user_id': userId,
+      if (officineId != null) 'officine_id': officineId,
+      if (boiteId != null) 'boite_id': boiteId,
+      if (label != null) 'label': label,
+      if (heure != null) 'heure': heure,
+      if (recurrenceType != null) 'recurrence_type': recurrenceType,
+      if (actif != null) 'actif': actif,
+      if (notes != null) 'notes': notes,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (deletedAt != null) 'deleted_at': deletedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RappelsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? userId,
+    Value<String?>? officineId,
+    Value<String?>? boiteId,
+    Value<String>? label,
+    Value<String>? heure,
+    Value<String>? recurrenceType,
+    Value<bool>? actif,
+    Value<String?>? notes,
+    Value<String>? createdAt,
+    Value<String>? updatedAt,
+    Value<String?>? deletedAt,
+    Value<int>? rowid,
+  }) {
+    return RappelsCompanion(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      officineId: officineId ?? this.officineId,
+      boiteId: boiteId ?? this.boiteId,
+      label: label ?? this.label,
+      heure: heure ?? this.heure,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
+      actif: actif ?? this.actif,
+      notes: notes ?? this.notes,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      deletedAt: deletedAt ?? this.deletedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (userId.present) {
+      map['user_id'] = Variable<String>(userId.value);
+    }
+    if (officineId.present) {
+      map['officine_id'] = Variable<String>(officineId.value);
+    }
+    if (boiteId.present) {
+      map['boite_id'] = Variable<String>(boiteId.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (heure.present) {
+      map['heure'] = Variable<String>(heure.value);
+    }
+    if (recurrenceType.present) {
+      map['recurrence_type'] = Variable<String>(recurrenceType.value);
+    }
+    if (actif.present) {
+      map['actif'] = Variable<bool>(actif.value);
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<String>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<String>(updatedAt.value);
+    }
+    if (deletedAt.present) {
+      map['deleted_at'] = Variable<String>(deletedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RappelsCompanion(')
+          ..write('id: $id, ')
+          ..write('userId: $userId, ')
+          ..write('officineId: $officineId, ')
+          ..write('boiteId: $boiteId, ')
+          ..write('label: $label, ')
+          ..write('heure: $heure, ')
+          ..write('recurrenceType: $recurrenceType, ')
+          ..write('actif: $actif, ')
+          ..write('notes: $notes, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('deletedAt: $deletedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -2167,6 +2870,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   );
   late final $PendingOperationsTable pendingOperations =
       $PendingOperationsTable(this);
+  late final $RappelsTable rappels = $RappelsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2175,6 +2879,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     boites,
     prisesPlanifiees,
     pendingOperations,
+    rappels,
   ];
 }
 
@@ -3222,6 +3927,340 @@ typedef $$PendingOperationsTableProcessedTableManager =
       PendingOperationRow,
       PrefetchHooks Function()
     >;
+typedef $$RappelsTableCreateCompanionBuilder =
+    RappelsCompanion Function({
+      required String id,
+      required String userId,
+      Value<String?> officineId,
+      Value<String?> boiteId,
+      required String label,
+      required String heure,
+      Value<String> recurrenceType,
+      Value<bool> actif,
+      Value<String?> notes,
+      required String createdAt,
+      required String updatedAt,
+      Value<String?> deletedAt,
+      Value<int> rowid,
+    });
+typedef $$RappelsTableUpdateCompanionBuilder =
+    RappelsCompanion Function({
+      Value<String> id,
+      Value<String> userId,
+      Value<String?> officineId,
+      Value<String?> boiteId,
+      Value<String> label,
+      Value<String> heure,
+      Value<String> recurrenceType,
+      Value<bool> actif,
+      Value<String?> notes,
+      Value<String> createdAt,
+      Value<String> updatedAt,
+      Value<String?> deletedAt,
+      Value<int> rowid,
+    });
+
+class $$RappelsTableFilterComposer
+    extends Composer<_$LocalDatabase, $RappelsTable> {
+  $$RappelsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get officineId => $composableBuilder(
+    column: $table.officineId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get boiteId => $composableBuilder(
+    column: $table.boiteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get heure => $composableBuilder(
+    column: $table.heure,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurrenceType => $composableBuilder(
+    column: $table.recurrenceType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RappelsTableOrderingComposer
+    extends Composer<_$LocalDatabase, $RappelsTable> {
+  $$RappelsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get userId => $composableBuilder(
+    column: $table.userId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get officineId => $composableBuilder(
+    column: $table.officineId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get boiteId => $composableBuilder(
+    column: $table.boiteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get heure => $composableBuilder(
+    column: $table.heure,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get recurrenceType => $composableBuilder(
+    column: $table.recurrenceType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get actif => $composableBuilder(
+    column: $table.actif,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deletedAt => $composableBuilder(
+    column: $table.deletedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RappelsTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $RappelsTable> {
+  $$RappelsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get userId =>
+      $composableBuilder(column: $table.userId, builder: (column) => column);
+
+  GeneratedColumn<String> get officineId => $composableBuilder(
+    column: $table.officineId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get boiteId =>
+      $composableBuilder(column: $table.boiteId, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<String> get heure =>
+      $composableBuilder(column: $table.heure, builder: (column) => column);
+
+  GeneratedColumn<String> get recurrenceType => $composableBuilder(
+    column: $table.recurrenceType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get actif =>
+      $composableBuilder(column: $table.actif, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get deletedAt =>
+      $composableBuilder(column: $table.deletedAt, builder: (column) => column);
+}
+
+class $$RappelsTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $RappelsTable,
+          RappelRow,
+          $$RappelsTableFilterComposer,
+          $$RappelsTableOrderingComposer,
+          $$RappelsTableAnnotationComposer,
+          $$RappelsTableCreateCompanionBuilder,
+          $$RappelsTableUpdateCompanionBuilder,
+          (
+            RappelRow,
+            BaseReferences<_$LocalDatabase, $RappelsTable, RappelRow>,
+          ),
+          RappelRow,
+          PrefetchHooks Function()
+        > {
+  $$RappelsTableTableManager(_$LocalDatabase db, $RappelsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RappelsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RappelsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RappelsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> userId = const Value.absent(),
+                Value<String?> officineId = const Value.absent(),
+                Value<String?> boiteId = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<String> heure = const Value.absent(),
+                Value<String> recurrenceType = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<String> createdAt = const Value.absent(),
+                Value<String> updatedAt = const Value.absent(),
+                Value<String?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RappelsCompanion(
+                id: id,
+                userId: userId,
+                officineId: officineId,
+                boiteId: boiteId,
+                label: label,
+                heure: heure,
+                recurrenceType: recurrenceType,
+                actif: actif,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String userId,
+                Value<String?> officineId = const Value.absent(),
+                Value<String?> boiteId = const Value.absent(),
+                required String label,
+                required String heure,
+                Value<String> recurrenceType = const Value.absent(),
+                Value<bool> actif = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                required String createdAt,
+                required String updatedAt,
+                Value<String?> deletedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RappelsCompanion.insert(
+                id: id,
+                userId: userId,
+                officineId: officineId,
+                boiteId: boiteId,
+                label: label,
+                heure: heure,
+                recurrenceType: recurrenceType,
+                actif: actif,
+                notes: notes,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                deletedAt: deletedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RappelsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $RappelsTable,
+      RappelRow,
+      $$RappelsTableFilterComposer,
+      $$RappelsTableOrderingComposer,
+      $$RappelsTableAnnotationComposer,
+      $$RappelsTableCreateCompanionBuilder,
+      $$RappelsTableUpdateCompanionBuilder,
+      (RappelRow, BaseReferences<_$LocalDatabase, $RappelsTable, RappelRow>),
+      RappelRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -3232,4 +4271,6 @@ class $LocalDatabaseManager {
       $$PrisesPlanifieesTableTableManager(_db, _db.prisesPlanifiees);
   $$PendingOperationsTableTableManager get pendingOperations =>
       $$PendingOperationsTableTableManager(_db, _db.pendingOperations);
+  $$RappelsTableTableManager get rappels =>
+      $$RappelsTableTableManager(_db, _db.rappels);
 }

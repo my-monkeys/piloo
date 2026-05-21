@@ -2716,6 +2716,200 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/rappels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Liste les rappels (actifs et inactifs) de l'utilisateur courant */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListRappelsResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Crée un nouveau rappel */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateRappelInput"];
+                };
+            };
+            responses: {
+                /** @description Rappel créé */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Rappel"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rappels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Supprime (soft-delete) un rappel */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Supprimé */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+                /** @description Rappel inconnu ou pas au user courant */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Met à jour un rappel (toggle actif, change heure, etc.) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRappelInput"];
+                };
+            };
+            responses: {
+                /** @description Rappel mis à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Rappel"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+                /** @description Rappel inconnu ou pas au user courant */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelsApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3364,6 +3558,60 @@ export interface components {
             image_base64: string;
             /** @enum {string} */
             mime_type: "image/jpeg" | "image/png" | "image/webp" | "image/heic";
+        };
+        ListRappelsResponse: {
+            items: components["schemas"]["Rappel"][];
+        };
+        Rappel: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            officine_id: string | null;
+            /** Format: uuid */
+            boite_id: string | null;
+            label: string;
+            heure: string;
+            /** @enum {string} */
+            recurrence_type: "daily";
+            actif: boolean;
+            notes: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        RappelsApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        CreateRappelInput: {
+            label: string;
+            heure: string;
+            /** Format: uuid */
+            officine_id?: string;
+            /** Format: uuid */
+            boite_id?: string;
+            /**
+             * @default daily
+             * @enum {string}
+             */
+            recurrence_type: "daily";
+            notes?: string;
+        };
+        UpdateRappelInput: {
+            label?: string;
+            heure?: string;
+            actif?: boolean;
+            /** Format: uuid */
+            boite_id?: string | null;
+            notes?: string | null;
         };
     };
     responses: never;
