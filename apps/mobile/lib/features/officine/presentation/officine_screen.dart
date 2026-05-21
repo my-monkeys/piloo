@@ -54,6 +54,7 @@ class _Boite implements GroupableBoite {
     required this.meta,
     required this.icon,
     required this.count,
+    this.total,
     this.exp,
     this.state = _BoiteState.ok,
     this.apiBoite,
@@ -65,7 +66,11 @@ class _Boite implements GroupableBoite {
   final String dci;
   final String meta;
   final IconData icon;
+  /// Doses restantes (unitesRestantes côté DB).
   final int count;
+  /// Doses totales de la boîte (unitesInitiales). null quand l'user
+  /// n'a pas renseigné la taille.
+  final int? total;
   final String? exp; // ex: "exp. 08/2026" ou null si périmé
   final _BoiteState state;
   /// Référence à la Boite API quand la card provient de l'API (sinon
@@ -145,7 +150,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           );
           if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
-          final newStock = await _askStock(boite.unitesRestantes);
+          final newStock = await _askStock(boite.unitesRestantes, boite.unitesInitiales);
           if (newStock == null || !mounted) return;
           await updateBoite(
             ref,
@@ -256,9 +261,9 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   /// Sheet de saisie du stock (#102 + #103). Combine :
   ///   - 5 chips "Plein / 3-4 / Moitié / 1-4 / Vide" pour estimation rapide
   ///   - un champ numérique pour comptage précis
-  /// Les chips pré-remplissent le champ, l'utilisateur valide. Retourne
-  /// le nombre d'unités, ou null si annulé.
-  Future<int?> _askStock(int? current) {
+  /// Quand `total` (= unitesInitiales) est connu, les chips affichent
+  /// les doses correspondantes (3/4 d'une boîte de 8 = 6).
+  Future<int?> _askStock(int? current, int? total) {
     return showModalBottomSheet<int>(
       context: context,
       backgroundColor: PilooColors.background,
@@ -266,7 +271,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _StockAdjustSheet(initial: current),
+      builder: (ctx) => _StockAdjustSheet(initial: current, total: total),
     );
   }
 
@@ -468,6 +473,7 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
     meta: meta,
     icon: PhosphorIconsFill.pill,
     count: b.unitesRestantes ?? 1,
+    total: b.unitesInitiales,
     exp: exp,
     state: state,
     apiBoite: b,
@@ -1011,7 +1017,9 @@ class _BoiteCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${boite.count}',
+                  // Affiche "6/8" si la taille est connue, sinon juste "6".
+                  // Plus parlant qu'un nombre seul (on voit où on en est).
+                  boite.total != null ? '${boite.count}/${boite.total}' : '${boite.count}',
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1080,13 +1088,14 @@ class _EmptyOfficine extends StatelessWidget {
 }
 
 class _StockAdjustSheet extends StatefulWidget {
-  const _StockAdjustSheet({required this.initial});
+  const _StockAdjustSheet({required this.initial, this.total});
 
-  /// Stock actuel (= unitesRestantes courant). Sert à pré-remplir le
-  /// champ texte et à indiquer où on en est. Peut être null (boîte
-  /// dont on n'a jamais compté précisément, ex: marquée "Plein" à la
-  /// création).
+  /// Stock actuel (= unitesRestantes courant).
   final int? initial;
+  /// Taille totale connue (= unitesInitiales). Si renseignée, les chips
+  /// calculent des doses correctes (3/4 d'une boîte de 8 = 6). Sinon
+  /// fallback historique sur 32/24/16/8/0.
+  final int? total;
 
   @override
   State<_StockAdjustSheet> createState() => _StockAdjustSheetState();
@@ -1096,16 +1105,29 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.initial?.toString() ?? '');
 
-  /// Valeurs chips standards (alignées avec boite_add_screen `_stockToUnits`).
-  /// Plein = 32 (typique blister 2×16), 3/4 = 24, Moitié = 16, 1/4 = 8, Vide = 0.
-  /// Estimation grossière — l'utilisateur ajuste ensuite si besoin.
-  static const _chips = <({String label, int units})>[
-    (label: 'Plein', units: 32),
-    (label: '3/4', units: 24),
-    (label: 'Moitié', units: 16),
-    (label: '1/4', units: 8),
-    (label: 'Vide', units: 0),
-  ];
+  /// Chips calculés depuis `widget.total` si connu, sinon fallback fixe.
+  /// Préférer toujours renseigner `unitesInitiales` à la création de la
+  /// boîte pour que les chips soient justes.
+  List<({String label, int units})> get _chips {
+    final t = widget.total;
+    if (t != null && t > 0) {
+      final lowest = t >= 4 ? 1 : 0;
+      return [
+        (label: 'Plein · $t', units: t),
+        (label: '3/4 · ${((t * 3) / 4).round()}', units: ((t * 3) / 4).round()),
+        (label: 'Moitié · ${(t / 2).round()}', units: (t / 2).round()),
+        (label: '1/4 · ${(t / 4).round()}', units: (t / 4).round()),
+        (label: 'Vide', units: lowest == 1 ? 1 : 0),
+      ];
+    }
+    return const [
+      (label: 'Plein', units: 32),
+      (label: '3/4', units: 24),
+      (label: 'Moitié', units: 16),
+      (label: '1/4', units: 8),
+      (label: 'Vide', units: 0),
+    ];
+  }
 
   @override
   void dispose() {

@@ -44,6 +44,10 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   _StockLevel _stock = _StockLevel.plein;
   final _notesCtrl = TextEditingController();
   final _lotCtrl = TextEditingController();
+  /// Nombre total de doses dans la boîte (taille de la présentation).
+  /// Vide tant que l'user ne l'a pas renseigné — sans ça les chips
+  /// fractionnels (3/4, 1/4, etc.) ne peuvent pas calculer correctement.
+  final _totalDosesCtrl = TextEditingController();
   // Péremption : on stocke (mois, année) pour rester aligné avec ce
   // qu'on récupère du DataMatrix (AI 17 = YYMM).
   int _expMonth = 3;
@@ -93,7 +97,19 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   void dispose() {
     _notesCtrl.dispose();
     _lotCtrl.dispose();
+    _totalDosesCtrl.dispose();
     super.dispose();
+  }
+
+  /// Taille de la boîte parsée depuis le champ utilisateur, ou null si
+  /// non renseignée / invalide. Utilisée pour calculer les chips
+  /// fractionnels (3/4 = total × 0.75 arrondi).
+  int? get _totalDoses {
+    final raw = _totalDosesCtrl.text.trim();
+    if (raw.isEmpty) return null;
+    final n = int.tryParse(raw);
+    if (n == null || n <= 0) return null;
+    return n;
   }
 
   Future<void> _editPeremption() async {
@@ -145,12 +161,14 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
 
     setState(() => _saving = true);
     try {
+      final total = _totalDoses;
       await createBoite(
         ref,
         officineId: officineId,
         cip13: cip13,
         peremption: _peremptionDate(),
         lot: _lotCtrl.text.trim().isEmpty ? null : _lotCtrl.text.trim(),
+        unitesInitiales: total,
         unitesRestantes: _stockToUnits(_stock),
         notes: notes,
       );
@@ -182,13 +200,34 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
     return api.Date(_expYear, _expMonth, lastDay);
   }
 
-  int? _stockToUnits(_StockLevel level) => switch (level) {
-        _StockLevel.plein => null, // unitesInitiales/restantes inconnues
-        _StockLevel.troisQuarts => 24,
-        _StockLevel.moitie => 16,
-        _StockLevel.unQuart => 8,
-        _StockLevel.presqueVide => 2,
+  /// Convertit le niveau choisi en doses restantes RÉELLES, en fonction
+  /// de la taille de la boîte (`_totalDoses`).
+  ///
+  /// Sans taille connue, on tombe en fallback sur des valeurs typiques
+  /// d'une boîte de ~30 doses (cas blister 2×16) — toujours mieux que
+  /// l'ancien comportement (3/4 = 24 même pour une boîte de 8), MAIS
+  /// l'utilisateur devrait renseigner _totalDoses pour un calcul correct.
+  int? _stockToUnits(_StockLevel level) {
+    final total = _totalDoses;
+    if (total != null) {
+      return switch (level) {
+        _StockLevel.plein => total,
+        _StockLevel.troisQuarts => ((total * 3) / 4).round(),
+        _StockLevel.moitie => (total / 2).round(),
+        _StockLevel.unQuart => (total / 4).round(),
+        _StockLevel.presqueVide => total >= 4 ? 1 : 0,
       };
+    }
+    // Fallback historique — utilisé seulement si l'user ne renseigne pas
+    // _totalDoses. À éviter en pratique.
+    return switch (level) {
+      _StockLevel.plein => null,
+      _StockLevel.troisQuarts => 24,
+      _StockLevel.moitie => 16,
+      _StockLevel.unQuart => 8,
+      _StockLevel.presqueVide => 2,
+    };
+  }
 
   Future<void> _pickOfficine() async {
     final list = ref.read(officinesListProvider).valueOrNull ?? const [];
@@ -284,8 +323,11 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    _TotalDosesField(controller: _totalDosesCtrl, onChanged: () => setState(() {})),
+                    const SizedBox(height: 12),
                     _StockChips(
                       value: _stock,
+                      total: _totalDoses,
                       onChanged: (v) => setState(() => _stock = v),
                     ),
                     const SizedBox(height: 16),
@@ -575,10 +617,14 @@ class _ValueRow extends StatelessWidget {
 }
 
 class _StockChips extends StatelessWidget {
-  const _StockChips({required this.value, required this.onChanged});
+  const _StockChips({required this.value, required this.onChanged, this.total});
 
   final _StockLevel value;
   final ValueChanged<_StockLevel> onChanged;
+  /// Taille totale de la boîte (renseignée via _TotalDosesField). Quand
+  /// connue, les labels affichent les doses correspondantes
+  /// (ex. "3/4 (6)" pour une boîte de 8) — sinon juste le libellé fractionnel.
+  final int? total;
 
   static const _options = [
     (_StockLevel.plein, 'Plein'),
@@ -587,6 +633,18 @@ class _StockChips extends StatelessWidget {
     (_StockLevel.unQuart, '1/4'),
     (_StockLevel.presqueVide, 'Presque vide'),
   ];
+
+  String _labelFor(_StockLevel level, String base) {
+    if (total == null) return base;
+    final n = switch (level) {
+      _StockLevel.plein => total!,
+      _StockLevel.troisQuarts => ((total! * 3) / 4).round(),
+      _StockLevel.moitie => (total! / 2).round(),
+      _StockLevel.unQuart => (total! / 4).round(),
+      _StockLevel.presqueVide => total! >= 4 ? 1 : 0,
+    };
+    return '$base · $n';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -598,13 +656,55 @@ class _StockChips extends StatelessWidget {
             if (i > 0) const SizedBox(width: 6),
             Expanded(
               child: _StockChip(
-                label: _options[i].$2,
+                label: _labelFor(_options[i].$1, _options[i].$2),
                 selected: value == _options[i].$1,
                 onTap: () => onChanged(_options[i].$1),
               ),
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _TotalDosesField extends StatelessWidget {
+  const _TotalDosesField({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Field(
+      label: 'DOSES PAR BOÎTE',
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        alignment: Alignment.centerLeft,
+        child: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => onChanged(),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            isDense: true,
+            hintText: 'ex. 30 (comprimés, sachets, doses…)',
+            hintStyle: GoogleFonts.manrope(
+              fontSize: 13,
+              color: PilooColors.textTertiary,
+            ),
+          ),
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: PilooColors.textPrimary,
+          ),
+        ),
       ),
     );
   }
