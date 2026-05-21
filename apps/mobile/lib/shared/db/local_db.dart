@@ -18,7 +18,9 @@ import 'tables.dart';
 
 part 'local_db.g.dart';
 
-@DriftDatabase(tables: [Boites, PrisesPlanifiees, PendingOperations, BdpmNoticesLocal])
+@DriftDatabase(
+  tables: [Boites, PrisesPlanifiees, PendingOperations, BdpmNoticesLocal, Rappels],
+)
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(driftDatabase(name: 'piloo_local'));
 
@@ -43,9 +45,13 @@ class LocalDatabase extends _$LocalDatabase {
             await _createPendingOpsIndex(m);
           }
           if (from < 3) {
-            // v3 : cache local des notices ANSM (pull au moment de
-            // l'ajout d'une boîte). Voir bdpm_notice_provider.dart.
+            // v3 : nouvelles tables miroir
+            //  - bdpm_notices_local : cache local notices ANSM (cf.
+            //    bdpm_notice_provider.dart)
+            //  - rappels (#327) : rappels simples sans ordonnance
+            //    (pilule, vitamine, etc.)
             await m.createTable(bdpmNoticesLocal);
+            await m.createTable(rappels);
           }
         },
       );

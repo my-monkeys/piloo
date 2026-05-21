@@ -70,6 +70,11 @@ class MoreScreen extends ConsumerWidget {
           routeName: RouteName.ordonnances,
         ),
         const _Row(
+          icon: PhosphorIconsRegular.bell,
+          label: 'Rappels simples',
+          routeName: RouteName.rappels,
+        ),
+        const _Row(
           icon: PhosphorIconsRegular.bellRinging,
           label: 'Notifications',
           routeName: RouteName.settingsNotifications,

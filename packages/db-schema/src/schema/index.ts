@@ -12,3 +12,4 @@ export * from './alertes.ts';
 export * from './sync.ts';
 export * from './devices.ts';
 export * from './invitations.ts';
+export * from './rappels.ts';
