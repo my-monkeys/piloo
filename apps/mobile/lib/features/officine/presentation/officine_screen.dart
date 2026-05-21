@@ -38,6 +38,8 @@ import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
@@ -298,13 +300,17 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     final boitesAsync = activeOfficine == null
         ? const AsyncValue<List<api.Boite>>.data([])
         : ref.watch(boitesProvider(activeOfficine.id));
+    // BDPM SQLite locale pour résoudre cip13 → denomination/dosage/forme
+    // sans aller chercher la dénomination dans les notes (bug historique
+    // où la card affichait "CIP 3400xxx" au lieu du nom).
+    final bdpmDb = ref.watch(bdpmDbProvider).valueOrNull;
     final source = boitesAsync.maybeWhen(
       data: (rows) => rows
           // Boîtes vidées : on les retire de l'affichage — l'utilisateur
           // a marqué la boîte épuisée, plus aucune action utile dessus.
           // Elles restent en DB (historique, agrégats stock_bas).
           .where((b) => b.statut != api.BoiteStatutEnum.vide && (b.unitesRestantes ?? 1) > 0)
-          .map(_mapApiBoite)
+          .map((b) => _mapApiBoite(b, bdpmDb))
           .toList(growable: false),
       orElse: () => const <_Boite>[],
     );
@@ -419,24 +425,46 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
 
 /// Mappe une `Boite` API → modèle d'affichage local.
 ///
-/// Convention : on stocke le nom BDPM en préfixe des notes
-/// ("NOM // notes libres") au moment de la création depuis le scan
-/// (#84/#89). Côté lecture on extrait. Sans préfixe, fallback CIP13.
-/// Un futur ticket ajoutera une colonne dédiée `nom_texte` côté DB,
-/// pour ne plus faire ce parsing — gardé minimal en attendant.
-_Boite _mapApiBoite(api.Boite b) {
+/// Stratégie d'affichage du nom (priorité décroissante) :
+///   1. BDPM SQLite locale (instantané, offline) : `denomination` →
+///      meilleure source, donne aussi forme + dosage pour la `meta`.
+///   2. Préfixe historique des notes (`NOM // notes libres`) — convention
+///      utilisée par le scan-flow avant que la BDPM mobile soit dispo.
+///   3. Fallback `CIP {cip13}` si rien d'autre.
+///
+/// Sans BDPM locale (avant 1er sync) ou cip13 hors base (médoc rare),
+/// on retombe sur 2 ou 3.
+_Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
   final parts = _splitNotes(b.notes);
-  final name = parts.name ?? 'CIP ${b.cip13}';
-  final meta = parts.name != null
-      ? 'CIP ${b.cip13}'
-      : (b.lot != null ? 'lot ${b.lot}' : '—');
+
+  String name;
+  String dci;
+  String meta;
+  final bdpmHit = bdpm?.findByCip13(b.cip13);
+  if (bdpmHit != null) {
+    name = bdpmHit.denomination;
+    dci = [bdpmHit.dosage, bdpmHit.forme]
+        .where((s) => s != null && s.isNotEmpty)
+        .join(' · ');
+    if (dci.isEmpty) dci = name;
+    meta = b.lot != null ? 'lot ${b.lot}' : 'CIP ${b.cip13}';
+  } else if (parts.name != null) {
+    name = parts.name!;
+    dci = name;
+    meta = 'CIP ${b.cip13}';
+  } else {
+    name = 'CIP ${b.cip13}';
+    dci = name;
+    meta = b.lot != null ? 'lot ${b.lot}' : '—';
+  }
+
   final state = _deriveState(b);
   final exp = state == _BoiteState.perime
       ? null
       : _formatPeremption(b.peremption);
   return _Boite(
     name: name,
-    dci: name,
+    dci: dci,
     meta: meta,
     icon: PhosphorIconsFill.pill,
     count: b.unitesRestantes ?? 1,
