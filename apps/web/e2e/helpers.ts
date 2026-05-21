@@ -68,22 +68,19 @@ export async function signUpViaUi(page: Page, user: TestUser): Promise<void> {
 
 /** Récupère la première officine de l'user authentifié et fixe le cookie
  *  `piloo_active_officine` pour que les pages /inventory et /ordonnances
- *  affichent la table au lieu de "Aucune officine sélectionnée". Plus
- *  fiable que de cliquer le bouton Activer du settings (qui dépend du
- *  rendu de la page). */
-export async function activateFirstOfficine(context: BrowserContext, page: Page): Promise<void> {
+ *  affichent la table au lieu de "Aucune officine sélectionnée".
+ *
+ *  Pose le cookie via document.cookie (même mécanisme que le code React
+ *  prod), plus fiable que context.addCookies qui parfois rate la scope. */
+export async function activateFirstOfficine(_context: BrowserContext, page: Page): Promise<string> {
   const res = await page.request.get('/api/v1/officines');
   if (!res.ok()) throw new Error(`GET /v1/officines failed: ${String(res.status())}`);
   const body = (await res.json()) as { items?: { id: string }[] };
   const first = body.items?.[0];
   if (!first)
     throw new Error('Aucune officine retournée par /v1/officines (hook auto-create cassé ?)');
-  await context.addCookies([
-    {
-      name: 'piloo_active_officine',
-      value: first.id,
-      url: page.url() || 'http://localhost:3100/',
-      sameSite: 'Lax',
-    },
-  ]);
+  await page.evaluate((id) => {
+    document.cookie = `piloo_active_officine=${id}; path=/; max-age=31536000; samesite=lax`;
+  }, first.id);
+  return first.id;
 }
