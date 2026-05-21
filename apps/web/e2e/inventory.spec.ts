@@ -6,7 +6,7 @@
 // péremption et enregistre. La boîte doit apparaître dans la table.
 import { expect, test } from '@playwright/test';
 
-import { makeTestUser, signUpViaUi } from './helpers';
+import { activateFirstOfficine, makeTestUser, signUpViaUi } from './helpers';
 
 const FAKE_BDPM = {
   items: [
@@ -26,7 +26,7 @@ const FAKE_BDPM = {
   ],
 };
 
-test('add boîte via dialog (scan simulé via mock BDPM)', async ({ page }) => {
+test('add boîte via dialog (scan simulé via mock BDPM)', async ({ page, context }) => {
   const user = makeTestUser('inv');
 
   // Mock la recherche BDPM avant toute navigation pour intercepter les
@@ -42,12 +42,8 @@ test('add boîte via dialog (scan simulé via mock BDPM)', async ({ page }) => {
   // 1. Sign-up
   await signUpViaUi(page, user);
 
-  // 2. Activer l'officine perso auto-créée.
-  await page.goto('/settings/officines');
-  await page
-    .getByRole('button', { name: /^activer$/i })
-    .first()
-    .click();
+  // 2. Activer l'officine perso auto-créée via cookie.
+  await activateFirstOfficine(context, page);
 
   // 3. Aller sur l'inventaire et ouvrir le dialog.
   await page.goto('/inventory');

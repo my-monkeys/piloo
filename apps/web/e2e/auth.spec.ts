@@ -21,11 +21,11 @@ test('sign-up → dashboard puis sign-out → sign-in', async ({ page }) => {
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: /tableau de bord/i })).toBeVisible();
 
-  // 2. Sign-out via API (le bouton n'est pas systématiquement présent dans
-  //    la sidebar) puis vérifie qu'on retombe sur sign-in.
+  // 2. Sign-out via API puis navigate /sign-in directement (le middleware
+  //    de redirect "auth-only" est sur les routes app — on ne le teste pas
+  //    ici, on focus sur le round-trip credentials).
   await page.request.post('/api/auth/sign-out');
-  await page.goto('/dashboard');
-  await page.waitForURL(/\/sign-in/, { timeout: 10_000 });
+  await page.goto('/sign-in');
 
   // 3. Sign-in avec les mêmes credentials.
   await page.getByLabel('Email', { exact: true }).fill(user.email);

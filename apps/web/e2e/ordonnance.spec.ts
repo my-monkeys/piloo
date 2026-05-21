@@ -4,9 +4,9 @@
 // BDPM seedé) et vérifie qu'elle apparaît dans la table.
 import { expect, test } from '@playwright/test';
 
-import { makeTestUser, signUpViaUi } from './helpers';
+import { activateFirstOfficine, makeTestUser, signUpViaUi } from './helpers';
 
-test('create ordonnance puis affichage en liste', async ({ page }) => {
+test('create ordonnance puis affichage en liste', async ({ page, context }) => {
   const user = makeTestUser('ord');
 
   // Mock BDPM pour retourner zéro résultat (évite que le composant
@@ -23,12 +23,8 @@ test('create ordonnance puis affichage en liste', async ({ page }) => {
   // 1. Sign-up
   await signUpViaUi(page, user);
 
-  // 2. Activer l'officine perso auto-créée.
-  await page.goto('/settings/officines');
-  await page
-    .getByRole('button', { name: /^activer$/i })
-    .first()
-    .click();
+  // 2. Activer l'officine perso auto-créée via cookie.
+  await activateFirstOfficine(context, page);
 
   // 3. Aller sur ordonnances + ouvrir le dialog.
   await page.goto('/ordonnances');
