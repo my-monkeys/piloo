@@ -78,6 +78,29 @@ export type BdpmDiffResponse = z.infer<typeof BdpmDiffResponseSchema>;
 export type BdpmSearchQuery = z.infer<typeof BdpmSearchQuerySchema>;
 export type BdpmSearchResponse = z.infer<typeof BdpmSearchResponseSchema>;
 
+/// Sections de la notice RCP scrapées sur la base ANSM publique.
+/// L'app les affiche tels quels (relais d'information publique, sans
+/// transformation — hors scope MDR cf. positionnement non-dispositif-médical).
+export const BdpmNoticeSectionSchema = z
+  .object({
+    number: z.string(),
+    title: z.string(),
+    text: z.string(),
+  })
+  .openapi('BdpmNoticeSection');
+
+export const BdpmNoticeResponseSchema = z
+  .object({
+    cis: z.string(),
+    source_url: z.url(),
+    scraped_at: z.iso.datetime(),
+    sections: z.array(BdpmNoticeSectionSchema),
+  })
+  .openapi('BdpmNoticeResponse');
+
+export type BdpmNoticeSection = z.infer<typeof BdpmNoticeSectionSchema>;
+export type BdpmNoticeResponse = z.infer<typeof BdpmNoticeResponseSchema>;
+
 const ApiErrorSchema = z
   .object({
     error: z.object({
@@ -143,6 +166,22 @@ registry.registerPath({
     },
     304: {
       description: 'Version inchangée, pas de re-download nécessaire',
+    },
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/bdpm/{cis}/notice',
+  summary: 'Sections du RCP (notice) scrapées sur la base ANSM publique',
+  description:
+    "Scrape la page http://base-donnees-publique.medicaments.gouv.fr/medicament/{cis}/extrait et retourne les sections 4.1 à 4.9 du RCP (indications, posologie, contre-indications, effets indésirables, etc.). Contenu relayé tel quel — Piloo n'altère pas le texte ANSM pour rester hors MDR.",
+  tags: ['bdpm'],
+  request: { params: z.object({ cis: z.string().min(1) }) },
+  responses: {
+    200: {
+      description: 'Notice scrapée',
+      content: { 'application/json': { schema: BdpmNoticeResponseSchema } },
     },
   },
 });

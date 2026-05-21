@@ -1405,6 +1405,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/bdpm/{cis}/notice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sections du RCP (notice) scrapées sur la base ANSM publique
+         * @description Scrape la page http://base-donnees-publique.medicaments.gouv.fr/medicament/{cis}/extrait et retourne les sections 4.1 à 4.9 du RCP (indications, posologie, contre-indications, effets indésirables, etc.). Contenu relayé tel quel — Piloo n'altère pas le texte ANSM pour rester hors MDR.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    cis: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Notice scrapée */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BdpmNoticeResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/bdpm/search": {
         parameters: {
             query?: never;
@@ -3075,6 +3116,19 @@ export interface components {
                     [key: string]: unknown;
                 };
             };
+        };
+        BdpmNoticeResponse: {
+            cis: string;
+            /** Format: uri */
+            source_url: string;
+            /** Format: date-time */
+            scraped_at: string;
+            sections: components["schemas"]["BdpmNoticeSection"][];
+        };
+        BdpmNoticeSection: {
+            number: string;
+            title: string;
+            text: string;
         };
         BdpmSearchResponse: {
             items: components["schemas"]["BdpmMedicament"][];

@@ -943,6 +943,39 @@ components:
             - message
       required:
         - error
+    BdpmNoticeResponse:
+      type: object
+      properties:
+        cis:
+          type: string
+        source_url:
+          type: string
+          format: uri
+        scraped_at:
+          type: string
+          format: date-time
+        sections:
+          type: array
+          items:
+            $ref: "#/components/schemas/BdpmNoticeSection"
+      required:
+        - cis
+        - source_url
+        - scraped_at
+        - sections
+    BdpmNoticeSection:
+      type: object
+      properties:
+        number:
+          type: string
+        title:
+          type: string
+        text:
+          type: string
+      required:
+        - number
+        - title
+        - text
     BdpmSearchResponse:
       type: object
       properties:
@@ -2573,6 +2606,26 @@ paths:
                 format: binary
         "304":
           description: Version inchangée, pas de re-download nécessaire
+  /v1/bdpm/{cis}/notice:
+    get:
+      summary: Sections du RCP (notice) scrapées sur la base ANSM publique
+      description: Scrape la page http://base-donnees-publique.medicaments.gouv.fr/medicament/{cis}/extrait et retourne les sections 4.1 à 4.9 du RCP (indications, posologie, contre-indications, effets indésirables, etc.). Contenu relayé tel quel — Piloo n'altère pas le texte ANSM pour rester hors MDR.
+      tags:
+        - bdpm
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+          required: true
+          name: cis
+          in: path
+      responses:
+        "200":
+          description: Notice scrapée
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmNoticeResponse"
   /v1/bdpm/search:
     get:
       summary: Recherche un médicament BDPM par nom ou CIP

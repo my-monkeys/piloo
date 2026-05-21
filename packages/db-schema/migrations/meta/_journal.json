@@ -85,6 +85,13 @@
       "when": 1779277885318,
       "tag": "0011_low_retro_girl",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1779374313517,
+      "tag": "0012_true_raider",
+      "breakpoints": true
     }
   ]
 }

@@ -19,27 +19,32 @@ import 'bdpm_provider.dart';
 
 final bdpmLookupProvider =
     FutureProvider.family<BdpmMedicament?, String>((ref, cip13) async {
-  // 1. Local d'abord.
+  // 1. Local d'abord (instant + offline).
   final dbAsync = ref.watch(bdpmDbProvider);
   final db = dbAsync.valueOrNull;
-  if (db != null) {
-    final local = db.findByCip13(cip13);
-    if (local != null) return local;
+  final local = db?.findByCip13(cip13);
+
+  // Si le local a TOUT (y compris ai_summary), on retourne direct.
+  // Si pas d'ai_summary, on tente l'API en parallèle pour enrichir —
+  // cas typique d'un fichier SQLite téléchargé avant la génération
+  // des résumés IA (#165) côté serveur.
+  if (local != null && local.aiSummary != null && local.aiSummary!.isNotEmpty) {
+    return local;
   }
 
-  // 2. Fallback API.
+  // 2. Fallback / enrichissement via API.
   try {
     final client = ref.read(pilooApiClientProvider).getBdpmApi();
     final res = await client.v1BdpmSearchGet(q: cip13);
     final items = res.data?.items.toList() ?? const <api.BdpmMedicament>[];
-    if (items.isEmpty) return null;
+    if (items.isEmpty) return local; // pas de fallback API, on garde local.
     final match = items.firstWhere(
       (m) => m.cip13 == cip13,
       orElse: () => items.first,
     );
     return _fromApi(match);
   } catch (_) {
-    return null;
+    return local; // on a au moins le local si l'API rate.
   }
 });
 
