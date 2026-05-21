@@ -10,6 +10,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
     "audit:logs": "node scripts/audit-logs.mjs",
     "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs",
     "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs",
@@ -39,6 +41,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",

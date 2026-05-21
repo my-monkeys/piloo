@@ -170,8 +170,10 @@ export function getAuth(): AuthInstance {
     baseURL: process.env['BETTER_AUTH_URL'] ?? 'http://localhost:3000',
     apple: APPLE_CONFIG,
     google: GOOGLE_CONFIG,
-    // Prod : magic link 1h obligatoire (#62).
-    requireEmailVerification: true,
+    // Prod : magic link 1h obligatoire (#62). Désactivable via
+    // `PILOO_DISABLE_EMAIL_VERIFICATION=1` pour les E2E Playwright (#141)
+    // qui ne peuvent pas orchestrer le clic dans un mail.
+    requireEmailVerification: process.env['PILOO_DISABLE_EMAIL_VERIFICATION'] !== '1',
   });
   return cached;
 }

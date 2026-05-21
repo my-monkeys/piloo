@@ -1,0 +1,78 @@
+name: e2e
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/**"
+      - "packages/**"
+      - ".github/workflows/e2e.yml"
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright (web)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: piloo
+          POSTGRES_PASSWORD: piloo
+          POSTGRES_DB: piloo_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://piloo:piloo@localhost:5432/piloo_e2e
+      DATABASE_POOL_URL: postgres://piloo:piloo@localhost:5432/piloo_e2e
+      BETTER_AUTH_SECRET: e2e-secret-not-used-in-prod-1234567890abcdef
+      BETTER_AUTH_URL: http://localhost:3100
+      NEXT_PUBLIC_APP_URL: http://localhost:3100
+      PILOO_DISABLE_EMAIL_VERIFICATION: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate OpenAPI clients
+        run: pnpm openapi:generate
+
+      - name: Apply DB migrations
+        run: pnpm db:migrate
+
+      - name: Install Playwright browser (Chromium)
+        run: pnpm --filter web exec playwright install --with-deps chromium
+
+      - name: Run E2E
+        run: pnpm --filter web e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report
+          retention-days: 7
