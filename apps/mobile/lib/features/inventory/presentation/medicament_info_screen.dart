@@ -12,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
@@ -81,11 +82,15 @@ class _LoadedView extends StatelessWidget {
             const SizedBox(height: 20),
             _AiSummary(text: med.aiSummary!),
           ],
+          const SizedBox(height: 16),
+          // Notice officielle ANSM — c'est LA source autoritative pour
+          // posologie + effets secondaires + interactions. Mise en CTA
+          // primary parce que Piloo ne porte délibérément pas ces données
+          // (positionnement non-MDR, cf. CLAUDE.md).
+          _NoticeButton(cis: med.cis),
           const SizedBox(height: 20),
           _InfosTable(med: med),
-          const SizedBox(height: 20),
-          _NoticeButton(cip13: med.cip13),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _Disclaimer(),
         ],
       ),
@@ -301,49 +306,72 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _NoticeButton extends StatelessWidget {
-  const _NoticeButton({required this.cip13});
+  const _NoticeButton({required this.cis});
 
-  final String? cip13;
+  final String cis;
+
+  /// URL du RCP officiel ANSM via la base de données publique des
+  /// médicaments. Le `specid` est le CIS. C'est la seule source légale
+  /// pour la posologie, les effets indésirables et les interactions —
+  /// Piloo ne porte pas ces données directement (cf. positionnement
+  /// non-dispositif-médical).
+  Uri get _noticeUrl =>
+      Uri.parse('https://base-donnees-publique.medicaments.gouv.fr/extrait.php?specid=$cis');
 
   @override
   Widget build(BuildContext context) {
-    if (cip13 == null) return const SizedBox.shrink();
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () async {
-        // Pas de url_launcher dans les deps pour l'instant — on copie
-        // le CIP13 dans le presse-papier comme fallback pratique (le
-        // user peut ouvrir base-donnees-publique.medicaments.gouv.fr).
-        await Clipboard.setData(ClipboardData(text: cip13!));
-        if (context.mounted) {
-          PilooToast.info(context, 'CIP13 copié dans le presse-papier.');
-        }
+        final ok = await launchUrl(_noticeUrl, mode: LaunchMode.externalApplication);
+        if (ok || !context.mounted) return;
+        await Clipboard.setData(ClipboardData(text: _noticeUrl.toString()));
+        if (!context.mounted) return;
+        PilooToast.info(context, 'Lien copié — colle-le dans ton navigateur.');
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
+          color: PilooColors.primary,
           borderRadius: BorderRadius.circular(PilooRadius.md),
-          border: Border.all(color: PilooColors.border),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              PhosphorIconsRegular.copy,
-              size: 16,
-              color: PilooColors.primary,
+              PhosphorIconsFill.fileText,
+              size: 18,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 10),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Voir la notice officielle',
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    'posologie · effets · interactions',
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      color: Colors.white.withValues(alpha: 0.85),
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                'Copier le CIP13',
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.manrope(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: PilooColors.primary,
-                ),
-              ),
+            const Icon(
+              PhosphorIconsRegular.arrowSquareOut,
+              size: 16,
+              color: Colors.white,
             ),
           ],
         ),
@@ -355,16 +383,34 @@ class _NoticeButton extends StatelessWidget {
 class _Disclaimer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Informations BDPM (base de données publique des médicaments). '
-      "À titre indicatif. Pour toute question, consulte ton médecin "
-      'ou pharmacien.',
-      textAlign: TextAlign.center,
-      style: GoogleFonts.manrope(
-        fontSize: 11,
-        fontStyle: FontStyle.italic,
-        color: PilooColors.textTertiary,
-        height: 1.5,
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PilooColors.surfaceSubtle,
+        borderRadius: BorderRadius.circular(PilooRadius.md),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            PhosphorIconsRegular.info,
+            size: 16,
+            color: PilooColors.textSecondary,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "Piloo est un carnet de suivi personnel, pas un substitut au médecin. "
+              "Pour la posologie, les effets secondaires et les interactions, "
+              "consulte la notice officielle ci-dessus ou ton pharmacien.",
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                color: PilooColors.textSecondary,
+                height: 1.5,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

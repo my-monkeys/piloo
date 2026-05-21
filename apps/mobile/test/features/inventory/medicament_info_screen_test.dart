@@ -57,8 +57,11 @@ void main() {
       expect(find.text('Remboursement'), findsOneWidget);
       expect(find.text('65%'), findsOneWidget);
       expect(find.text(_cip), findsOneWidget);
-      expect(find.text('Copier le CIP13'), findsOneWidget);
-      expect(find.textContaining('À titre indicatif'), findsOneWidget);
+      // CTA primaire vers le RCP ANSM (remplace l'ancien "Copier le CIP13").
+      expect(find.text('Voir la notice officielle'), findsOneWidget);
+      expect(find.textContaining('posologie'), findsAtLeast(1));
+      // Disclaimer reformulé : pose le positionnement non-MDR explicitement.
+      expect(find.textContaining('carnet de suivi personnel'), findsOneWidget);
     });
 
     testWidgets('empty state quand le CIP est inconnu', (tester) async {

@@ -38,6 +38,8 @@ import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
@@ -52,6 +54,7 @@ class _Boite implements GroupableBoite {
     required this.meta,
     required this.icon,
     required this.count,
+    this.total,
     this.exp,
     this.state = _BoiteState.ok,
     this.apiBoite,
@@ -63,7 +66,11 @@ class _Boite implements GroupableBoite {
   final String dci;
   final String meta;
   final IconData icon;
+  /// Doses restantes (unitesRestantes côté DB).
   final int count;
+  /// Doses totales de la boîte (unitesInitiales). null quand l'user
+  /// n'a pas renseigné la taille.
+  final int? total;
   final String? exp; // ex: "exp. 08/2026" ou null si périmé
   final _BoiteState state;
   /// Référence à la Boite API quand la card provient de l'API (sinon
@@ -143,7 +150,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           );
           if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
-          final newStock = await _askStock(boite.unitesRestantes);
+          final newStock = await _askStock(boite.unitesRestantes, boite.unitesInitiales);
           if (newStock == null || !mounted) return;
           await updateBoite(
             ref,
@@ -254,9 +261,9 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   /// Sheet de saisie du stock (#102 + #103). Combine :
   ///   - 5 chips "Plein / 3-4 / Moitié / 1-4 / Vide" pour estimation rapide
   ///   - un champ numérique pour comptage précis
-  /// Les chips pré-remplissent le champ, l'utilisateur valide. Retourne
-  /// le nombre d'unités, ou null si annulé.
-  Future<int?> _askStock(int? current) {
+  /// Quand `total` (= unitesInitiales) est connu, les chips affichent
+  /// les doses correspondantes (3/4 d'une boîte de 8 = 6).
+  Future<int?> _askStock(int? current, int? total) {
     return showModalBottomSheet<int>(
       context: context,
       backgroundColor: PilooColors.background,
@@ -264,7 +271,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _StockAdjustSheet(initial: current),
+      builder: (ctx) => _StockAdjustSheet(initial: current, total: total),
     );
   }
 
@@ -298,13 +305,17 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     final boitesAsync = activeOfficine == null
         ? const AsyncValue<List<api.Boite>>.data([])
         : ref.watch(boitesProvider(activeOfficine.id));
+    // BDPM SQLite locale pour résoudre cip13 → denomination/dosage/forme
+    // sans aller chercher la dénomination dans les notes (bug historique
+    // où la card affichait "CIP 3400xxx" au lieu du nom).
+    final bdpmDb = ref.watch(bdpmDbProvider).valueOrNull;
     final source = boitesAsync.maybeWhen(
       data: (rows) => rows
           // Boîtes vidées : on les retire de l'affichage — l'utilisateur
           // a marqué la boîte épuisée, plus aucune action utile dessus.
           // Elles restent en DB (historique, agrégats stock_bas).
           .where((b) => b.statut != api.BoiteStatutEnum.vide && (b.unitesRestantes ?? 1) > 0)
-          .map(_mapApiBoite)
+          .map((b) => _mapApiBoite(b, bdpmDb))
           .toList(growable: false),
       orElse: () => const <_Boite>[],
     );
@@ -419,27 +430,50 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
 
 /// Mappe une `Boite` API → modèle d'affichage local.
 ///
-/// Convention : on stocke le nom BDPM en préfixe des notes
-/// ("NOM // notes libres") au moment de la création depuis le scan
-/// (#84/#89). Côté lecture on extrait. Sans préfixe, fallback CIP13.
-/// Un futur ticket ajoutera une colonne dédiée `nom_texte` côté DB,
-/// pour ne plus faire ce parsing — gardé minimal en attendant.
-_Boite _mapApiBoite(api.Boite b) {
+/// Stratégie d'affichage du nom (priorité décroissante) :
+///   1. BDPM SQLite locale (instantané, offline) : `denomination` →
+///      meilleure source, donne aussi forme + dosage pour la `meta`.
+///   2. Préfixe historique des notes (`NOM // notes libres`) — convention
+///      utilisée par le scan-flow avant que la BDPM mobile soit dispo.
+///   3. Fallback `CIP {cip13}` si rien d'autre.
+///
+/// Sans BDPM locale (avant 1er sync) ou cip13 hors base (médoc rare),
+/// on retombe sur 2 ou 3.
+_Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
   final parts = _splitNotes(b.notes);
-  final name = parts.name ?? 'CIP ${b.cip13}';
-  final meta = parts.name != null
-      ? 'CIP ${b.cip13}'
-      : (b.lot != null ? 'lot ${b.lot}' : '—');
+
+  String name;
+  String dci;
+  String meta;
+  final bdpmHit = bdpm?.findByCip13(b.cip13);
+  if (bdpmHit != null) {
+    name = bdpmHit.denomination;
+    dci = [bdpmHit.dosage, bdpmHit.forme]
+        .where((s) => s != null && s.isNotEmpty)
+        .join(' · ');
+    if (dci.isEmpty) dci = name;
+    meta = b.lot != null ? 'lot ${b.lot}' : 'CIP ${b.cip13}';
+  } else if (parts.name != null) {
+    name = parts.name!;
+    dci = name;
+    meta = 'CIP ${b.cip13}';
+  } else {
+    name = 'CIP ${b.cip13}';
+    dci = name;
+    meta = b.lot != null ? 'lot ${b.lot}' : '—';
+  }
+
   final state = _deriveState(b);
   final exp = state == _BoiteState.perime
       ? null
       : _formatPeremption(b.peremption);
   return _Boite(
     name: name,
-    dci: name,
+    dci: dci,
     meta: meta,
     icon: PhosphorIconsFill.pill,
     count: b.unitesRestantes ?? 1,
+    total: b.unitesInitiales,
     exp: exp,
     state: state,
     apiBoite: b,
@@ -983,7 +1017,9 @@ class _BoiteCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${boite.count}',
+                  // Affiche "6/8" si la taille est connue, sinon juste "6".
+                  // Plus parlant qu'un nombre seul (on voit où on en est).
+                  boite.total != null ? '${boite.count}/${boite.total}' : '${boite.count}',
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1052,13 +1088,14 @@ class _EmptyOfficine extends StatelessWidget {
 }
 
 class _StockAdjustSheet extends StatefulWidget {
-  const _StockAdjustSheet({required this.initial});
+  const _StockAdjustSheet({required this.initial, this.total});
 
-  /// Stock actuel (= unitesRestantes courant). Sert à pré-remplir le
-  /// champ texte et à indiquer où on en est. Peut être null (boîte
-  /// dont on n'a jamais compté précisément, ex: marquée "Plein" à la
-  /// création).
+  /// Stock actuel (= unitesRestantes courant).
   final int? initial;
+  /// Taille totale connue (= unitesInitiales). Si renseignée, les chips
+  /// calculent des doses correctes (3/4 d'une boîte de 8 = 6). Sinon
+  /// fallback historique sur 32/24/16/8/0.
+  final int? total;
 
   @override
   State<_StockAdjustSheet> createState() => _StockAdjustSheetState();
@@ -1068,16 +1105,29 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.initial?.toString() ?? '');
 
-  /// Valeurs chips standards (alignées avec boite_add_screen `_stockToUnits`).
-  /// Plein = 32 (typique blister 2×16), 3/4 = 24, Moitié = 16, 1/4 = 8, Vide = 0.
-  /// Estimation grossière — l'utilisateur ajuste ensuite si besoin.
-  static const _chips = <({String label, int units})>[
-    (label: 'Plein', units: 32),
-    (label: '3/4', units: 24),
-    (label: 'Moitié', units: 16),
-    (label: '1/4', units: 8),
-    (label: 'Vide', units: 0),
-  ];
+  /// Chips calculés depuis `widget.total` si connu, sinon fallback fixe.
+  /// Préférer toujours renseigner `unitesInitiales` à la création de la
+  /// boîte pour que les chips soient justes.
+  List<({String label, int units})> get _chips {
+    final t = widget.total;
+    if (t != null && t > 0) {
+      final lowest = t >= 4 ? 1 : 0;
+      return [
+        (label: 'Plein · $t', units: t),
+        (label: '3/4 · ${((t * 3) / 4).round()}', units: ((t * 3) / 4).round()),
+        (label: 'Moitié · ${(t / 2).round()}', units: (t / 2).round()),
+        (label: '1/4 · ${(t / 4).round()}', units: (t / 4).round()),
+        (label: 'Vide', units: lowest == 1 ? 1 : 0),
+      ];
+    }
+    return const [
+      (label: 'Plein', units: 32),
+      (label: '3/4', units: 24),
+      (label: 'Moitié', units: 16),
+      (label: '1/4', units: 8),
+      (label: 'Vide', units: 0),
+    ];
+  }
 
   @override
   void dispose() {
