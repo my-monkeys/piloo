@@ -32,6 +32,12 @@ function NavBar() {
         </Link>
         <nav className="flex items-center gap-3">
           <Link
+            href="/pricing"
+            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
+          >
+            Tarifs
+          </Link>
+          <Link
             href="/status"
             className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
           >
