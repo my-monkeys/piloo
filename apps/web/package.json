@@ -12,6 +12,8 @@
     "test": "vitest run",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o storybook-static",
     "audit:logs": "node scripts/audit-logs.mjs",
     "bdpm:import": "node --experimental-strip-types scripts/import-bdpm.mjs",
     "bdpm:sqlite": "node --experimental-strip-types scripts/generate-bdpm-sqlite.mjs",
@@ -42,15 +44,21 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/react": "^8.6.18",
+    "@storybook/react-vite": "^8.6.18",
     "@testcontainers/postgresql": "^11.14.0",
     "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.14",
+    "storybook": "^8.6.18",
     "tailwindcss": "^3.4.19",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.9.3",
+    "vite": "^5.4.21",
     "vitest": "^4.1.5"
   }
 }

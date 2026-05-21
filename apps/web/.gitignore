@@ -3,3 +3,5 @@
 test-results/
 playwright-report/
 playwright/.cache/
+# Storybook build (#57)
+storybook-static/

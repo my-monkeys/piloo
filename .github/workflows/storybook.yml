@@ -1,0 +1,114 @@
+name: storybook
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/web/components/ui/**"
+      - "apps/web/.storybook/**"
+      - "apps/web/app/globals.css"
+      - "apps/web/tailwind.config.ts"
+      - "apps/web/package.json"
+      - ".github/workflows/storybook.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/web/components/ui/**"
+      - "apps/web/.storybook/**"
+      - "apps/web/app/globals.css"
+      - "apps/web/tailwind.config.ts"
+
+concurrency:
+  group: storybook-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+  pull-requests: write
+
+jobs:
+  build:
+    name: Build Storybook static
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Storybook
+        run: pnpm --filter web build-storybook
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: storybook-static
+          path: apps/web/storybook-static
+          retention-days: 14
+
+      - name: Upload to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/storybook-static
+
+  deploy:
+    name: Deploy to GitHub Pages (main only)
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+  pr-comment:
+    name: Comment artifact URL on PR
+    if: github.event_name == 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comment with artifact link
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}#artifacts`;
+            const body = `📚 Storybook preview built — [download static bundle](${url}) (artifact \`storybook-static\`).\nUnzip + \`open index.html\` pour la review locale.`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+            });
+            const existing = comments.find((c) => c.user.login === 'github-actions[bot]' && c.body.includes('Storybook preview built'));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                body,
+              });
+            }
