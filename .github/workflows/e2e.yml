@@ -57,8 +57,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate OpenAPI clients
-        run: pnpm openapi:generate
+      - name: Generate OpenAPI + TS client (skip Dart — pas de Flutter en CI E2E)
+        run: pnpm turbo run openapi:generate openapi:generate-ts-client
 
       - name: Apply DB migrations
         run: pnpm db:migrate
