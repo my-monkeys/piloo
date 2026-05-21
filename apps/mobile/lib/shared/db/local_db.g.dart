@@ -2158,6 +2158,378 @@ class PendingOperationsCompanion extends UpdateCompanion<PendingOperationRow> {
   }
 }
 
+class $BdpmNoticesLocalTable extends BdpmNoticesLocal
+    with TableInfo<$BdpmNoticesLocalTable, BdpmNoticeLocalRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BdpmNoticesLocalTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _cisMeta = const VerificationMeta('cis');
+  @override
+  late final GeneratedColumn<String> cis = GeneratedColumn<String>(
+    'cis',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceUrlMeta = const VerificationMeta(
+    'sourceUrl',
+  );
+  @override
+  late final GeneratedColumn<String> sourceUrl = GeneratedColumn<String>(
+    'source_url',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sectionsJsonMeta = const VerificationMeta(
+    'sectionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> sectionsJson = GeneratedColumn<String>(
+    'sections_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _scrapedAtMeta = const VerificationMeta(
+    'scrapedAt',
+  );
+  @override
+  late final GeneratedColumn<String> scrapedAt = GeneratedColumn<String>(
+    'scraped_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fetchedAtMeta = const VerificationMeta(
+    'fetchedAt',
+  );
+  @override
+  late final GeneratedColumn<String> fetchedAt = GeneratedColumn<String>(
+    'fetched_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    cis,
+    sourceUrl,
+    sectionsJson,
+    scrapedAt,
+    fetchedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'bdpm_notices_local';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<BdpmNoticeLocalRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('cis')) {
+      context.handle(
+        _cisMeta,
+        cis.isAcceptableOrUnknown(data['cis']!, _cisMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_cisMeta);
+    }
+    if (data.containsKey('source_url')) {
+      context.handle(
+        _sourceUrlMeta,
+        sourceUrl.isAcceptableOrUnknown(data['source_url']!, _sourceUrlMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceUrlMeta);
+    }
+    if (data.containsKey('sections_json')) {
+      context.handle(
+        _sectionsJsonMeta,
+        sectionsJson.isAcceptableOrUnknown(
+          data['sections_json']!,
+          _sectionsJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sectionsJsonMeta);
+    }
+    if (data.containsKey('scraped_at')) {
+      context.handle(
+        _scrapedAtMeta,
+        scrapedAt.isAcceptableOrUnknown(data['scraped_at']!, _scrapedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_scrapedAtMeta);
+    }
+    if (data.containsKey('fetched_at')) {
+      context.handle(
+        _fetchedAtMeta,
+        fetchedAt.isAcceptableOrUnknown(data['fetched_at']!, _fetchedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_fetchedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {cis};
+  @override
+  BdpmNoticeLocalRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return BdpmNoticeLocalRow(
+      cis: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}cis'],
+      )!,
+      sourceUrl: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}source_url'],
+      )!,
+      sectionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sections_json'],
+      )!,
+      scrapedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}scraped_at'],
+      )!,
+      fetchedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fetched_at'],
+      )!,
+    );
+  }
+
+  @override
+  $BdpmNoticesLocalTable createAlias(String alias) {
+    return $BdpmNoticesLocalTable(attachedDatabase, alias);
+  }
+}
+
+class BdpmNoticeLocalRow extends DataClass
+    implements Insertable<BdpmNoticeLocalRow> {
+  final String cis;
+  final String sourceUrl;
+  final String sectionsJson;
+  final String scrapedAt;
+  final String fetchedAt;
+  const BdpmNoticeLocalRow({
+    required this.cis,
+    required this.sourceUrl,
+    required this.sectionsJson,
+    required this.scrapedAt,
+    required this.fetchedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['cis'] = Variable<String>(cis);
+    map['source_url'] = Variable<String>(sourceUrl);
+    map['sections_json'] = Variable<String>(sectionsJson);
+    map['scraped_at'] = Variable<String>(scrapedAt);
+    map['fetched_at'] = Variable<String>(fetchedAt);
+    return map;
+  }
+
+  BdpmNoticesLocalCompanion toCompanion(bool nullToAbsent) {
+    return BdpmNoticesLocalCompanion(
+      cis: Value(cis),
+      sourceUrl: Value(sourceUrl),
+      sectionsJson: Value(sectionsJson),
+      scrapedAt: Value(scrapedAt),
+      fetchedAt: Value(fetchedAt),
+    );
+  }
+
+  factory BdpmNoticeLocalRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return BdpmNoticeLocalRow(
+      cis: serializer.fromJson<String>(json['cis']),
+      sourceUrl: serializer.fromJson<String>(json['sourceUrl']),
+      sectionsJson: serializer.fromJson<String>(json['sectionsJson']),
+      scrapedAt: serializer.fromJson<String>(json['scrapedAt']),
+      fetchedAt: serializer.fromJson<String>(json['fetchedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'cis': serializer.toJson<String>(cis),
+      'sourceUrl': serializer.toJson<String>(sourceUrl),
+      'sectionsJson': serializer.toJson<String>(sectionsJson),
+      'scrapedAt': serializer.toJson<String>(scrapedAt),
+      'fetchedAt': serializer.toJson<String>(fetchedAt),
+    };
+  }
+
+  BdpmNoticeLocalRow copyWith({
+    String? cis,
+    String? sourceUrl,
+    String? sectionsJson,
+    String? scrapedAt,
+    String? fetchedAt,
+  }) => BdpmNoticeLocalRow(
+    cis: cis ?? this.cis,
+    sourceUrl: sourceUrl ?? this.sourceUrl,
+    sectionsJson: sectionsJson ?? this.sectionsJson,
+    scrapedAt: scrapedAt ?? this.scrapedAt,
+    fetchedAt: fetchedAt ?? this.fetchedAt,
+  );
+  BdpmNoticeLocalRow copyWithCompanion(BdpmNoticesLocalCompanion data) {
+    return BdpmNoticeLocalRow(
+      cis: data.cis.present ? data.cis.value : this.cis,
+      sourceUrl: data.sourceUrl.present ? data.sourceUrl.value : this.sourceUrl,
+      sectionsJson: data.sectionsJson.present
+          ? data.sectionsJson.value
+          : this.sectionsJson,
+      scrapedAt: data.scrapedAt.present ? data.scrapedAt.value : this.scrapedAt,
+      fetchedAt: data.fetchedAt.present ? data.fetchedAt.value : this.fetchedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BdpmNoticeLocalRow(')
+          ..write('cis: $cis, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('sectionsJson: $sectionsJson, ')
+          ..write('scrapedAt: $scrapedAt, ')
+          ..write('fetchedAt: $fetchedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(cis, sourceUrl, sectionsJson, scrapedAt, fetchedAt);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is BdpmNoticeLocalRow &&
+          other.cis == this.cis &&
+          other.sourceUrl == this.sourceUrl &&
+          other.sectionsJson == this.sectionsJson &&
+          other.scrapedAt == this.scrapedAt &&
+          other.fetchedAt == this.fetchedAt);
+}
+
+class BdpmNoticesLocalCompanion extends UpdateCompanion<BdpmNoticeLocalRow> {
+  final Value<String> cis;
+  final Value<String> sourceUrl;
+  final Value<String> sectionsJson;
+  final Value<String> scrapedAt;
+  final Value<String> fetchedAt;
+  final Value<int> rowid;
+  const BdpmNoticesLocalCompanion({
+    this.cis = const Value.absent(),
+    this.sourceUrl = const Value.absent(),
+    this.sectionsJson = const Value.absent(),
+    this.scrapedAt = const Value.absent(),
+    this.fetchedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BdpmNoticesLocalCompanion.insert({
+    required String cis,
+    required String sourceUrl,
+    required String sectionsJson,
+    required String scrapedAt,
+    required String fetchedAt,
+    this.rowid = const Value.absent(),
+  }) : cis = Value(cis),
+       sourceUrl = Value(sourceUrl),
+       sectionsJson = Value(sectionsJson),
+       scrapedAt = Value(scrapedAt),
+       fetchedAt = Value(fetchedAt);
+  static Insertable<BdpmNoticeLocalRow> custom({
+    Expression<String>? cis,
+    Expression<String>? sourceUrl,
+    Expression<String>? sectionsJson,
+    Expression<String>? scrapedAt,
+    Expression<String>? fetchedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (cis != null) 'cis': cis,
+      if (sourceUrl != null) 'source_url': sourceUrl,
+      if (sectionsJson != null) 'sections_json': sectionsJson,
+      if (scrapedAt != null) 'scraped_at': scrapedAt,
+      if (fetchedAt != null) 'fetched_at': fetchedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BdpmNoticesLocalCompanion copyWith({
+    Value<String>? cis,
+    Value<String>? sourceUrl,
+    Value<String>? sectionsJson,
+    Value<String>? scrapedAt,
+    Value<String>? fetchedAt,
+    Value<int>? rowid,
+  }) {
+    return BdpmNoticesLocalCompanion(
+      cis: cis ?? this.cis,
+      sourceUrl: sourceUrl ?? this.sourceUrl,
+      sectionsJson: sectionsJson ?? this.sectionsJson,
+      scrapedAt: scrapedAt ?? this.scrapedAt,
+      fetchedAt: fetchedAt ?? this.fetchedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (cis.present) {
+      map['cis'] = Variable<String>(cis.value);
+    }
+    if (sourceUrl.present) {
+      map['source_url'] = Variable<String>(sourceUrl.value);
+    }
+    if (sectionsJson.present) {
+      map['sections_json'] = Variable<String>(sectionsJson.value);
+    }
+    if (scrapedAt.present) {
+      map['scraped_at'] = Variable<String>(scrapedAt.value);
+    }
+    if (fetchedAt.present) {
+      map['fetched_at'] = Variable<String>(fetchedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BdpmNoticesLocalCompanion(')
+          ..write('cis: $cis, ')
+          ..write('sourceUrl: $sourceUrl, ')
+          ..write('sectionsJson: $sectionsJson, ')
+          ..write('scrapedAt: $scrapedAt, ')
+          ..write('fetchedAt: $fetchedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$LocalDatabase extends GeneratedDatabase {
   _$LocalDatabase(QueryExecutor e) : super(e);
   $LocalDatabaseManager get managers => $LocalDatabaseManager(this);
@@ -2167,6 +2539,9 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   );
   late final $PendingOperationsTable pendingOperations =
       $PendingOperationsTable(this);
+  late final $BdpmNoticesLocalTable bdpmNoticesLocal = $BdpmNoticesLocalTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -2175,6 +2550,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     boites,
     prisesPlanifiees,
     pendingOperations,
+    bdpmNoticesLocal,
   ];
 }
 
@@ -3222,6 +3598,218 @@ typedef $$PendingOperationsTableProcessedTableManager =
       PendingOperationRow,
       PrefetchHooks Function()
     >;
+typedef $$BdpmNoticesLocalTableCreateCompanionBuilder =
+    BdpmNoticesLocalCompanion Function({
+      required String cis,
+      required String sourceUrl,
+      required String sectionsJson,
+      required String scrapedAt,
+      required String fetchedAt,
+      Value<int> rowid,
+    });
+typedef $$BdpmNoticesLocalTableUpdateCompanionBuilder =
+    BdpmNoticesLocalCompanion Function({
+      Value<String> cis,
+      Value<String> sourceUrl,
+      Value<String> sectionsJson,
+      Value<String> scrapedAt,
+      Value<String> fetchedAt,
+      Value<int> rowid,
+    });
+
+class $$BdpmNoticesLocalTableFilterComposer
+    extends Composer<_$LocalDatabase, $BdpmNoticesLocalTable> {
+  $$BdpmNoticesLocalTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get cis => $composableBuilder(
+    column: $table.cis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get sectionsJson => $composableBuilder(
+    column: $table.sectionsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get scrapedAt => $composableBuilder(
+    column: $table.scrapedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BdpmNoticesLocalTableOrderingComposer
+    extends Composer<_$LocalDatabase, $BdpmNoticesLocalTable> {
+  $$BdpmNoticesLocalTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get cis => $composableBuilder(
+    column: $table.cis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sourceUrl => $composableBuilder(
+    column: $table.sourceUrl,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get sectionsJson => $composableBuilder(
+    column: $table.sectionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get scrapedAt => $composableBuilder(
+    column: $table.scrapedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fetchedAt => $composableBuilder(
+    column: $table.fetchedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BdpmNoticesLocalTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $BdpmNoticesLocalTable> {
+  $$BdpmNoticesLocalTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get cis =>
+      $composableBuilder(column: $table.cis, builder: (column) => column);
+
+  GeneratedColumn<String> get sourceUrl =>
+      $composableBuilder(column: $table.sourceUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get sectionsJson => $composableBuilder(
+    column: $table.sectionsJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get scrapedAt =>
+      $composableBuilder(column: $table.scrapedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get fetchedAt =>
+      $composableBuilder(column: $table.fetchedAt, builder: (column) => column);
+}
+
+class $$BdpmNoticesLocalTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $BdpmNoticesLocalTable,
+          BdpmNoticeLocalRow,
+          $$BdpmNoticesLocalTableFilterComposer,
+          $$BdpmNoticesLocalTableOrderingComposer,
+          $$BdpmNoticesLocalTableAnnotationComposer,
+          $$BdpmNoticesLocalTableCreateCompanionBuilder,
+          $$BdpmNoticesLocalTableUpdateCompanionBuilder,
+          (
+            BdpmNoticeLocalRow,
+            BaseReferences<
+              _$LocalDatabase,
+              $BdpmNoticesLocalTable,
+              BdpmNoticeLocalRow
+            >,
+          ),
+          BdpmNoticeLocalRow,
+          PrefetchHooks Function()
+        > {
+  $$BdpmNoticesLocalTableTableManager(
+    _$LocalDatabase db,
+    $BdpmNoticesLocalTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BdpmNoticesLocalTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BdpmNoticesLocalTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BdpmNoticesLocalTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> cis = const Value.absent(),
+                Value<String> sourceUrl = const Value.absent(),
+                Value<String> sectionsJson = const Value.absent(),
+                Value<String> scrapedAt = const Value.absent(),
+                Value<String> fetchedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BdpmNoticesLocalCompanion(
+                cis: cis,
+                sourceUrl: sourceUrl,
+                sectionsJson: sectionsJson,
+                scrapedAt: scrapedAt,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String cis,
+                required String sourceUrl,
+                required String sectionsJson,
+                required String scrapedAt,
+                required String fetchedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => BdpmNoticesLocalCompanion.insert(
+                cis: cis,
+                sourceUrl: sourceUrl,
+                sectionsJson: sectionsJson,
+                scrapedAt: scrapedAt,
+                fetchedAt: fetchedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BdpmNoticesLocalTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $BdpmNoticesLocalTable,
+      BdpmNoticeLocalRow,
+      $$BdpmNoticesLocalTableFilterComposer,
+      $$BdpmNoticesLocalTableOrderingComposer,
+      $$BdpmNoticesLocalTableAnnotationComposer,
+      $$BdpmNoticesLocalTableCreateCompanionBuilder,
+      $$BdpmNoticesLocalTableUpdateCompanionBuilder,
+      (
+        BdpmNoticeLocalRow,
+        BaseReferences<
+          _$LocalDatabase,
+          $BdpmNoticesLocalTable,
+          BdpmNoticeLocalRow
+        >,
+      ),
+      BdpmNoticeLocalRow,
+      PrefetchHooks Function()
+    >;
 
 class $LocalDatabaseManager {
   final _$LocalDatabase _db;
@@ -3232,4 +3820,6 @@ class $LocalDatabaseManager {
       $$PrisesPlanifieesTableTableManager(_db, _db.prisesPlanifiees);
   $$PendingOperationsTableTableManager get pendingOperations =>
       $$PendingOperationsTableTableManager(_db, _db.pendingOperations);
+  $$BdpmNoticesLocalTableTableManager get bdpmNoticesLocal =>
+      $$BdpmNoticesLocalTableTableManager(_db, _db.bdpmNoticesLocal);
 }

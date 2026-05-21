@@ -58,6 +58,29 @@ class PrisesPlanifiees extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+@DataClassName('BdpmNoticeLocalRow')
+class BdpmNoticesLocal extends Table {
+  // Miroir Drift du cache de notices ANSM servi par le backend (table
+  // bdpm_notices_cache côté Postgres). Permet de garder les notices en
+  // local pour un affichage instantané et offline.
+  //
+  // On stocke `sections` en JSON string : le SDK Drift ne supporte pas
+  // de type JSONB natif, et la dé-sérialisation côté Riverpod reste
+  // triviale (jsonDecode → List<NoticeSection>).
+  TextColumn get cis => text()();
+  TextColumn get sourceUrl => text()();
+  TextColumn get sectionsJson => text()();
+  // Date du scrape côté serveur — c'est l'âge "vrai" de la notice, pas
+  // l'âge du download local. Sert à décider d'un re-fetch.
+  TextColumn get scrapedAt => text()(); // ISO 8601 UTC
+  // Quand on a téléchargé pour la dernière fois — purement informatif
+  // (debug, métriques).
+  TextColumn get fetchedAt => text()();
+
+  @override
+  Set<Column> get primaryKey => {cis};
+}
+
 @DataClassName('PendingOperationRow')
 class PendingOperations extends Table {
   // Journal append-only des opérations locales en attente de sync

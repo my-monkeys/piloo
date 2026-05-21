@@ -73,7 +73,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   drift_dev: ^2.33.0
-  build_runner: ^2.6.0
+  build_runner: ^2.10.0
   flutter_launcher_icons: ^0.14.4
 
 # App icons iOS + Android (#50). Génère toutes les résolutions à partir

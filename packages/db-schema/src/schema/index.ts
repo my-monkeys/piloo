@@ -4,6 +4,7 @@ export * from './officines.ts';
 export * from './partages.ts';
 export * from './boites.ts';
 export * from './bdpm.ts';
+export * from './bdpm_notices_cache.ts';
 export * from './ordonnances.ts';
 export * from './prescriptions.ts';
 export * from './prises_planifiees.ts';

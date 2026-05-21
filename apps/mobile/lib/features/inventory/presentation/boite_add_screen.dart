@@ -10,6 +10,8 @@
 //
 // Structure visuelle inchangée vs #89 ; seul le contenu du preview
 // dépend maintenant des providers Riverpod.
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,6 +29,7 @@ import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
+import 'package:piloo/shared/bdpm/bdpm_notice_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -172,6 +175,13 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         unitesRestantes: _stockToUnits(_stock),
         notes: notes,
       );
+      // Pré-cache la notice ANSM en local pour que l'ouverture de la
+      // fiche soit instantanée + offline. Fire-and-forget : on n'attend
+      // pas la fin et on laisse le user revenir à l'officine.
+      final cis = lookup?.cis;
+      if (cis != null) {
+        unawaited(prefetchNoticeIntoLocal(ref, cis));
+      }
       if (!mounted) return;
       PilooToast.success(context, 'Boîte ajoutée.');
       context.canPop() ? context.pop() : context.go(RoutePath.officine);
