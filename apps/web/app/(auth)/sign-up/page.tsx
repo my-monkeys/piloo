@@ -41,10 +41,18 @@ export default function SignUpPage() {
         prenom: prenom.trim(),
         typeCompte,
       });
-      // #62 — email non vérifié à ce stade : Better Auth a déjà envoyé
-      // le magic link 1h. On envoie vers la page d'attente plutôt que
-      // dashboard (la session n'est créée qu'après vérification).
-      router.push(`/check-inbox?email=${encodeURIComponent(trimmedEmail)}`);
+      // #62 — selon la config serveur (requireEmailVerification), Better Auth
+      // a soit posé une session direct (verif off), soit envoyé un magic link.
+      // On vérifie get-session pour router en conséquence : /dashboard si la
+      // session existe, sinon /check-inbox pour attendre la vérification.
+      const session = await fetch('/api/auth/get-session', { credentials: 'same-origin' })
+        .then((r) => (r.ok ? (r.json() as Promise<{ user?: unknown } | null>) : null))
+        .catch(() => null);
+      if (session?.user) {
+        router.push('/dashboard');
+      } else {
+        router.push(`/check-inbox?email=${encodeURIComponent(trimmedEmail)}`);
+      }
       router.refresh();
     } catch (err) {
       setError(err instanceof WebAuthError ? err.message : 'Inscription impossible.');
