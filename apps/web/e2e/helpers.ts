@@ -70,15 +70,26 @@ export async function signUpViaUi(page: Page, user: TestUser): Promise<void> {
  *  `piloo_active_officine` pour que les pages /inventory et /ordonnances
  *  affichent la table au lieu de "Aucune officine sélectionnée".
  *
- *  Pose le cookie via document.cookie (même mécanisme que le code React
- *  prod), plus fiable que context.addCookies qui parfois rate la scope. */
-export async function activateFirstOfficine(_context: BrowserContext, page: Page): Promise<string> {
+ *  Pose le cookie au niveau context Playwright (visible avant tout render
+ *  côté React) ET via document.cookie (au cas où). */
+export async function activateFirstOfficine(context: BrowserContext, page: Page): Promise<string> {
   const res = await page.request.get('/api/v1/officines');
   if (!res.ok()) throw new Error(`GET /v1/officines failed: ${String(res.status())}`);
   const body = (await res.json()) as { items?: { id: string }[] };
   const first = body.items?.[0];
   if (!first)
     throw new Error('Aucune officine retournée par /v1/officines (hook auto-create cassé ?)');
+  const url = new URL(page.url());
+  await context.addCookies([
+    {
+      name: 'piloo_active_officine',
+      value: first.id,
+      domain: url.hostname,
+      path: '/',
+      sameSite: 'Lax',
+      expires: Math.floor(Date.now() / 1000) + 86400,
+    },
+  ]);
   await page.evaluate((id) => {
     document.cookie = `piloo_active_officine=${id}; path=/; max-age=31536000; samesite=lax`;
   }, first.id);
