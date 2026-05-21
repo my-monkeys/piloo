@@ -150,10 +150,12 @@ workflows:
         # API key Codemagic-managed (cf. integrations).
         # Submit_to_testflight: true pour traitement automatique côté Apple.
         # Pas de submit_to_app_store : la promotion vers App Store reste manuelle (review humaine).
+        # Pas de beta_groups : tant que le groupe "Piloo Internes" n'est
+        # pas créé dans App Store Connect, référencer un groupe inexistant
+        # fait failer la publishing task. À ré-ajouter une fois le groupe
+        # créé manuellement côté ASC.
         auth: integration
         submit_to_testflight: true
-        beta_groups:
-          - "Piloo Internes"
 
       email:
         # Fallback notification — Slack/Discord à brancher plus tard si besoin.
@@ -280,10 +282,8 @@ workflows:
       app_store_connect:
         auth: integration
         submit_to_testflight: true
-        # Groupe distinct des builds prod pour éviter d'envoyer un
-        # build demo aux testeurs habituels par erreur.
-        beta_groups:
-          - "Piloo Demos"
+        # Pas de beta_groups : "Piloo Demos" pas créé côté ASC encore.
+        # Reactiver une fois les groupes créés manuellement.
 
       email:
         recipients:
