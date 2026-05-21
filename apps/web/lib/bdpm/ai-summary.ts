@@ -62,7 +62,23 @@ export interface SummaryGenResult {
   skipped: number;
   failures: number;
   durationMs: number;
+  /// Tokens cumulés sur tous les appels Gemini réussis (input prompt).
+  inputTokens: number;
+  /// Tokens cumulés sur tous les appels Gemini réussis (output text).
+  outputTokens: number;
+  /// Coût USD estimé sur la passe (cf. PRICING_USD ci-dessous).
+  estimatedCostUsd: number;
+  /// Coût moyen par génération réussie (USD). null si 0 généré.
+  avgCostPerGenerationUsd: number | null;
 }
+
+/// Prix Gemini officiels (USD / 1M tokens), 2026-05 — voir
+/// https://ai.google.dev/pricing. À mettre à jour si on change MODEL
+/// ou si Google révise les tarifs.
+const PRICING_USD = {
+  inputPerMillion: 0.3, // gemini-2.5-flash input
+  outputPerMillion: 2.5, // gemini-2.5-flash output
+};
 
 export interface SummaryGenOptions {
   /// Limite de médicaments traités dans cette passe. null = tout.
@@ -111,14 +127,18 @@ export async function runSummaryGeneration(
 
   let generated = 0;
   let failures = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
   for (const row of todo) {
     try {
-      const summary = await generateOne(client, row);
+      const { summary, usage } = await generateOne(client, row);
       await db
         .update(medicamentsBdpm)
         .set({ aiSummary: summary, aiSummaryVersion: CURRENT_VERSION })
         .where(eq(medicamentsBdpm.cip13, row.cip13));
       generated++;
+      inputTokens += usage.inputTokens;
+      outputTokens += usage.outputTokens;
     } catch (e) {
       failures++;
       // On log mais on continue — un médoc qui plante le LLM ne doit
@@ -133,16 +153,40 @@ export async function runSummaryGeneration(
     }
   }
 
+  const estimatedCostUsd = computeCostUsd(inputTokens, outputTokens);
+
   return {
     scanned: todo.length,
     generated,
     skipped: todo.length - generated - failures,
     failures,
     durationMs: Date.now() - t0,
+    inputTokens,
+    outputTokens,
+    estimatedCostUsd: round6(estimatedCostUsd),
+    avgCostPerGenerationUsd: generated > 0 ? round6(estimatedCostUsd / generated) : null,
   };
 }
 
-async function generateOne(client: GoogleGenAI, row: SummaryGenInput): Promise<string> {
+function round6(n: number): number {
+  return Math.round(n * 1_000_000) / 1_000_000;
+}
+
+/// Calcul de coût USD à partir des tokens consommés. Exportée pour
+/// les tests + l'UI admin qui veut estimer le coût avant lancement.
+export function computeCostUsd(inputTokens: number, outputTokens: number): number {
+  return (
+    (inputTokens / 1_000_000) * PRICING_USD.inputPerMillion +
+    (outputTokens / 1_000_000) * PRICING_USD.outputPerMillion
+  );
+}
+
+interface GenerateOneResult {
+  summary: string;
+  usage: { inputTokens: number; outputTokens: number };
+}
+
+async function generateOne(client: GoogleGenAI, row: SummaryGenInput): Promise<GenerateOneResult> {
   const userMsg = `Médicament : ${row.denomination}${row.dosage ? ` (${row.dosage})` : ''}${row.forme ? ` — ${row.forme}` : ''}`;
   const res = await client.models.generateContent({
     model: MODEL,
@@ -162,8 +206,17 @@ async function generateOne(client: GoogleGenAI, row: SummaryGenInput): Promise<s
   if (text.length === 0) {
     throw new Error('Réponse Gemini vide');
   }
-  return text;
+  const inputTokens = res.usageMetadata?.promptTokenCount ?? 0;
+  const outputTokens = res.usageMetadata?.candidatesTokenCount ?? 0;
+  return {
+    summary: text,
+    usage: { inputTokens, outputTokens },
+  };
 }
+
+/// Export pour les tests + l'UI admin (#166) qui veut afficher le tarif
+/// utilisé sans avoir à le hardcoder.
+export const SUMMARY_PRICING_USD = PRICING_USD;
 
 /// Count des médicaments restant à traiter (ai_summary null ou version
 /// périmée). Utile pour le monitoring et l'UI admin (#166).
