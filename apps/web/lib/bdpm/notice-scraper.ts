@@ -75,45 +75,52 @@ export async function scrapeNoticeFromAnsm(cis: string): Promise<BdpmNotice> {
 }
 
 /// Extrait les sections RCP du HTML ANSM. Approche défensive :
-///   - Cherche les nodes dont l'id ressemble à `4.X_*` (ancres ANSM).
-///   - Pour chaque section, prend tout le contenu jusqu'au prochain
-///     header avec ancre similaire.
-///   - Nettoie : whitespace collapse, retire "Retour en haut de page".
+///   1. Cherche les `<p class="AmmAnnexeTitre2">` qui commencent par
+///      "4.X." (titres de section). C'est l'invariant ANSM le plus
+///      stable — présent même quand l'ancre id/name manque (cas 4.1).
+///   2. Pour chaque header, on remonte le `<p>` racine (les sous-balises
+///      `<span id=...>` sont à l'intérieur), puis on collecte les
+///      siblings jusqu'au prochain titre de section (4.X ou 5+).
+///   3. Nettoie : whitespace collapse, retire "Retour en haut de page",
+///      strip ancres internes type "_Hlk...".
 export function parseSections(html: string): NoticeSection[] {
   const $ = cheerio.load(html);
 
   const out: NoticeSection[] = [];
-  const headers = $('[id]')
-    .filter((_, el) => {
-      const id = $(el).attr('id') ?? '';
-      const number = extractSectionNumber(id);
-      return number !== null && TARGET_SECTIONS.has(number);
-    })
-    .toArray();
+  // Tous les <p class="AmmAnnexeTitre2"> + leurs frères "AmmAnnexeTitre1"
+  // (sections de niveau supérieur 4, 5, 6…) : ce sont les frontières.
+  const allTitres = $('p.AmmAnnexeTitre1, p.AmmAnnexeTitre2').toArray();
 
-  for (let i = 0; i < headers.length; i++) {
-    const el = headers[i];
+  // Filtre uniquement les 4.X qui nous intéressent. On garde l'index
+  // dans `allTitres` pour pouvoir trouver le prochain header (peu importe
+  // s'il est 4.X ou 5+) comme borne de fin.
+  const targets: { index: number; number: string; title: string }[] = [];
+  for (let i = 0; i < allTitres.length; i++) {
+    const el = allTitres[i];
     if (!el) continue;
-    const id = $(el).attr('id') ?? '';
-    const number = extractSectionNumber(id);
-    if (number === null) continue;
-
-    const title = $(el).text().replace(/\s+/g, ' ').trim();
-    const next = headers[i + 1];
-    const text = collectTextBetween($, el, next ?? null);
-    if (text.trim().length === 0) continue;
-
-    out.push({ number, title, text });
+    const raw = $(el).text().replace(/\s+/g, ' ').trim();
+    const number = extractSectionNumber(raw);
+    if (number === null || !TARGET_SECTIONS.has(number)) continue;
+    targets.push({ index: i, number, title: raw });
   }
 
-  // Tri par numéro de section pour un ordre stable.
+  for (const t of targets) {
+    const header = allTitres[t.index];
+    if (!header) continue;
+    const nextHeader = allTitres[t.index + 1] ?? null;
+    const text = collectTextBetween($, header, nextHeader);
+    if (text.trim().length === 0) continue;
+    out.push({ number: t.number, title: t.title, text });
+  }
+
   out.sort((a, b) => a.number.localeCompare(b.number, undefined, { numeric: true }));
   return out;
 }
 
-/// Extrait `4.X` depuis un id type "4.1._Indications_thérapeutiques".
-function extractSectionNumber(rawId: string): string | null {
-  const match = /^(\d+\.\d+)/.exec(rawId);
+/// Extrait `4.X` depuis un titre type "4.1. Indications thérapeutiques"
+/// ou un id type "4.1._Indications_thérapeutiques".
+function extractSectionNumber(raw: string): string | null {
+  const match = /^(\d+\.\d+)/.exec(raw.trim());
   return match?.[1] ?? null;
 }
 
@@ -124,15 +131,19 @@ function collectTextBetween($: cheerio.CheerioAPI, from: AnyNode, to: AnyNode | 
   const chunks: string[] = [];
   let current = from.nextSibling;
   while (current && current !== to) {
-    // Domhandler nodes : 'tag' = ElementNode, 'text' = TextNode.
-    // String literal cast évite le narrowing trop strict TS qui pense
-    // que la comparaison entre l'enum interne et 'tag'/'text' n'a pas
-    // de chevauchement.
     const type: string = current.type;
     if (type === 'tag') {
-      const text = $(current).text();
+      const $el = $(current);
+      // Ignore les liens "retour en haut" et tooltips associés (bruit pur).
+      const className = $el.attr('class') ?? '';
+      if (className.includes('lien-retour-hautdepage') || className.includes('fr-tooltip')) {
+        current = current.nextSibling;
+        continue;
+      }
+      const text = $el.text();
       const cleaned = text
         .replace(/Retour en haut de page/g, '')
+        .replace(/Redirection vers le haut de page/g, '')
         .replace(/\s+\n/g, '\n')
         .replace(/[ \t]+/g, ' ')
         .replace(/\n{3,}/g, '\n\n')
