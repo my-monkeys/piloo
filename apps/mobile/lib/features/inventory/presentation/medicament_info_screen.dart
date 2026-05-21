@@ -561,6 +561,7 @@ class _InfoRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -569,8 +570,8 @@ class _InfoRow extends StatelessWidget {
               color: PilooColors.textSecondary,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 16),
+          Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,
