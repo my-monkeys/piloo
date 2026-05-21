@@ -6,7 +6,7 @@
 // péremption et enregistre. La boîte doit apparaître dans la table.
 import { expect, test } from '@playwright/test';
 
-import { dismissCookieBanner, makeTestUser } from './helpers';
+import { makeTestUser, signUpViaUi } from './helpers';
 
 const FAKE_BDPM = {
   items: [
@@ -40,14 +40,7 @@ test('add boîte via dialog (scan simulé via mock BDPM)', async ({ page }) => {
   });
 
   // 1. Sign-up
-  await page.goto('/sign-up');
-  await dismissCookieBanner(page);
-  await page.getByLabel(/prénom/i).fill(user.prenom);
-  await page.getByLabel(/nom/i).fill(user.nom);
-  await page.getByLabel(/email/i).fill(user.email);
-  await page.getByLabel(/mot de passe/i).fill(user.password);
-  await page.getByRole('button', { name: /créer mon compte/i }).click();
-  await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
+  await signUpViaUi(page, user);
 
   // 2. Activer l'officine perso auto-créée.
   await page.goto('/settings/officines');
@@ -61,14 +54,14 @@ test('add boîte via dialog (scan simulé via mock BDPM)', async ({ page }) => {
   await page.getByRole('button', { name: /ajouter une boîte/i }).click();
 
   // 4. Recherche BDPM (mockée) + sélection du résultat.
-  await page.getByLabel(/médicament/i).fill('doli');
+  await page.getByLabel('Médicament *', { exact: true }).fill('doli');
   // La debounce est à 250ms côté composant + fetch mocké instantané.
   const result = page.getByRole('button', { name: /DOLIPRANE 1000mg.*\(E2E\)/i });
   await expect(result).toBeVisible({ timeout: 5_000 });
   await result.click();
 
   // 5. Péremption + submit.
-  await page.getByLabel(/péremption/i).fill('2027-06-30');
+  await page.getByLabel(/^péremption/i).fill('2027-06-30');
   await page.getByRole('button', { name: /enregistrer la boîte/i }).click();
 
   // 6. Le dialog se ferme + la boîte apparaît dans la table (CIP13).

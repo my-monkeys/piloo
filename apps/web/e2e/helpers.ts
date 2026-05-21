@@ -48,8 +48,20 @@ export async function dismissCookieBanner(page: Page): Promise<void> {
 export async function signInViaUi(page: Page, user: TestUser): Promise<void> {
   await page.goto('/sign-in');
   await dismissCookieBanner(page);
-  await page.getByLabel(/email/i).fill(user.email);
-  await page.getByLabel(/mot de passe/i).fill(user.password);
+  await page.getByLabel('Email', { exact: true }).fill(user.email);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: /se connecter/i }).click();
+  await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
+}
+
+/** Helper sign-up via UI — factorise le boilerplate des 3 specs. */
+export async function signUpViaUi(page: Page, user: TestUser): Promise<void> {
+  await page.goto('/sign-up');
+  await dismissCookieBanner(page);
+  await page.getByLabel('Prénom', { exact: true }).fill(user.prenom);
+  await page.getByLabel('Nom', { exact: true }).fill(user.nom);
+  await page.getByLabel('Email', { exact: true }).fill(user.email);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
+  await page.getByRole('button', { name: /créer mon compte/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
 }

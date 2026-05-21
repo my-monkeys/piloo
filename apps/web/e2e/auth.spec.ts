@@ -13,10 +13,10 @@ test('sign-up → dashboard puis sign-out → sign-in', async ({ page }) => {
   // 1. Sign-up
   await page.goto('/sign-up');
   await dismissCookieBanner(page);
-  await page.getByLabel(/prénom/i).fill(user.prenom);
-  await page.getByLabel(/nom/i).fill(user.nom);
-  await page.getByLabel(/email/i).fill(user.email);
-  await page.getByLabel(/mot de passe/i).fill(user.password);
+  await page.getByLabel('Prénom', { exact: true }).fill(user.prenom);
+  await page.getByLabel('Nom', { exact: true }).fill(user.nom);
+  await page.getByLabel('Email', { exact: true }).fill(user.email);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: /créer mon compte/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: /tableau de bord/i })).toBeVisible();
@@ -28,8 +28,8 @@ test('sign-up → dashboard puis sign-out → sign-in', async ({ page }) => {
   await page.waitForURL(/\/sign-in/, { timeout: 10_000 });
 
   // 3. Sign-in avec les mêmes credentials.
-  await page.getByLabel(/email/i).fill(user.email);
-  await page.getByLabel(/mot de passe/i).fill(user.password);
+  await page.getByLabel('Email', { exact: true }).fill(user.email);
+  await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: /se connecter/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
   await expect(page.getByRole('heading', { name: /tableau de bord/i })).toBeVisible();
