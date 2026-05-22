@@ -545,8 +545,9 @@ IconData _iconForForme(String? forme) {
   if (f.contains('collyre') || f.contains('goutte')) return PhosphorIconsFill.eyedropper;
   if (f.contains('inhalation') || f.contains('aérosol') || f.contains('aerosol')) return PhosphorIconsFill.wind;
   if (f.contains('pulvérisation') || f.contains('pulverisation') || f.contains('spray')) {
-    return PhosphorIconsFill.rocketLaunch;
+    return PhosphorIconsFill.sprayBottle;
   }
+  if (f.contains('suppositoire') || f.contains('ovule')) return PhosphorIconsFill.rocketLaunch;
   if (f.contains('transdermique') || f.contains('patch')) return PhosphorIconsFill.bandaids;
   if (f.contains('injectable') || f.contains('perfusion')) return PhosphorIconsFill.syringe;
   if (f.contains('crème') || f.contains('creme') || f.contains('gel') ||

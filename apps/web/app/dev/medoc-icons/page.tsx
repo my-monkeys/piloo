@@ -26,10 +26,13 @@ const FAMILLES: Famille[] = [
       'gélule',
       'gélule gastro-résistant',
       'capsule molle',
-      'suppositoire',
-      'ovule',
       'dispositif',
     ],
+  },
+  {
+    label: 'Suppositoire / Ovule',
+    icon: 'rocket-launch',
+    formes: ['suppositoire', 'ovule'],
   },
   {
     label: 'Injection / Perfusion',
@@ -68,7 +71,7 @@ const FAMILLES: Famille[] = [
   },
   {
     label: 'Spray / Pulvérisation',
-    icon: 'rocket-launch',
+    icon: 'spray-bottle',
     formes: ['solution pour pulvérisation nasale', 'spray buccal'],
   },
 ];
