@@ -3108,6 +3108,11 @@ export interface components {
             ai_summary?: string | null;
             /** Format: date */
             version_bdpm: string;
+            libelle_presentation?: string | null;
+            container?: string | null;
+            total_doses?: number | null;
+            dose_unit?: string | null;
+            dose_unit_plural?: string | null;
         };
         BdpmApiError: {
             error: {

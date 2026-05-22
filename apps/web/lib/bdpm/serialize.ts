@@ -16,5 +16,10 @@ export function serializeBdpmMedicament(row: MedicamentBdpm): BdpmMedicament {
     taux_remboursement: row.tauxRemboursement,
     ai_summary: row.aiSummary,
     version_bdpm: row.versionBdpm,
+    libelle_presentation: row.libellePresentation,
+    container: row.container,
+    total_doses: row.totalDoses,
+    dose_unit: row.doseUnit,
+    dose_unit_plural: row.doseUnitPlural,
   };
 }

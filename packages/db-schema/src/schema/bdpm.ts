@@ -43,6 +43,24 @@ export const medicamentsBdpm = pgTable(
     /// prompt (ex: "claude-haiku-4-5/v1"). Null tant que pas de résumé.
     aiSummaryVersion: text(),
     versionBdpm: date().notNull(),
+    /// Libellé brut de la présentation côté BDPM, ex:
+    /// "plaquette PVC-aluminium de 8 comprimés". Conservé pour debug
+    /// et fallback affichage si le parsing structurel échoue.
+    libellePresentation: text(),
+    /// Contenant user-friendly extrait du libellé : "boîte", "flacon",
+    /// "tube", "ampoule"… Sert à dire "Boîte de 8 comprimés" plutôt
+    /// que "Plaquette PVC PVDC aluminium de 8 comprimés".
+    container: text(),
+    /// Nombre total de doses dans le conditionnement complet
+    /// (ex: 20 récipients × 2 ml = 40 ml). Sert d'auto-fill pour le
+    /// champ `unitesInitiales` à la création de boîte.
+    totalDoses: integer(),
+    /// Unité au singulier ("comprimé", "ml", "g", "ampoule"…) — drive
+    /// le wording UI ("Comprimés restants" vs "ml restants").
+    doseUnit: text(),
+    /// Pluriel quand applicable (les unités physiques ml/g restent
+    /// invariables). Évite une lib de pluralisation côté mobile.
+    doseUnitPlural: text(),
   },
   (table) => [
     index('idx_bdpm_cis').on(table.cis),

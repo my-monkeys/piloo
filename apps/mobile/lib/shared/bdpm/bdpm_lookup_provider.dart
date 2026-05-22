@@ -64,5 +64,10 @@ BdpmMedicament _fromApi(api.BdpmMedicament m) {
     statutAmm: m.statutAmm,
     tauxRemboursement: m.tauxRemboursement,
     aiSummary: m.aiSummary,
+    libellePresentation: m.libellePresentation,
+    container: m.container,
+    totalDoses: m.totalDoses,
+    doseUnit: m.doseUnit,
+    doseUnitPlural: m.doseUnitPlural,
   );
 }

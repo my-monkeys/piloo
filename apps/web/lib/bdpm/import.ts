@@ -77,6 +77,11 @@ async function upsertChunk(db: Db, rows: MedicamentBdpmRow[]): Promise<void> {
         statutAmm: sqlExcluded('statut_amm'),
         tauxRemboursement: sqlExcluded('taux_remboursement'),
         versionBdpm: sqlExcluded('version_bdpm'),
+        libellePresentation: sqlExcluded('libelle_presentation'),
+        container: sqlExcluded('container'),
+        totalDoses: sqlExcluded('total_doses'),
+        doseUnit: sqlExcluded('dose_unit'),
+        doseUnitPlural: sqlExcluded('dose_unit_plural'),
       },
     });
 }

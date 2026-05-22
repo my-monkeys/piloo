@@ -86,9 +86,15 @@ class BdpmDb {
   void close() => _db.dispose();
 
   static BdpmMedicament _rowToMedicament(Row row) {
-    // `ai_summary` peut ne pas exister dans les vieux SQLite (avant
-    // distribution #167) — on tolère via columnNames check.
-    final hasAi = row.keys.contains('ai_summary');
+    // Tolérance versions SQLite plus anciennes : les colonnes ajoutées
+    // après la 1ère distribution mobile peuvent ne pas exister. On les
+    // lit conditionnellement via `keys.contains` plutôt que d'imposer
+    // un re-download immédiat à tous les users.
+    final keys = row.keys;
+    String? optStr(String col) =>
+        keys.contains(col) ? row[col] as String? : null;
+    int? optInt(String col) =>
+        keys.contains(col) ? row[col] as int? : null;
     return BdpmMedicament(
       cis: row['cis'] as String,
       denomination: row['denomination'] as String,
@@ -100,7 +106,12 @@ class BdpmDb {
       titulaire: row['titulaire'] as String?,
       statutAmm: row['statut_amm'] as String?,
       tauxRemboursement: row['taux_remboursement'] as int?,
-      aiSummary: hasAi ? row['ai_summary'] as String? : null,
+      aiSummary: optStr('ai_summary'),
+      libellePresentation: optStr('libelle_presentation'),
+      container: optStr('container'),
+      totalDoses: optInt('total_doses'),
+      doseUnit: optStr('dose_unit'),
+      doseUnitPlural: optStr('dose_unit_plural'),
     );
   }
 }

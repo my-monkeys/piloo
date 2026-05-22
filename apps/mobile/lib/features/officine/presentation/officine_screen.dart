@@ -39,6 +39,7 @@ import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -150,7 +151,11 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           );
           if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
-          final adjust = await _askStock(boite.unitesRestantes, boite.unitesInitiales);
+          final adjust = await _askStock(
+            boite.unitesRestantes,
+            boite.unitesInitiales,
+            cip13: boite.cip13,
+          );
           if (adjust == null || !mounted) return;
           // Quand le user sélectionne le chip "Vide" (restantes=0) on
           // bascule aussi le statut à 'vide' — sinon la boîte reste
@@ -276,7 +281,13 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   ///   - un champ numérique pour comptage précis
   /// Quand `total` (= unitesInitiales) est connu, les chips affichent
   /// les doses correspondantes (3/4 d'une boîte de 8 = 6).
-  Future<StockAdjustResult?> _askStock(int? current, int? total) {
+  Future<StockAdjustResult?> _askStock(
+    int? current,
+    int? total, {
+    required String cip13,
+  }) {
+    final bdpmDb = ref.read(bdpmDbProvider).valueOrNull;
+    final presentation = bdpmDb?.findByCip13(cip13);
     return showModalBottomSheet<StockAdjustResult>(
       context: context,
       backgroundColor: PilooColors.background,
@@ -284,7 +295,11 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => _StockAdjustSheet(initial: current, total: total),
+      builder: (ctx) => _StockAdjustSheet(
+        initial: current,
+        total: total,
+        presentation: presentation,
+      ),
     );
   }
 
@@ -1112,7 +1127,11 @@ class StockAdjustResult {
 }
 
 class _StockAdjustSheet extends StatefulWidget {
-  const _StockAdjustSheet({required this.initial, this.total});
+  const _StockAdjustSheet({
+    required this.initial,
+    this.total,
+    this.presentation,
+  });
 
   /// Stock actuel (= unitesRestantes courant).
   final int? initial;
@@ -1122,6 +1141,11 @@ class _StockAdjustSheet extends StatefulWidget {
   /// — sinon les "Plein/3/4" affichent n'importe quoi (cf. bug remonté
   /// 2026-05-22 : Plein → 32 sur une boîte de Doliprane 8).
   final int? total;
+  /// Médicament BDPM associé (résolu via bdpmLookupProvider). Quand
+  /// fourni : on pré-remplit le champ "Taille de la boîte" avec
+  /// `presentation.totalDoses`, et on adapte tous les labels du sheet
+  /// à `doseUnit/doseUnitPlural` (Comprimés vs ml vs Sachets).
+  final BdpmMedicament? presentation;
 
   @override
   State<_StockAdjustSheet> createState() => _StockAdjustSheetState();
@@ -1131,7 +1155,10 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.initial?.toString() ?? '');
   late final TextEditingController _totalCtrl =
-      TextEditingController(text: widget.total?.toString() ?? '');
+      TextEditingController(
+        // Priorité : valeur déjà en DB > donnée BDPM > vide.
+        text: (widget.total ?? widget.presentation?.totalDoses)?.toString() ?? '',
+      );
 
   /// Taille active = soit ce que l'user vient de saisir, soit ce que la
   /// boîte avait déjà en base.
@@ -1148,6 +1175,42 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   bool get _totalChanged {
     final t = _effectiveTotal;
     return t != null && t != widget.total;
+  }
+
+  /// Wording dynamique selon `presentation` BDPM. Tombe sur des libellés
+  /// génériques quand le médoc n'est pas BDPM-résolu (cas du scan inconnu
+  /// ou des médocs hors BDPM). Concentre toute la pluralisation/casse
+  /// ici pour ne pas la disperser dans le widget tree.
+  String get _doseSingular => widget.presentation?.doseUnit ?? 'comprimé';
+  String get _dosePlural => widget.presentation?.doseUnitPlural ?? 'comprimés';
+  String get _containerWord => widget.presentation?.container ?? 'boîte';
+
+  String get _titleLabel {
+    // "Comprimés restants" / "ml restants" / "Sachets restants"
+    final p = _dosePlural;
+    return '${p[0].toUpperCase()}${p.substring(1)} restants';
+  }
+
+  String get _subtitleLabel {
+    final examples = widget.presentation?.doseUnit != null
+        ? _dosePlural
+        : 'comprimés, gélules, sachets, ml…';
+    return 'Combien il reste dans cette $_containerWord ($examples).';
+  }
+
+  String get _totalFieldLabel => 'Taille de la $_containerWord';
+
+  String get _totalFieldHint {
+    final example = widget.presentation?.totalDoses ?? 8;
+    return 'ex. $example $_dosePlural';
+  }
+
+  String get _nbExactLabel => 'Nombre exact';
+  String get _nbExactHint {
+    final remaining = widget.presentation?.totalDoses != null
+        ? (widget.presentation!.totalDoses! ~/ 2)
+        : 14;
+    return 'ex. $remaining';
   }
 
   /// Chips fractionnels uniquement quand le total est connu (saisi ou
@@ -1209,7 +1272,7 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                 ),
               ),
               Text(
-                'Comprimés restants',
+                _titleLabel,
                 style: GoogleFonts.fraunces(
                   fontSize: 20,
                   fontWeight: FontWeight.w500,
@@ -1218,7 +1281,7 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
               ),
               const SizedBox(height: 4),
               Text(
-                'Nombre d’unités dans la boîte (comprimés, gélules, sachets…).',
+                _subtitleLabel,
                 style: GoogleFonts.manrope(
                   fontSize: 12,
                   color: PilooColors.textSecondary,
@@ -1229,10 +1292,10 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                 controller: _totalCtrl,
                 keyboardType: TextInputType.number,
                 onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  labelText: 'Taille de la boîte (doses)',
-                  hintText: 'ex. 8 comprimés',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: _totalFieldLabel,
+                  hintText: _totalFieldHint,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -1286,10 +1349,10 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                 controller: _ctrl,
                 autofocus: true,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Nombre exact',
-                  hintText: 'ex. 14',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: _nbExactLabel,
+                  hintText: _nbExactHint,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 18),

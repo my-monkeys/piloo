@@ -17,6 +17,11 @@ class BdpmMedicament {
     this.statutAmm,
     this.tauxRemboursement,
     this.aiSummary,
+    this.libellePresentation,
+    this.container,
+    this.totalDoses,
+    this.doseUnit,
+    this.doseUnitPlural,
   });
 
   final String cis;
@@ -33,7 +38,39 @@ class BdpmMedicament {
   /// (#165) ne l'a pas rempli — l'UI affiche dans ce cas un
   /// placeholder "résumé bientôt disponible".
   final String? aiSummary;
+  /// Présentation brute BDPM ("plaquette PVC-aluminium de 8 comprimés").
+  /// Sert de fallback affichage si les champs parsés sont null.
+  final String? libellePresentation;
+  /// Contenant user-friendly ("boîte", "flacon", "tube", "ampoule"…).
+  /// Drive le label "Boîte de N comprimés" sur la fiche.
+  final String? container;
+  /// Quantité totale dans le conditionnement complet — auto-fill pour
+  /// `unitesInitiales` à la création de boîte.
+  final int? totalDoses;
+  /// Unité singulier ("comprimé", "ml", "g", "ampoule"…). Drive le
+  /// wording UI : "Comprimés restants" vs "ml restants".
+  final String? doseUnit;
+  /// Pluriel ("comprimés", "ml", "g", "ampoules"…) — calculé côté
+  /// serveur pour éviter une lib de pluralisation côté mobile.
+  final String? doseUnitPlural;
+
+  /// Helper d'affichage : "Boîte de 8 comprimés", "Flacon de 200 ml",
+  /// ou fallback `libellePresentation` brut, ou null si rien.
+  String? get prettyPresentation {
+    final c = container;
+    final n = totalDoses;
+    final u = (n != null && n > 1 ? doseUnitPlural : doseUnit);
+    if (c != null && n != null && u != null) {
+      // Évite la redondance "Boîte de 1 boîte" quand on n'a que le contenant.
+      if (c == u) return '${_capitalize(c)} unique';
+      return '${_capitalize(c)} de $n $u';
+    }
+    return libellePresentation;
+  }
 
   @override
   String toString() => 'BdpmMedicament($cis, $denomination)';
 }
+
+String _capitalize(String s) =>
+    s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';

@@ -482,7 +482,9 @@ class _TechInfosCollapsibleState extends State<_TechInfosCollapsible> {
   @override
   Widget build(BuildContext context) {
     final med = widget.med;
+    final presentation = med.prettyPresentation;
     final rows = <({String label, String value})>[
+      if (presentation != null) (label: 'Présentation', value: presentation),
       if (med.titulaire != null) (label: 'Laboratoire', value: med.titulaire!),
       if (med.voieAdministration != null) (label: 'Voie', value: med.voieAdministration!),
       if (med.tauxRemboursement != null)

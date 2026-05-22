@@ -265,6 +265,27 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scanCip = ref.watch(scanResultProvider)?.cip13;
+    // Auto-fill du total depuis BDPM dès que la lookup résout. On le fait
+    // ici plutôt qu'en initState car bdpmLookupProvider est async — au
+    // 1er build il est en loading. Le `ref.listen` se déclenche quand la
+    // valeur change (loading → data).
+    if (scanCip != null) {
+      ref.listen<AsyncValue<BdpmMedicament?>>(
+        bdpmLookupProvider(scanCip),
+        (_, next) {
+          final med = next.valueOrNull;
+          final fromBdpm = med?.totalDoses;
+          if (fromBdpm != null && _totalDosesCtrl.text.trim().isEmpty) {
+            _totalDosesCtrl.text = fromBdpm.toString();
+            setState(() {});
+          }
+        },
+      );
+    }
+    final lookup = scanCip != null
+        ? ref.watch(bdpmLookupProvider(scanCip)).valueOrNull
+        : null;
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -279,7 +300,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _MedicamentPreviewSection(
-                      cip13: ref.watch(scanResultProvider)?.cip13,
+                      cip13: scanCip,
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -333,7 +354,11 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    _TotalDosesField(controller: _totalDosesCtrl, onChanged: () => setState(() {})),
+                    _TotalDosesField(
+                      controller: _totalDosesCtrl,
+                      onChanged: () => setState(() {}),
+                      presentation: lookup,
+                    ),
                     const SizedBox(height: 12),
                     _StockChips(
                       value: _stock,
@@ -679,15 +704,35 @@ class _StockChips extends StatelessWidget {
 }
 
 class _TotalDosesField extends StatelessWidget {
-  const _TotalDosesField({required this.controller, required this.onChanged});
+  const _TotalDosesField({
+    required this.controller,
+    required this.onChanged,
+    this.presentation,
+  });
 
   final TextEditingController controller;
   final VoidCallback onChanged;
+  /// Médicament BDPM résolu : drive le label ("COMPRIMÉS PAR BOÎTE" vs
+  /// "ML DANS LE FLACON") + l'exemple dans le hint.
+  final BdpmMedicament? presentation;
+
+  String get _label {
+    final dose = (presentation?.doseUnitPlural ?? 'doses').toUpperCase();
+    final container =
+        (presentation?.container ?? 'boîte').toUpperCase();
+    return '$dose PAR $container';
+  }
+
+  String get _hint {
+    final example = presentation?.totalDoses ?? 30;
+    final plural = presentation?.doseUnitPlural ?? 'comprimés, sachets, ml…';
+    return 'ex. $example $plural';
+  }
 
   @override
   Widget build(BuildContext context) {
     return _Field(
-      label: 'DOSES PAR BOÎTE',
+      label: _label,
       child: Container(
         height: 44,
         padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -704,7 +749,7 @@ class _TotalDosesField extends StatelessWidget {
           decoration: InputDecoration(
             border: InputBorder.none,
             isDense: true,
-            hintText: 'ex. 30 (comprimés, sachets, doses…)',
+            hintText: _hint,
             hintStyle: GoogleFonts.manrope(
               fontSize: 13,
               color: PilooColors.textTertiary,

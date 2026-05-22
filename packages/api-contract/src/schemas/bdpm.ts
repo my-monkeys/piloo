@@ -33,6 +33,17 @@ export const BdpmMedicamentSchema = z
     /// n'a pas encore traité ce CIP — l'UI affiche un placeholder.
     ai_summary: z.string().nullable().optional(),
     version_bdpm: z.iso.date(),
+    /// Libellé brut BDPM de la présentation (debug + fallback affichage).
+    libelle_presentation: z.string().nullable().optional(),
+    /// Contenant user-friendly : "boîte", "flacon", "tube"…
+    container: z.string().nullable().optional(),
+    /// Nb total de doses dans le conditionnement (auto-fill mobile).
+    total_doses: z.number().int().positive().nullable().optional(),
+    /// Unité de dose singulier ("comprimé", "ml", "g"…).
+    dose_unit: z.string().nullable().optional(),
+    /// Pluriel ("comprimés", "ml", "g"…) — fourni explicitement pour
+    /// éviter une lib de pluralisation côté mobile.
+    dose_unit_plural: z.string().nullable().optional(),
   })
   .openapi('BdpmMedicament');
 

@@ -918,6 +918,27 @@ components:
         version_bdpm:
           type: string
           format: date
+        libelle_presentation:
+          type:
+            - string
+            - "null"
+        container:
+          type:
+            - string
+            - "null"
+        total_doses:
+          type:
+            - integer
+            - "null"
+          exclusiveMinimum: 0
+        dose_unit:
+          type:
+            - string
+            - "null"
+        dose_unit_plural:
+          type:
+            - string
+            - "null"
       required:
         - cis
         - cip13
