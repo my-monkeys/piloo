@@ -272,6 +272,7 @@ class _Line extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
@@ -280,8 +281,12 @@ class _Line extends StatelessWidget {
               color: PilooColors.textSecondary,
             ),
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(width: 16),
+          // Expanded plutôt que Spacer+Flexible : sans Expanded, le
+          // Text garde sa largeur naturelle et `textAlign.right` n'a pas
+          // d'espace pour pousser. Avec Expanded le Text prend toute la
+          // largeur restante et l'alignement à droite devient visible.
+          Expanded(
             child: Text(
               value,
               textAlign: TextAlign.right,

@@ -37,10 +37,20 @@ if (!versionRegex.test(values.version)) {
 }
 
 // Lecture en mémoire — les 2 fichiers font ensemble ~30 Mo, OK.
-const [cisContent, cipContent] = await Promise.all([
-  readFile(values.cis, 'utf8'),
-  readFile(values.cip, 'utf8'),
-]);
+// Auto-détection encoding : BDPM historiquement Latin-1, passe
+// progressivement en UTF-8 (CIS_CIP_bdpm.txt est déjà UTF-8 mais
+// CIS_bdpm.txt reste Latin-1 en 05/2026). On tente UTF-8 strict
+// d'abord ; si invalid → fallback Windows-1252 (compatible Latin-1).
+const decode = (buf) => {
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    return new TextDecoder('windows-1252').decode(buf);
+  }
+};
+const [cisBuf, cipBuf] = await Promise.all([readFile(values.cis), readFile(values.cip)]);
+const cisContent = decode(cisBuf);
+const cipContent = decode(cipBuf);
 
 const db = getDb();
 log.info('bdpm.import.start', { version: values.version });

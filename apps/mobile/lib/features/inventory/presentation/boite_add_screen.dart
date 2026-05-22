@@ -30,6 +30,7 @@ import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 import 'package:piloo/shared/bdpm/bdpm_notice_provider.dart';
+import 'package:piloo/shared/widgets/bdpm_conflict_warning.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
@@ -239,6 +240,13 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
     };
   }
 
+  void _maybeAutofillTotal(int? totalFromBdpm) {
+    if (totalFromBdpm == null) return;
+    if (_totalDosesCtrl.text.trim().isNotEmpty) return;
+    _totalDosesCtrl.text = totalFromBdpm.toString();
+    if (mounted) setState(() {});
+  }
+
   Future<void> _pickOfficine() async {
     final list = ref.read(officinesListProvider).valueOrNull ?? const [];
     if (list.isEmpty) {
@@ -266,26 +274,28 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   @override
   Widget build(BuildContext context) {
     final scanCip = ref.watch(scanResultProvider)?.cip13;
-    // Auto-fill du total depuis BDPM dès que la lookup résout. On le fait
-    // ici plutôt qu'en initState car bdpmLookupProvider est async — au
-    // 1er build il est en loading. Le `ref.listen` se déclenche quand la
-    // valeur change (loading → data).
-    if (scanCip != null) {
-      ref.listen<AsyncValue<BdpmMedicament?>>(
-        bdpmLookupProvider(scanCip),
-        (_, next) {
-          final med = next.valueOrNull;
-          final fromBdpm = med?.totalDoses;
-          if (fromBdpm != null && _totalDosesCtrl.text.trim().isEmpty) {
-            _totalDosesCtrl.text = fromBdpm.toString();
-            setState(() {});
-          }
-        },
-      );
-    }
     final lookup = scanCip != null
         ? ref.watch(bdpmLookupProvider(scanCip)).valueOrNull
         : null;
+    // Auto-fill du total depuis BDPM. Deux mécanismes complémentaires :
+    //
+    // 1) `ref.listen` se déclenche au changement (loading → data) — cas
+    //    du 1er ouverture d'écran post-scan.
+    // 2) Le bloc impératif ci-dessous gère le cas où Riverpod a déjà
+    //    la donnée en cache (l'user a déjà ouvert un BoiteAdd auparavant
+    //    pour ce même CIP). `ref.listen` ne se déclenche pas car pas de
+    //    transition.
+    if (scanCip != null) {
+      ref.listen<AsyncValue<BdpmMedicament?>>(
+        bdpmLookupProvider(scanCip),
+        (_, next) => _maybeAutofillTotal(next.valueOrNull?.totalDoses),
+      );
+    }
+    if (lookup?.totalDoses != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _maybeAutofillTotal(lookup!.totalDoses);
+      });
+    }
     return Scaffold(
       backgroundColor: PilooColors.background,
       body: SafeArea(
@@ -729,37 +739,65 @@ class _TotalDosesField extends StatelessWidget {
     return 'ex. $example $plural';
   }
 
+  /// Compare la valeur saisie à la donnée BDPM. Différence → warning.
+  bool get _conflictsWithBdpm {
+    final bdpm = presentation?.totalDoses;
+    if (bdpm == null) return false;
+    final typed = int.tryParse(controller.text.trim());
+    return typed != null && typed != bdpm;
+  }
+
   @override
   Widget build(BuildContext context) {
     return _Field(
       label: _label,
-      child: Container(
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: PilooColors.surface,
-          borderRadius: BorderRadius.circular(PilooRadius.md),
-          border: Border.all(color: PilooColors.border),
-        ),
-        alignment: Alignment.centerLeft,
-        child: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          onChanged: (_) => onChanged(),
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            isDense: true,
-            hintText: _hint,
-            hintStyle: GoogleFonts.manrope(
-              fontSize: 13,
-              color: PilooColors.textTertiary,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            decoration: BoxDecoration(
+              color: PilooColors.surface,
+              borderRadius: BorderRadius.circular(PilooRadius.md),
+              border: Border.all(color: PilooColors.border),
+            ),
+            alignment: Alignment.centerLeft,
+            child: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              onChanged: (_) => onChanged(),
+              decoration: InputDecoration(
+                // Triple no-border : sans ça, Flutter applique sa
+                // UnderlineInputBorder par défaut pour enabled/focused,
+                // produisant un double trait sous l'input (à l'intérieur
+                // du Container border qui l'entoure déjà).
+                border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                isDense: true,
+                contentPadding: EdgeInsets.zero,
+                hintText: _hint,
+                hintStyle: GoogleFonts.manrope(
+                  fontSize: 13,
+                  color: PilooColors.textTertiary,
+                ),
+              ),
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                color: PilooColors.textPrimary,
+              ),
             ),
           ),
-          style: GoogleFonts.manrope(
-            fontSize: 13,
-            color: PilooColors.textPrimary,
+          if (_conflictsWithBdpm) BdpmConflictWarning(
+            officialTotal: presentation!.totalDoses!,
+            unitPlural: presentation?.doseUnitPlural ?? 'doses',
+            onReset: () {
+              controller.text = presentation!.totalDoses!.toString();
+              onChanged();
+            },
           ),
-        ),
+        ],
       ),
     );
   }

@@ -24,11 +24,14 @@ final bdpmLookupProvider =
   final db = dbAsync.valueOrNull;
   final local = db?.findByCip13(cip13);
 
-  // Si le local a TOUT (y compris ai_summary), on retourne direct.
-  // Si pas d'ai_summary, on tente l'API en parallèle pour enrichir —
-  // cas typique d'un fichier SQLite téléchargé avant la génération
-  // des résumés IA (#165) côté serveur.
-  if (local != null && local.aiSummary != null && local.aiSummary!.isNotEmpty) {
+  // Local-only si TOUTES les colonnes enrichies (ai_summary, totalDoses,
+  // doseUnit) sont là. Sinon fallback API pour récupérer l'enrichissement
+  // manquant — typique des SQLite mobiles plus anciens qui n'ont pas
+  // encore les colonnes #165 (ai_summary) ou #presentation-enrichment
+  // (totalDoses/doseUnit/container) ajoutées côté serveur.
+  final hasAi = local?.aiSummary != null && local!.aiSummary!.isNotEmpty;
+  final hasPresentation = local?.totalDoses != null && local?.doseUnit != null;
+  if (local != null && hasAi && hasPresentation) {
     return local;
   }
 

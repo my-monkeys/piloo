@@ -39,8 +39,10 @@ import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_db.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
+import 'package:piloo/shared/widgets/bdpm_conflict_warning.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
@@ -285,9 +287,15 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     int? current,
     int? total, {
     required String cip13,
-  }) {
-    final bdpmDb = ref.read(bdpmDbProvider).valueOrNull;
-    final presentation = bdpmDb?.findByCip13(cip13);
+  }) async {
+    // bdpmLookupProvider plutôt que bdpmDb direct : le SQLite local
+    // n'a pas forcément les colonnes enrichies (totalDoses/doseUnit/
+    // container), or ces champs drivent les labels du sheet ("Comprimés
+    // restants" vs "8 doses"). Le provider fait fallback API si la
+    // version SQLite locale est trop ancienne.
+    final presentation =
+        await ref.read(bdpmLookupProvider(cip13).future).catchError((_) => null);
+    if (!mounted) return null;
     return showModalBottomSheet<StockAdjustResult>(
       context: context,
       backgroundColor: PilooColors.background,
@@ -1197,13 +1205,6 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
     return 'Combien il reste dans cette $_containerWord ($examples).';
   }
 
-  String get _totalFieldLabel => 'Taille de la $_containerWord';
-
-  String get _totalFieldHint {
-    final example = widget.presentation?.totalDoses ?? 8;
-    return 'ex. $example $_dosePlural';
-  }
-
   String get _nbExactLabel => 'Nombre exact';
   String get _nbExactHint {
     final remaining = widget.presentation?.totalDoses != null
@@ -1287,16 +1288,15 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _totalCtrl,
-                keyboardType: TextInputType.number,
-                onChanged: (_) => setState(() {}),
-                decoration: InputDecoration(
-                  labelText: _totalFieldLabel,
-                  hintText: _totalFieldHint,
-                  border: const OutlineInputBorder(),
-                  isDense: true,
-                ),
+              // Affiche "Doliprane 1000 mg · 8 comprimés [✏️]" en info-row
+              // tappable quand la taille est connue (BDPM ou déjà saisie
+              // pour cette boîte). Sinon affiche le TextField pour la
+              // saisir. Au tap édition, le TextField réapparaît.
+              _PresentationRow(
+                presentation: widget.presentation,
+                totalCtrl: _totalCtrl,
+                effectiveTotal: _effectiveTotal,
+                onTotalChanged: () => setState(() {}),
               ),
               if (_chips.isEmpty) ...[
                 const SizedBox(height: 8),
@@ -1374,6 +1374,136 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bloc d'info-row tappable affichant "Doliprane 1000 mg · 8 comprimés"
+/// dans l'_StockAdjustSheet. Au tap : déplie un TextField pour corriger
+/// la taille (cas où le BDPM est faux ou que la boîte a été reconditionnée).
+///
+/// Quand la taille est inconnue (pas de BDPM + pas saisie précédemment),
+/// on affiche direct le TextField — sinon l'user serait coincé sans pouvoir
+/// renseigner la taille la 1ère fois.
+class _PresentationRow extends StatefulWidget {
+  const _PresentationRow({
+    required this.presentation,
+    required this.totalCtrl,
+    required this.effectiveTotal,
+    required this.onTotalChanged,
+  });
+
+  final BdpmMedicament? presentation;
+  final TextEditingController totalCtrl;
+  final int? effectiveTotal;
+  final VoidCallback onTotalChanged;
+
+  @override
+  State<_PresentationRow> createState() => _PresentationRowState();
+}
+
+class _PresentationRowState extends State<_PresentationRow> {
+  bool _editing = false;
+
+  String _displayLine() {
+    final med = widget.presentation;
+    final t = widget.effectiveTotal;
+    if (med == null) return t != null ? '$t doses' : '';
+    final parts = <String>[];
+    parts.add(med.denomination.split(',').first.trim());
+    if (med.dosage != null && med.dosage!.isNotEmpty) {
+      if (!parts.first.contains(med.dosage!)) parts.add(med.dosage!);
+    }
+    if (t != null) {
+      final unit = (t > 1
+              ? (med.doseUnitPlural ?? 'doses')
+              : (med.doseUnit ?? 'dose'));
+      parts.add('$t $unit');
+    }
+    return parts.join(' · ');
+  }
+
+  /// Vrai si la taille saisie diverge de celle officielle BDPM (l'user
+  /// a peut-être reconditionné ou la BDPM est obsolète — on l'avertit
+  /// avec un petit chevron sans bloquer le save).
+  bool get _conflictsWithBdpm {
+    final bdpm = widget.presentation?.totalDoses;
+    final t = widget.effectiveTotal;
+    return bdpm != null && t != null && bdpm != t;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.effectiveTotal;
+    final hasKnownTotal = t != null && t > 0;
+    if (_editing || !hasKnownTotal) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: widget.totalCtrl,
+            keyboardType: TextInputType.number,
+            autofocus: _editing,
+            onChanged: (_) => widget.onTotalChanged(),
+            onSubmitted: (_) => setState(() => _editing = false),
+            decoration: InputDecoration(
+              labelText: hasKnownTotal
+                  ? 'Taille de la boîte'
+                  : 'Saisir la taille de la boîte (doses)',
+              hintText: hasKnownTotal ? null : 'ex. 8',
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+          if (_conflictsWithBdpm) BdpmConflictWarning(
+            officialTotal: widget.presentation!.totalDoses!,
+            unitPlural: widget.presentation?.doseUnitPlural ?? 'doses',
+            onReset: () {
+              widget.totalCtrl.text =
+                  widget.presentation!.totalDoses!.toString();
+              widget.onTotalChanged();
+            },
+          ),
+        ],
+      );
+    }
+    return InkWell(
+      borderRadius: BorderRadius.circular(PilooRadius.md),
+      onTap: () => setState(() => _editing = true),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: PilooColors.surfaceSubtle,
+          borderRadius: BorderRadius.circular(PilooRadius.md),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Row(
+          children: [
+            const Icon(
+              PhosphorIconsRegular.pill,
+              size: 18,
+              color: PilooColors.primary,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _displayLine(),
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+            ),
+            const Icon(
+              PhosphorIconsRegular.pencilSimple,
+              size: 14,
+              color: PilooColors.textTertiary,
+            ),
+          ],
         ),
       ),
     );
