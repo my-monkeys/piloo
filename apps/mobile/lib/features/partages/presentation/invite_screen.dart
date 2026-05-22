@@ -7,33 +7,39 @@
 //  - rappel "le lien expire dans 72 h"
 //  - bouton "Envoyer l'invitation"
 //
-// L'envoi appellera POST /officines/:id/invitations (à câbler avec
-// le client OpenAPI). Pour l'instant on push pop avec un faux succès.
+// POST /officines/:id/invitations câblé via piloo_api_client. Le
+// serveur génère le token + envoie l'email Brevo (best-effort) au
+// destinataire avec un lien d'acceptation.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _InviteRole { proprietaire, editeur, lecteur }
 
-class InviteScreen extends StatefulWidget {
+class InviteScreen extends ConsumerStatefulWidget {
   const InviteScreen({this.officineId, super.key});
 
   final String? officineId;
 
   @override
-  State<InviteScreen> createState() => _InviteScreenState();
+  ConsumerState<InviteScreen> createState() => _InviteScreenState();
 }
 
-class _InviteScreenState extends State<InviteScreen> {
+class _InviteScreenState extends ConsumerState<InviteScreen> {
   final _emailCtrl = TextEditingController();
   _InviteRole _role = _InviteRole.editeur;
+  bool _sending = false;
 
   @override
   void dispose() {
@@ -44,16 +50,60 @@ class _InviteScreenState extends State<InviteScreen> {
   static const _emailRegex =
       r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$";
 
-  void _send() {
+  /// Résout l'officine cible. Le router peut passer `officineId='maison'`
+  /// comme placeholder quand l'écran s'ouvre depuis Plus → Partages sans
+  /// avoir d'officine encore sélectionnée — dans ce cas on fallback sur
+  /// l'officine active du user.
+  String? _resolveOfficineId() {
+    final fromRoute = widget.officineId;
+    if (fromRoute != null && fromRoute.length == 36) return fromRoute;
+    return ref.read(activeOfficineProvider).valueOrNull?.id;
+  }
+
+  Future<void> _send() async {
     final email = _emailCtrl.text.trim();
     if (!RegExp(_emailRegex).hasMatch(email)) {
       PilooToast.error(context, 'Email invalide.');
       return;
     }
-    PilooToast.success(context, "Invitation envoyée à $email.");
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) context.canPop() ? context.pop() : context.go(RoutePath.today);
-    });
+    final officineId = _resolveOfficineId();
+    if (officineId == null) {
+      PilooToast.error(context, 'Aucune officine sélectionnée.');
+      return;
+    }
+    setState(() => _sending = true);
+    try {
+      final client = ref.read(pilooApiClientProvider).getInvitationsApi();
+      final builder = api.CreateInvitationInputBuilder()
+        ..email = email
+        ..role = _toWireRole(_role);
+      final res = await client.v1OfficinesOfficineIdInvitationsPost(
+        officineId: officineId,
+        createInvitationInput: builder.build(),
+      );
+      if (res.statusCode != 201 && res.statusCode != 200) {
+        throw Exception('Statut ${res.statusCode}');
+      }
+      if (!mounted) return;
+      PilooToast.success(context, "Invitation envoyée à $email.");
+      Future.delayed(const Duration(milliseconds: 600), () {
+        if (mounted) {
+          context.canPop() ? context.pop() : context.go(RoutePath.today);
+        }
+      });
+    } catch (e) {
+      if (mounted) PilooToast.error(context, "Échec de l'envoi : $e");
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  api.CreateInvitationInputRoleEnum _toWireRole(_InviteRole r) {
+    return switch (r) {
+      _InviteRole.proprietaire => api.CreateInvitationInputRoleEnum.owner,
+      _InviteRole.editeur => api.CreateInvitationInputRoleEnum.editor,
+      _InviteRole.lecteur => api.CreateInvitationInputRoleEnum.viewer,
+    };
   }
 
   @override

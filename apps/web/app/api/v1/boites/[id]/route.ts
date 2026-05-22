@@ -86,6 +86,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   const db = getDb();
   const updated = await updateBoite(db, ctx.resolved.boiteId, {
     ...(parsed.data.statut !== undefined && { statut: parsed.data.statut }),
+    ...(parsed.data.unites_initiales !== undefined && {
+      unitesInitiales: parsed.data.unites_initiales,
+    }),
     ...(parsed.data.unites_restantes !== undefined && {
       unitesRestantes: parsed.data.unites_restantes,
     }),

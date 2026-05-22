@@ -21,18 +21,29 @@ LocalDatabase makeDb() {
 }
 
 void main() {
-  group('LocalDatabase v3', () {
-    test('schemaVersion vaut 3', () {
+  group('LocalDatabase v4', () {
+    test('schemaVersion vaut 4', () {
       final db = makeDb();
-      expect(db.schemaVersion, 3);
+      expect(db.schemaVersion, 4);
     });
 
-    test('table rappels créée par onCreate (v3)', () async {
+    test('table rappels ABSENTE (supprimée en v4)', () async {
       final db = makeDb();
       await db.customSelect('SELECT 1').get();
       final tables = await db
           .customSelect(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='rappels'",
+          )
+          .get();
+      expect(tables, isEmpty);
+    });
+
+    test('table bdpm_notices_local créée par onCreate', () async {
+      final db = makeDb();
+      await db.customSelect('SELECT 1').get();
+      final tables = await db
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='bdpm_notices_local'",
           )
           .get();
       expect(tables, isNotEmpty);

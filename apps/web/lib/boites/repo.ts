@@ -44,6 +44,7 @@ export async function updateBoite(
   id: string,
   patch: {
     statut?: 'active' | 'vide' | 'perimee';
+    unitesInitiales?: number | null;
     unitesRestantes?: number | null;
     notes?: string | null;
   },

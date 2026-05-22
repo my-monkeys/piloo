@@ -117,12 +117,21 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   Future<void> _onBoiteTap(_Boite boite) async {
     final apiBoite = boite.apiBoite;
     if (apiBoite == null) return;
+    final bdpmDb = ref.read(bdpmDbProvider).valueOrNull;
+    final recognized = bdpmDb?.findByCip13(apiBoite.cip13) != null;
+    final peremption = DateTime(
+      apiBoite.peremption.year,
+      apiBoite.peremption.month,
+      apiBoite.peremption.day,
+    );
     final action = await showQuickActionsSheet(
       context,
       info: QuickActionsContext(
         officineLabel: ref.read(activeOfficineProvider).valueOrNull?.nom ?? '',
         medicamentName: boite.name,
         cip13: apiBoite.cip13,
+        recognizedFromBdpm: recognized,
+        peremptionDate: peremption,
       ),
     );
     if (action == null || !mounted) return;
@@ -132,15 +141,6 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   Future<void> _runAction(api.Boite boite, QuickAction action) async {
     try {
       switch (action) {
-        case QuickAction.markEmpty:
-          await updateBoite(
-            ref,
-            boiteId: boite.id,
-            officineId: boite.officineId,
-            statut: api.UpdateBoiteInputStatutEnum.vide,
-            unitesRestantes: 0,
-          );
-          if (mounted) PilooToast.success(context, 'Marquée vide.');
         case QuickAction.markExpired:
           await updateBoite(
             ref,
@@ -150,15 +150,28 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           );
           if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
-          final newStock = await _askStock(boite.unitesRestantes, boite.unitesInitiales);
-          if (newStock == null || !mounted) return;
+          final adjust = await _askStock(boite.unitesRestantes, boite.unitesInitiales);
+          if (adjust == null || !mounted) return;
+          // Quand le user sélectionne le chip "Vide" (restantes=0) on
+          // bascule aussi le statut à 'vide' — sinon la boîte reste
+          // "active" et l'icône/badge ne se mettent pas à jour. C'est
+          // ce remplacement qui rend l'action séparée "Marquer comme
+          // vide" inutile (cf. cleanup quick actions 2026-05-22).
+          final markVide = adjust.restantes == 0;
           await updateBoite(
             ref,
             boiteId: boite.id,
             officineId: boite.officineId,
-            unitesRestantes: newStock,
+            unitesRestantes: adjust.restantes,
+            unitesInitiales: adjust.totalUpdated,
+            statut: markVide ? api.UpdateBoiteInputStatutEnum.vide : null,
           );
-          if (mounted) PilooToast.success(context, 'Stock mis à jour.');
+          if (mounted) {
+            PilooToast.success(
+              context,
+              markVide ? 'Marquée vide.' : 'Stock mis à jour.',
+            );
+          }
         case QuickAction.reportMissing:
           final alertesApi = ref.read(pilooApiClientProvider).getAlertesApi();
           final input = api.SignalerManqueInputBuilder()
@@ -263,8 +276,8 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   ///   - un champ numérique pour comptage précis
   /// Quand `total` (= unitesInitiales) est connu, les chips affichent
   /// les doses correspondantes (3/4 d'une boîte de 8 = 6).
-  Future<int?> _askStock(int? current, int? total) {
-    return showModalBottomSheet<int>(
+  Future<StockAdjustResult?> _askStock(int? current, int? total) {
+    return showModalBottomSheet<StockAdjustResult>(
       context: context,
       backgroundColor: PilooColors.background,
       isScrollControlled: true,
@@ -1087,14 +1100,27 @@ class _EmptyOfficine extends StatelessWidget {
   }
 }
 
+/// Résultat de l'ajustement : nouvelle valeur de stock + (optionnellement)
+/// taille totale renseignée à cette occasion. La taille est remontée pour
+/// que l'écran appelant fasse un PATCH `unites_initiales` en plus du PATCH
+/// `unites_restantes` — au prochain ajustement les chips fractionnels
+/// seront corrects sans re-demander la taille.
+class StockAdjustResult {
+  const StockAdjustResult({required this.restantes, this.totalUpdated});
+  final int restantes;
+  final int? totalUpdated;
+}
+
 class _StockAdjustSheet extends StatefulWidget {
   const _StockAdjustSheet({required this.initial, this.total});
 
   /// Stock actuel (= unitesRestantes courant).
   final int? initial;
-  /// Taille totale connue (= unitesInitiales). Si renseignée, les chips
-  /// calculent des doses correctes (3/4 d'une boîte de 8 = 6). Sinon
-  /// fallback historique sur 32/24/16/8/0.
+  /// Taille totale connue (= unitesInitiales). Quand renseignée, les chips
+  /// calculent des doses correctes (3/4 d'une boîte de 8 = 6). Quand
+  /// inconnue, on prompte l'user pour la saisir avant d'afficher les chips
+  /// — sinon les "Plein/3/4" affichent n'importe quoi (cf. bug remonté
+  /// 2026-05-22 : Plein → 32 sur une boîte de Doliprane 8).
   final int? total;
 
   @override
@@ -1104,41 +1130,58 @@ class _StockAdjustSheet extends StatefulWidget {
 class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   late final TextEditingController _ctrl =
       TextEditingController(text: widget.initial?.toString() ?? '');
+  late final TextEditingController _totalCtrl =
+      TextEditingController(text: widget.total?.toString() ?? '');
 
-  /// Chips calculés depuis `widget.total` si connu, sinon fallback fixe.
-  /// Préférer toujours renseigner `unitesInitiales` à la création de la
-  /// boîte pour que les chips soient justes.
+  /// Taille active = soit ce que l'user vient de saisir, soit ce que la
+  /// boîte avait déjà en base.
+  int? get _effectiveTotal {
+    final raw = _totalCtrl.text.trim();
+    if (raw.isEmpty) return widget.total;
+    final n = int.tryParse(raw);
+    if (n == null || n <= 0) return widget.total;
+    return n;
+  }
+
+  /// Vrai si l'user a saisi un total qui diffère de celui de la boîte —
+  /// on remontera alors la valeur pour persister `unitesInitiales`.
+  bool get _totalChanged {
+    final t = _effectiveTotal;
+    return t != null && t != widget.total;
+  }
+
+  /// Chips fractionnels uniquement quand le total est connu (saisi ou
+  /// déjà en base). Aucune valeur "fallback" hardcodée : un Plein sur
+  /// boîte de 8 doit valoir 8, pas 32.
   List<({String label, int units})> get _chips {
-    final t = widget.total;
-    if (t != null && t > 0) {
-      final lowest = t >= 4 ? 1 : 0;
-      return [
-        (label: 'Plein · $t', units: t),
-        (label: '3/4 · ${((t * 3) / 4).round()}', units: ((t * 3) / 4).round()),
-        (label: 'Moitié · ${(t / 2).round()}', units: (t / 2).round()),
-        (label: '1/4 · ${(t / 4).round()}', units: (t / 4).round()),
-        (label: 'Vide', units: lowest == 1 ? 1 : 0),
-      ];
-    }
-    return const [
-      (label: 'Plein', units: 32),
-      (label: '3/4', units: 24),
-      (label: 'Moitié', units: 16),
-      (label: '1/4', units: 8),
-      (label: 'Vide', units: 0),
+    final t = _effectiveTotal;
+    if (t == null || t <= 0) return const [];
+    final lowest = t >= 4 ? 1 : 0;
+    return [
+      (label: 'Plein · $t', units: t),
+      (label: '3/4 · ${((t * 3) / 4).round()}', units: ((t * 3) / 4).round()),
+      (label: 'Moitié · ${(t / 2).round()}', units: (t / 2).round()),
+      (label: '1/4 · ${(t / 4).round()}', units: (t / 4).round()),
+      (label: 'Vide', units: lowest == 1 ? 1 : 0),
     ];
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
+    _totalCtrl.dispose();
     super.dispose();
   }
 
   void _save() {
     final n = int.tryParse(_ctrl.text.trim());
     if (n == null || n < 0) return;
-    Navigator.of(context).pop(n);
+    Navigator.of(context).pop(
+      StockAdjustResult(
+        restantes: n,
+        totalUpdated: _totalChanged ? _effectiveTotal : null,
+      ),
+    );
   }
 
   @override
@@ -1181,8 +1224,30 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                   color: PilooColors.textSecondary,
                 ),
               ),
-              const SizedBox(height: 16),
-              Row(
+              const SizedBox(height: 12),
+              TextField(
+                controller: _totalCtrl,
+                keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Taille de la boîte (doses)',
+                  hintText: 'ex. 8 comprimés',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+              ),
+              if (_chips.isEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Renseigne la taille pour activer les raccourcis Plein / 3/4 / Moitié.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    color: PilooColors.textTertiary,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              if (_chips.isNotEmpty) Row(
                 children: [
                   for (var i = 0; i < _chips.length; i++) ...[
                     if (i > 0) const SizedBox(width: 6),

@@ -81,32 +81,6 @@ class BdpmNoticesLocal extends Table {
   Set<Column> get primaryKey => {cis};
 }
 
-@DataClassName('RappelRow')
-class Rappels extends Table {
-  // Rappels simples sans ordonnance (#327). Miroir local de la table
-  // serveur du même nom. Sync via pending_operations comme les boîtes.
-  //
-  // `heure` stockée en HH:MM:SS (string) plutôt qu'en epoch — un rappel
-  // quotidien à 8h00 doit déclencher tous les jours à 8h00 *local user*,
-  // pas à un instant absolu.
-  TextColumn get id => text()();
-  TextColumn get userId => text()();
-  TextColumn get officineId => text().nullable()();
-  TextColumn get boiteId => text().nullable()();
-  TextColumn get label => text()();
-  TextColumn get heure => text()(); // HH:MM:SS
-  TextColumn get recurrenceType =>
-      text().withDefault(const Constant('daily'))();
-  BoolColumn get actif => boolean().withDefault(const Constant(true))();
-  TextColumn get notes => text().nullable()();
-  TextColumn get createdAt => text()();
-  TextColumn get updatedAt => text()();
-  TextColumn get deletedAt => text().nullable()();
-
-  @override
-  Set<Column> get primaryKey => {id};
-}
-
 @DataClassName('PendingOperationRow')
 class PendingOperations extends Table {
   // Journal append-only des opérations locales en attente de sync

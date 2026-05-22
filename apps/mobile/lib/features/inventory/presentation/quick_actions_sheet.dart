@@ -21,10 +21,9 @@ import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 
 enum QuickAction {
-  adjustStock,
   seeInfo,
+  adjustStock,
   rename,
-  markEmpty,
   markExpired,
   reportMissing,
 }
@@ -34,12 +33,25 @@ class QuickActionsContext {
     required this.officineLabel,
     required this.medicamentName,
     this.cip13,
+    this.recognizedFromBdpm = false,
+    this.peremptionDate,
   });
 
   /// Label affiché dans le header de la sheet : "Maison · Doliprane 1000 mg".
   final String officineLabel;
   final String medicamentName;
   final String? cip13;
+
+  /// True si le médicament est reconnu dans BDPM (le `_mapApiBoite` a
+  /// trouvé une dénomination via `BdpmDb.findByCip13`). Quand vrai, on
+  /// masque l'action "Renommer" — l'user n'a aucune raison de renommer
+  /// un médoc dont le nom officiel est déjà connu.
+  final bool recognizedFromBdpm;
+
+  /// Date de péremption de la boîte. Quand non null et dans le futur,
+  /// on masque l'action "Marquer comme périmée" — la péremption est
+  /// connue, l'app la calculera automatiquement le jour venu.
+  final DateTime? peremptionDate;
 }
 
 /// Affiche la sheet et retourne l'action choisie (ou null si annulé /
@@ -89,15 +101,8 @@ class _QuickActionsSheet extends StatelessWidget {
             ),
             _SheetHeader(info: info),
             const SizedBox(height: 16),
-            _ActionRow(
-              icon: PhosphorIconsRegular.slidersHorizontal,
-              iconColor: PilooColors.primary,
-              iconBg: PilooColors.primarySoft,
-              title: 'Ajuster le stock',
-              subtitle: 'Plein · 3/4 · Moitié · 1/4 · Vide',
-              onTap: () => Navigator.of(context).pop(QuickAction.adjustStock),
-            ),
-            const SizedBox(height: 8),
+            // Voir la fiche en premier : c'est l'action la plus consultée
+            // (résumé IA + notice ANSM), bien avant l'ajustement de stock.
             _ActionRow(
               icon: PhosphorIconsRegular.info,
               iconColor: PilooColors.infoOn,
@@ -107,29 +112,43 @@ class _QuickActionsSheet extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _ActionRow(
-              icon: PhosphorIconsRegular.pencilSimple,
-              iconColor: PilooColors.textPrimary,
-              iconBg: PilooColors.surfaceSubtle,
-              title: 'Renommer',
-              subtitle: 'Utile quand le médicament est inconnu en base',
-              onTap: () => Navigator.of(context).pop(QuickAction.rename),
+              icon: PhosphorIconsRegular.slidersHorizontal,
+              iconColor: PilooColors.primary,
+              iconBg: PilooColors.primarySoft,
+              title: 'Ajuster le stock',
+              subtitle: 'Plein · 3/4 · Moitié · 1/4 · Vide',
+              onTap: () => Navigator.of(context).pop(QuickAction.adjustStock),
             ),
-            const SizedBox(height: 8),
-            _ActionRow(
-              icon: PhosphorIconsRegular.checkCircle,
-              iconColor: PilooColors.warningOn,
-              iconBg: PilooColors.warning,
-              title: 'Marquer comme vide',
-              onTap: () => Navigator.of(context).pop(QuickAction.markEmpty),
-            ),
-            const SizedBox(height: 8),
-            _ActionRow(
-              icon: PhosphorIconsRegular.warningOctagon,
-              iconColor: PilooColors.errorOn,
-              iconBg: PilooColors.error,
-              title: 'Marquer comme périmée',
-              onTap: () => Navigator.of(context).pop(QuickAction.markExpired),
-            ),
+            // "Renommer" : pertinent uniquement quand le scan n'a pas
+            // trouvé le médicament en BDPM (cas du médoc inconnu ou
+            // étranger). Cacher sinon — sinon l'user croit qu'il doit
+            // renommer un Doliprane officiellement reconnu.
+            if (!info.recognizedFromBdpm) ...[
+              const SizedBox(height: 8),
+              _ActionRow(
+                icon: PhosphorIconsRegular.pencilSimple,
+                iconColor: PilooColors.textPrimary,
+                iconBg: PilooColors.surfaceSubtle,
+                title: 'Renommer',
+                subtitle: 'Utile quand le médicament est inconnu en base',
+                onTap: () => Navigator.of(context).pop(QuickAction.rename),
+              ),
+            ],
+            // "Marquer comme périmée" : on cache si la péremption est
+            // dans le futur — le cron de péremption (#118) basculera le
+            // statut automatiquement le jour J. Garder l'option quand
+            // la date est manquante (raisonnable de marquer manuellement)
+            // ou déjà passée (l'user veut juste forcer le badge).
+            if (_shouldShowMarkExpired(info.peremptionDate)) ...[
+              const SizedBox(height: 8),
+              _ActionRow(
+                icon: PhosphorIconsRegular.warningOctagon,
+                iconColor: PilooColors.errorOn,
+                iconBg: PilooColors.error,
+                title: 'Marquer comme périmée',
+                onTap: () => Navigator.of(context).pop(QuickAction.markExpired),
+              ),
+            ],
             const SizedBox(height: 8),
             _ActionRow(
               icon: PhosphorIconsRegular.handWaving,
@@ -146,6 +165,11 @@ class _QuickActionsSheet extends StatelessWidget {
       ),
     );
   }
+}
+
+bool _shouldShowMarkExpired(DateTime? peremption) {
+  if (peremption == null) return true;
+  return !peremption.isAfter(DateTime.now());
 }
 
 class _SheetHeader extends StatelessWidget {

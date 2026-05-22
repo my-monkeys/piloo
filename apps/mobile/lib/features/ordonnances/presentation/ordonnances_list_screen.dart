@@ -51,8 +51,11 @@ class OrdonnancesListScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _Header(
-              onAdd: () => Navigator.of(context)
-                  .pushNamed(RoutePath.ordonnanceCreate),
+              // go_router : on doit utiliser `context.push(<path>)` ou
+              // `context.pushNamed(<name>)` — pas `Navigator.pushNamed`
+              // qui s'attend à un NAME et fail silencieux sur un PATH.
+              // Avant 2026-05-22 : tap sur "+" ne faisait rien.
+              onAdd: () => context.push(RoutePath.ordonnanceCreate),
             ),
             Expanded(
               child: listAsync.when(

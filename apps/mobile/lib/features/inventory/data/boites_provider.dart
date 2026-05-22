@@ -44,12 +44,14 @@ Future<WriteOutcome<Boite>> updateBoiteResult(
   required String boiteId,
   required String officineId,
   UpdateBoiteInputStatutEnum? statut,
+  int? unitesInitiales,
   int? unitesRestantes,
   String? notes,
 }) async {
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
   final builder = UpdateBoiteInputBuilder()
     ..statut = statut
+    ..unitesInitiales = unitesInitiales
     ..unitesRestantes = unitesRestantes
     ..notes = notes;
   final body = builder.build();
@@ -73,6 +75,7 @@ Future<WriteOutcome<Boite>> updateBoiteResult(
         entityId: boiteId,
         payload: {
           if (statut != null) 'statut': _statutToWire(statut),
+          if (unitesInitiales != null) 'unites_initiales': unitesInitiales,
           if (unitesRestantes != null) 'unites_restantes': unitesRestantes,
           if (notes != null) 'notes': notes,
         },
@@ -95,6 +98,7 @@ Future<Boite> updateBoite(
   required String boiteId,
   required String officineId,
   UpdateBoiteInputStatutEnum? statut,
+  int? unitesInitiales,
   int? unitesRestantes,
   String? notes,
 }) async {
@@ -103,6 +107,7 @@ Future<Boite> updateBoite(
     boiteId: boiteId,
     officineId: officineId,
     statut: statut,
+    unitesInitiales: unitesInitiales,
     unitesRestantes: unitesRestantes,
     notes: notes,
   );

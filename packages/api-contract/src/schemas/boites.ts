@@ -41,6 +41,7 @@ export const CreateBoiteInputSchema = z
 export const UpdateBoiteInputSchema = z
   .object({
     statut: StatutBoiteEnum.optional(),
+    unites_initiales: z.number().int().positive().nullable().optional(),
     unites_restantes: z.number().int().min(0).nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
   })

@@ -14,10 +14,8 @@
 // `redirect` : centralisé ici, branchera l'auth en #58 (A1 Splash). Pour
 // l'instant la racine `/` mène au splash placeholder.
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/features/auth/presentation/account_type_screen.dart';
 import 'package:piloo/features/auth/presentation/forgot_password_screen.dart';
@@ -44,9 +42,6 @@ import 'package:piloo/features/settings/presentation/notifications_screen.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
 import 'package:piloo/features/settings/presentation/bdpm_status_screen.dart';
 import 'package:piloo/features/settings/presentation/security_screen.dart';
-import 'package:piloo/features/rappels/data/rappel_scheduler.dart';
-import 'package:piloo/features/rappels/data/rappels_provider.dart';
-import 'package:piloo/features/rappels/presentation/rappels_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
 import 'package:piloo/shared/widgets/piloo_tab_bar.dart';
@@ -205,13 +200,6 @@ GoRouter buildRouter() {
         builder: (_, _) => const ScanScreen(),
       ),
 
-      // Rappels simples (#327)
-      GoRoute(
-        path: RoutePath.rappels,
-        name: RouteName.rappels,
-        builder: (_, _) => const RappelsScreen(),
-      ),
-
       // Boîtes
       GoRoute(
         path: RoutePath.boiteAdd,
@@ -350,22 +338,6 @@ class _MainShell extends ConsumerStatefulWidget {
 }
 
 class _MainShellState extends ConsumerState<_MainShell> {
-  @override
-  void initState() {
-    super.initState();
-    // Cold boot : enregistre le hook de scheduling rappels puis force
-    // un fetch unique. La fetch déclenche le hook → notifs locales
-    // re-programmées. Sans ça, un user qui n'ouvre jamais l'écran
-    // Rappels n'aurait pas ses rappels notifiés après un kill/restart.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final plugin = FlutterLocalNotificationsPlugin();
-      final scheduler = RappelScheduler(plugin);
-      registerRappelsSchedulerHook((items) => scheduler.rescheduleAll(items));
-      // ignore: unawaited_futures
-      ref.read(rappelsProvider.future).catchError((_) => <api.Rappel>[]);
-    });
-  }
-
   static const _tabs = [
     PilooTabItem(icon: PhosphorIconsFill.sunHorizon, label: 'AUJ.'),
     PilooTabItem(icon: PhosphorIconsRegular.firstAidKit, label: 'OFFICINE'),

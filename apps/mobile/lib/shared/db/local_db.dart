@@ -19,7 +19,7 @@ import 'tables.dart';
 part 'local_db.g.dart';
 
 @DriftDatabase(
-  tables: [Boites, PrisesPlanifiees, PendingOperations, BdpmNoticesLocal, Rappels],
+  tables: [Boites, PrisesPlanifiees, PendingOperations, BdpmNoticesLocal],
 )
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase() : super(driftDatabase(name: 'piloo_local'));
@@ -29,7 +29,7 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -45,13 +45,18 @@ class LocalDatabase extends _$LocalDatabase {
             await _createPendingOpsIndex(m);
           }
           if (from < 3) {
-            // v3 : nouvelles tables miroir
-            //  - bdpm_notices_local : cache local notices ANSM (cf.
-            //    bdpm_notice_provider.dart)
-            //  - rappels (#327) : rappels simples sans ordonnance
-            //    (pilule, vitamine, etc.)
+            // v3 : nouvelle table miroir bdpm_notices_local (cache
+            // local notices ANSM, cf. bdpm_notice_provider.dart).
             await m.createTable(bdpmNoticesLocal);
-            await m.createTable(rappels);
+          }
+          if (from < 4) {
+            // v4 (2026-05-22) : suppression de la table `rappels`.
+            // L'écran dédié a été remplacé par "Plus → Nouveau rappel"
+            // qui pousse vers OrdonnanceCreateScreen. DROP IF EXISTS
+            // car les users qui n'ont jamais atteint v3 n'ont pas la
+            // table — pas d'erreur.
+            await m.database
+                .customStatement('DROP TABLE IF EXISTS rappels');
           }
         },
       );
