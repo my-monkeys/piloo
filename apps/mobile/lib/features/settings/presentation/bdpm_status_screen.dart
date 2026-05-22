@@ -36,7 +36,11 @@ class _BdpmStatusScreenState extends ConsumerState<BdpmStatusScreen> {
     setState(() => _refreshing = true);
     try {
       final sync = await ref.read(bdpmSyncProvider.future);
-      final result = await sync.ensureUpToDate();
+      // force: true → re-télécharge même si localVersion == serverVersion.
+      // Sans ça on resterait coincé avec une SQLite locale corrompue
+      // (encoding cassé d'un import précédent) sous la même version
+      // serveur — le bouton "Forcer" ne forcerait alors plus rien.
+      final result = await sync.ensureUpToDate(force: true);
       if (!mounted) return;
       ref.invalidate(bdpmDbProvider);
       PilooToast.success(context, _outcomeLabel(result.outcome));

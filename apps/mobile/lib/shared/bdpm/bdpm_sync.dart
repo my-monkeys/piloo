@@ -66,9 +66,15 @@ class BdpmSync {
 
   /// Synchronise la BDPM locale. Idempotent — peut être appelé à
   /// chaque cold start sans conséquence si tout est déjà à jour.
+  ///
+  /// [force] : ignore le check `localVersion == serverVersion` et
+  /// re-télécharge systématiquement. Utile quand la SQLite locale a été
+  /// générée avec un encoding cassé (ex: accents `?`) sous la même
+  /// version que le serveur — sans force, on resterait coincé.
   Future<BdpmSyncResult> ensureUpToDate({
     void Function(int received, int total)? onProgress,
     CancelToken? cancelToken,
+    bool force = false,
   }) async {
     final localVersion = _readLocalVersion();
 
@@ -96,7 +102,7 @@ class BdpmSync {
       );
     }
 
-    if (localVersion == serverVersion) {
+    if (!force && localVersion == serverVersion) {
       return BdpmSyncResult(
         outcome: BdpmSyncOutcome.upToDate,
         localVersion: localVersion,
