@@ -18,11 +18,16 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
+import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/scan/data/camera_permission.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/features/scan/presentation/manual_cip_sheet.dart';
+import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/gs1/gs1_parser.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
@@ -66,7 +71,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     }
   }
 
-  void _onDetect(BarcodeCapture capture) {
+  Future<void> _onDetect(BarcodeCapture capture) async {
     if (_scanned) return; // évite double-fire
     final raw = capture.barcodes.firstOrNull?.rawValue;
     if (raw == null || raw.isEmpty) return;
@@ -86,7 +91,87 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
     // l'écran cible puisse le lire dès son build initial.
     ref.read(scanResultProvider.notifier).set(scanResult);
     if (!mounted) return;
+    // Pre-check : si l'officine active a déjà une boîte avec ce
+    // (cip13, lot), on saute boite_add et on ouvre direct la modale
+    // quick-actions. UX nettement plus rapide que de devoir taper
+    // "Ajouter" pour se taper un 409.
+    final existing = _findExistingForScan(scanResult);
+    if (existing != null) {
+      await _showExistingBoiteSheet(existing, scanResult.cip13);
+      return;
+    }
+    if (!mounted) return;
     context.pushReplacement(RoutePath.boiteAdd);
+  }
+
+  /// Cherche dans le cache Riverpod local une boîte de l'officine
+  /// active qui matche le scan. Si data pas encore chargée, retourne
+  /// null — le 409 fallback côté boite_add prendra le relais.
+  api.Boite? _findExistingForScan(ScanResult sr) {
+    final officine = ref.read(activeOfficineProvider).valueOrNull;
+    if (officine == null) return null;
+    final boites = ref.read(boitesProvider(officine.id)).valueOrNull;
+    if (boites == null) return null;
+    for (final b in boites) {
+      if (b.cip13 != sr.cip13) continue;
+      // Match strict : même lot (ou même serial si fourni). Sans lot
+      // côté scan, on ne match pas — l'user veut ajouter sans préciser
+      // le lot, le flow ajout reste cohérent.
+      if (sr.serial != null && b.numeroSerie == sr.serial) return b;
+      if (sr.lot != null && b.lot == sr.lot) return b;
+    }
+    return null;
+  }
+
+  Future<void> _showExistingBoiteSheet(api.Boite existing, String cip13) async {
+    final lookup =
+        await ref.read(bdpmLookupProvider(cip13).future).catchError((_) => null);
+    if (!mounted) return;
+    final officine = ref.read(activeOfficineProvider).valueOrNull;
+    final officineLabel = officine?.nom ?? 'Maison';
+    final medName = lookup?.denomination ?? 'Médicament';
+    final peremption = DateTime(
+      existing.peremption.year,
+      existing.peremption.month,
+      existing.peremption.day,
+    );
+    final action = await showQuickActionsSheet(
+      context,
+      info: QuickActionsContext(
+        officineLabel: officineLabel,
+        medicamentName: medName,
+        cip13: existing.cip13,
+        recognizedFromBdpm: true,
+        peremptionDate: peremption,
+        canAddAnotherBox: true,
+      ),
+    );
+    if (!mounted) return;
+    if (action == QuickAction.addAnotherBox) {
+      await updateBoite(
+        ref,
+        boiteId: existing.id,
+        officineId: existing.officineId,
+        nombreBoites: existing.nombreBoites + 1,
+      );
+      if (!mounted) return;
+      PilooToast.success(
+        context,
+        'Boîte ajoutée (${existing.nombreBoites + 1} au total).',
+      );
+    } else if (action == QuickAction.seeInfo) {
+      context.pushReplacement(RoutePath.medicamentInfo(existing.cip13));
+      return;
+    }
+    // Dans tous les cas (action choisie ou sheet dismissed), on revient
+    // sur l'écran d'avant le scan plutôt que de rester sur l'écran scan
+    // — sinon le scanner re-fire au prochain frame.
+    if (!mounted) return;
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RoutePath.officine);
+    }
   }
 
   DateTime? _lastNonPharmaToast;

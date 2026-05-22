@@ -352,6 +352,12 @@ class _MainShellState extends ConsumerState<_MainShell> {
       // extendBody pour que la zone derrière la pilule soit transparente
       // (sinon le scroll content est coupé sous la tab bar).
       extendBody: true,
+      // Ne resize pas le shell quand le clavier monte : sinon le FAB
+      // Scan (centerDocked) remonte avec la tab bar et l'user le voit
+      // bouger pendant qu'il tape (retour user 2026-05-23). Les écrans
+      // qui ont des TextField doivent gérer leur propre scroll via
+      // MediaQuery.viewInsets.bottom (cas des sheets / form scrollables).
+      resizeToAvoidBottomInset: false,
       // Badge sync au top — `SizedBox.shrink()` quand pending = 0, donc
       // n'affecte pas le layout normal (#95).
       body: Column(
