@@ -15,7 +15,7 @@ concurrency:
 jobs:
   e2e:
     name: Playwright (web)
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, cookie]
     timeout-minutes: 25
 
     services:

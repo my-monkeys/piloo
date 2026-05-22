@@ -22,7 +22,7 @@ concurrency:
 jobs:
   migrate:
     name: Run Drizzle migrations
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, cookie]
     environment: production
     timeout-minutes: 10
     steps:
@@ -48,7 +48,7 @@ jobs:
   deploy:
     name: Trigger Vercel production deploy
     needs: migrate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, linux, cookie]
     environment: production
     timeout-minutes: 15
     steps:
