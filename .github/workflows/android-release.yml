@@ -69,16 +69,12 @@ jobs:
           cache: true
 
       # Notre runner self-hosted cookie-server n'a pas l'Android SDK
-      # pré-installé (contrairement à ubuntu-latest hosted GitHub). Cette
-      # action télécharge platform-tools + cmdline-tools + accepte les
-      # licences. Cache pour éviter le re-DL à chaque run.
+      # pré-installé (contrairement à ubuntu-latest hosted GitHub).
+      # Default install (cmdline-tools + platform-tools + latest platform/
+      # build-tools) suffit à Flutter — Gradle télécharge le reste à la
+      # demande au 1er build.
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: |
-            platform-tools
-            platforms;android-35
-            build-tools;35.0.0
 
       - name: Setup Node 22
         uses: actions/setup-node@v4
