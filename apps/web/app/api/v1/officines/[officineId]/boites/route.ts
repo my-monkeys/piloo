@@ -65,16 +65,31 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
   const partage = await requireRole(auth.user.id, params.officineId, ['owner', 'editor'], { db });
   if (partage instanceof Response) return partage;
 
-  const boite = await createBoite(db, {
-    officineId: params.officineId,
-    cip13: parsed.data.cip13,
-    lot: parsed.data.lot ?? null,
-    numeroSerie: parsed.data.numero_serie ?? null,
-    peremption: parsed.data.peremption,
-    unitesInitiales: parsed.data.unites_initiales ?? null,
-    unitesRestantes: parsed.data.unites_restantes ?? null,
-    notes: parsed.data.notes ?? null,
-    ajouteePar: auth.user.id,
-  });
-  return Response.json(serializeBoite(boite), { status: 201 });
+  try {
+    const boite = await createBoite(db, {
+      officineId: params.officineId,
+      cip13: parsed.data.cip13,
+      lot: parsed.data.lot ?? null,
+      numeroSerie: parsed.data.numero_serie ?? null,
+      peremption: parsed.data.peremption,
+      unitesInitiales: parsed.data.unites_initiales ?? null,
+      unitesRestantes: parsed.data.unites_restantes ?? null,
+      notes: parsed.data.notes ?? null,
+      ajouteePar: auth.user.id,
+    });
+    return Response.json(serializeBoite(boite), { status: 201 });
+  } catch (err) {
+    // Double-scan : contrainte unique (officine_id, cip13, lot[, numero_serie])
+    // violée. Sans ce catch on remontait un 500 brut au mobile (DioException),
+    // peu actionnable côté UX. Désormais 409 explicite.
+    if (isUniqueViolation(err)) {
+      return apiErrorResponse('conflict', 'Cette boîte est déjà enregistrée dans cette officine.');
+    }
+    throw err;
+  }
+}
+
+// Postgres unique_violation = SQLSTATE 23505. Neon driver expose .code.
+function isUniqueViolation(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && 'code' in err && err.code === '23505';
 }
