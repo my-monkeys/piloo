@@ -22,6 +22,15 @@ on:
     tags:
       - "v*"
       - "!v*-demo" # géré par android-demo-release.yml
+  # Permet de re-déclencher manuellement (ou via gh CLI) sur un tag
+  # quand un run précédent a fail pour cause d'infra (Android SDK
+  # manquant, etc.) sans avoir à retag.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag à builder (ex: v0.1.35)"
+        required: true
+        type: string
 
 permissions:
   contents: write
