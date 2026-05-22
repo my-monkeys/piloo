@@ -138,9 +138,9 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: PilooButton(
-                label: "Envoyer l'invitation",
+                label: _sending ? 'Envoi…' : "Envoyer l'invitation",
                 variant: PilooButtonVariant.primary,
-                onPressed: _send,
+                onPressed: _sending ? null : _send,
               ),
             ),
           ],
