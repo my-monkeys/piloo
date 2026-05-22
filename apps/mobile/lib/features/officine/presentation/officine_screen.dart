@@ -490,10 +490,13 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
   String meta;
   final bdpmHit = bdpm?.findByCip13(b.cip13);
   if (bdpmHit != null) {
-    name = bdpmHit.denomination;
-    dci = [bdpmHit.dosage, bdpmHit.forme]
-        .where((s) => s != null && s.isNotEmpty)
-        .join(' · ');
+    // BDPM denomination = "DOLIPRANE 1000 mg, comprimé pelliculé".
+    // On retire le suffixe ", <forme>" pour ne garder que le nom + dosage
+    // dans la card officine — la forme reviendra comme icône (#98 follow-up).
+    name = _stripFormeSuffix(bdpmHit.denomination, bdpmHit.forme);
+    // dci = juste le dosage maintenant que la forme est cachée. Si pas
+    // de dosage non plus, on retombe sur le nom pour ne pas afficher vide.
+    dci = bdpmHit.dosage ?? '';
     if (dci.isEmpty) dci = name;
     meta = b.lot != null ? 'lot ${b.lot}' : 'CIP ${b.cip13}';
   } else if (parts.name != null) {
@@ -520,13 +523,57 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
     name: name,
     dci: dci,
     meta: metaWithCount,
-    icon: PhosphorIconsFill.pill,
+    icon: _iconForForme(bdpmHit?.forme),
     count: b.unitesRestantes ?? 1,
     total: b.unitesInitiales,
     exp: exp,
     state: state,
     apiBoite: b,
   );
+}
+
+/// Mappe la `forme` BDPM (texte libre) → icône Phosphor. Match par
+/// keyword pour absorber les variations ("comprimé pelliculé",
+/// "gélule gastro-résistant", etc.). Tout ce qui n'est pas reconnu
+/// retombe sur `pill` — choix neutre qui marche pour la majorité des
+/// formes solides ingérables.
+IconData _iconForForme(String? forme) {
+  if (forme == null || forme.isEmpty) return PhosphorIconsFill.pill;
+  final f = forme.toLowerCase();
+  // Ordre : du plus spécifique au plus générique pour éviter qu'une
+  // forme rare se fasse capter par un mot trop large.
+  if (f.contains('collyre') || f.contains('goutte')) return PhosphorIconsFill.eyedropper;
+  if (f.contains('inhalation') || f.contains('aérosol') || f.contains('aerosol')) return PhosphorIconsFill.wind;
+  if (f.contains('pulvérisation') || f.contains('pulverisation') || f.contains('spray')) {
+    return PhosphorIconsFill.rocketLaunch;
+  }
+  if (f.contains('transdermique') || f.contains('patch')) return PhosphorIconsFill.bandaids;
+  if (f.contains('injectable') || f.contains('perfusion')) return PhosphorIconsFill.syringe;
+  if (f.contains('crème') || f.contains('creme') || f.contains('gel') ||
+      f.contains('pommade') || f.contains('application')) {
+    return PhosphorIconsFill.handSoap;
+  }
+  if (f.contains('buvable') || f.contains('sirop') || f.contains('suspension')) {
+    return PhosphorIconsFill.flask;
+  }
+  // Comprimé, gélule, capsule, suppositoire, ovule, dispositif… → pill
+  // (phosphor 2.1.0 n'expose pas de `capsule` dédié, on garde pill pour
+  // tous les solides).
+  return PhosphorIconsFill.pill;
+}
+
+/// Retire le suffixe `, $forme` de la dénomination BDPM. Robust à la
+/// casse et aux variations subtiles de la BDPM. Si on ne match pas, on
+/// renvoie la dénomination intacte plutôt que d'inventer une troncature
+/// approximative — mieux vaut un nom long qu'un nom faux.
+String _stripFormeSuffix(String denomination, String? forme) {
+  if (forme == null || forme.isEmpty) return denomination;
+  final suffix = ', $forme';
+  final lower = denomination.toLowerCase();
+  if (lower.endsWith(suffix.toLowerCase())) {
+    return denomination.substring(0, denomination.length - suffix.length).trim();
+  }
+  return denomination;
 }
 
 ({String? name, String? rest}) _splitNotes(String? raw) {
