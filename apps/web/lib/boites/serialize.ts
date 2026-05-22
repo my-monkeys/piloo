@@ -12,6 +12,7 @@ export function serializeBoite(row: BoiteRow): BoiteDto {
     peremption: row.peremption,
     unites_initiales: row.unitesInitiales,
     unites_restantes: row.unitesRestantes,
+    nombre_boites: row.nombreBoites,
     statut: row.statut,
     notes: row.notes,
     ajoutee_par: row.ajouteePar,

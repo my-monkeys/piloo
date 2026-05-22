@@ -113,6 +113,13 @@
       "when": 1779447500933,
       "tag": "0015_burly_corsair",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1779478593572,
+      "tag": "0016_cute_gauntlet",
+      "breakpoints": true
     }
   ]
 }

@@ -24,6 +24,7 @@ import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/inventory/data/boites_provider.dart';
+import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
@@ -186,11 +187,69 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
       if (!mounted) return;
       PilooToast.success(context, 'Boîte ajoutée.');
       context.canPop() ? context.pop() : context.go(RoutePath.officine);
+    } on BoiteConflictException catch (e) {
+      if (!mounted) return;
+      await _handleAlreadyExists(e.existing, lookup?.denomination ?? 'Médicament');
     } catch (e) {
       if (!mounted) return;
       PilooToast.error(context, 'Échec de l\'ajout : $e');
     } finally {
       if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  /// Quand le serveur dit "déjà connue", on ouvre la modale quick
+  /// actions (#101) plutôt que de remonter une erreur. L'user choisit :
+  /// +1 boîte (incrémente nombre_boites), voir la fiche, ou retour
+  /// à l'officine pour les autres actions sur la boîte existante.
+  Future<void> _handleAlreadyExists(
+    api.Boite existing,
+    String medicamentName,
+  ) async {
+    final officineLabel = _resolveOfficineLabel();
+    final peremption = DateTime(
+      existing.peremption.year,
+      existing.peremption.month,
+      existing.peremption.day,
+    );
+    final action = await showQuickActionsSheet(
+      context,
+      info: QuickActionsContext(
+        officineLabel: officineLabel,
+        medicamentName: medicamentName,
+        cip13: existing.cip13,
+        recognizedFromBdpm: true,
+        peremptionDate: peremption,
+        canAddAnotherBox: true,
+      ),
+    );
+    if (!mounted || action == null) return;
+
+    switch (action) {
+      case QuickAction.addAnotherBox:
+        await updateBoite(
+          ref,
+          boiteId: existing.id,
+          officineId: existing.officineId,
+          nombreBoites: existing.nombreBoites + 1,
+        );
+        if (!mounted) return;
+        PilooToast.success(context, 'Boîte ajoutée (${existing.nombreBoites + 1} au total).');
+        context.canPop() ? context.pop() : context.go(RoutePath.officine);
+      case QuickAction.seeInfo:
+        // L'écran fiche se base sur le CIP13 ; il fetch la BDPM + notice
+        // déjà cachée par prefetchNoticeIntoLocal au scan.
+        if (!mounted) return;
+        context.push(RoutePath.medicamentInfo(existing.cip13));
+      case QuickAction.adjustStock:
+      case QuickAction.markExpired:
+      case QuickAction.reportMissing:
+      case QuickAction.rename:
+        // Ces actions vivent sur l'écran officine (modale par boîte).
+        // On y retourne, l'user clique la boîte concernée.
+        if (!mounted) return;
+        PilooToast.success(context, 'Ouvre la boîte dans ton officine.');
+        context.canPop() ? context.pop() : context.go(RoutePath.officine);
     }
   }
 

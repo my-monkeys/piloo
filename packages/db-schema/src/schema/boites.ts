@@ -37,6 +37,11 @@ export const boites = pgTable(
     peremption: date().notNull(),
     unitesInitiales: integer(),
     unitesRestantes: integer(),
+    // Nombre de boîtes physiques avec ce (cip13, lot). Quand l'user
+    // re-scan le même lot, on incrémente plutôt que d'enfreindre la
+    // contrainte unique. Stock total affiché =
+    //   (nombre_boites - 1) × unites_initiales + unites_restantes
+    nombreBoites: integer().notNull().default(1),
     statut: statutBoiteEnum().notNull().default('active'),
     notes: text(),
     ajouteePar: uuid()

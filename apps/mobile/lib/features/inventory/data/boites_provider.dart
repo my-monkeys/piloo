@@ -15,6 +15,15 @@ import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/db/db_provider.dart';
 import 'package:piloo/shared/sync/enqueue.dart';
 
+/// Levée par `createBoite` quand le serveur répond 409 conflict (le
+/// même (officine, cip13, lot) existe déjà). Porte la boîte existante
+/// pour que l'écran appelant puisse proposer la modale quick actions
+/// (voir fiche, ajuster stock, +1 boîte, etc.).
+class BoiteConflictException implements Exception {
+  const BoiteConflictException(this.existing);
+  final Boite existing;
+}
+
 final boitesProvider =
     FutureProvider.family<List<Boite>, String>((ref, officineId) async {
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
@@ -46,6 +55,7 @@ Future<WriteOutcome<Boite>> updateBoiteResult(
   UpdateBoiteInputStatutEnum? statut,
   int? unitesInitiales,
   int? unitesRestantes,
+  int? nombreBoites,
   String? notes,
 }) async {
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
@@ -53,6 +63,7 @@ Future<WriteOutcome<Boite>> updateBoiteResult(
     ..statut = statut
     ..unitesInitiales = unitesInitiales
     ..unitesRestantes = unitesRestantes
+    ..nombreBoites = nombreBoites
     ..notes = notes;
   final body = builder.build();
   try {
@@ -77,6 +88,7 @@ Future<WriteOutcome<Boite>> updateBoiteResult(
           if (statut != null) 'statut': _statutToWire(statut),
           if (unitesInitiales != null) 'unites_initiales': unitesInitiales,
           if (unitesRestantes != null) 'unites_restantes': unitesRestantes,
+          if (nombreBoites != null) 'nombre_boites': nombreBoites,
           if (notes != null) 'notes': notes,
         },
       ),
@@ -100,6 +112,7 @@ Future<Boite> updateBoite(
   UpdateBoiteInputStatutEnum? statut,
   int? unitesInitiales,
   int? unitesRestantes,
+  int? nombreBoites,
   String? notes,
 }) async {
   final out = await updateBoiteResult(
@@ -109,6 +122,7 @@ Future<Boite> updateBoite(
     statut: statut,
     unitesInitiales: unitesInitiales,
     unitesRestantes: unitesRestantes,
+    nombreBoites: nombreBoites,
     notes: notes,
   );
   return out.value;
@@ -148,6 +162,16 @@ Future<Boite> createBoite(
     ref.invalidate(boitesProvider(officineId));
     return res.data!;
   } on DioException catch (e) {
+    // 409 : (cip13, lot) déjà connu dans cette officine. Le serveur
+    // renvoie la boîte existante dans details.existing_boite (cf.
+    // apps/web/.../boites/route.ts). On la déserialise et la lève dans
+    // une exception typée pour que l'écran d'ajout puisse afficher la
+    // modale quick actions au lieu d'un toast d'erreur cryptique.
+    if (e.response?.statusCode == 409) {
+      final existing = _parseExistingBoite(e.response?.data);
+      if (existing != null) throw BoiteConflictException(existing);
+      rethrow;
+    }
     if (!_isTransient(e)) rethrow;
     // Pour un create, l'ID serveur n'existe pas encore — on en génère
     // un côté client. Le serveur l'acceptera comme PK (UUID v4) au
@@ -219,6 +243,27 @@ Boite _placeholderBoite(String id, String officineId, {String? cip13}) {
         ..createdAt = now
         ..updatedAt = now)
       .build();
+}
+
+/// Désérialise `error.details.existing_boite` du body 409 en `Boite`.
+/// Retourne null si la structure n'est pas conforme (réponse 409 d'une
+/// autre source ou serveur ancien qui n'inclut pas l'existing).
+Boite? _parseExistingBoite(dynamic body) {
+  if (body is! Map) return null;
+  final error = body['error'];
+  if (error is! Map) return null;
+  final details = error['details'];
+  if (details is! Map) return null;
+  final raw = details['existing_boite'];
+  if (raw is! Map) return null;
+  try {
+    return standardSerializers.deserializeWith(
+      Boite.serializer,
+      Map<String, dynamic>.from(raw),
+    );
+  } catch (_) {
+    return null;
+  }
 }
 
 /// UUID v4 local pour les entités créées offline.

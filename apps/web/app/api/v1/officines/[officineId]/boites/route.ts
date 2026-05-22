@@ -3,7 +3,7 @@ import { CreateBoiteInputSchema } from '@piloo/api-contract';
 import { z } from 'zod';
 
 import { requireAuth, requireRole } from '@/lib/auth/guards';
-import { createBoite, listBoitesByOfficine } from '@/lib/boites/repo';
+import { createBoite, findExistingBoite, listBoitesByOfficine } from '@/lib/boites/repo';
 import { serializeBoite } from '@/lib/boites/serialize';
 import { getDb } from '@/lib/db';
 import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';
@@ -80,10 +80,21 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
     return Response.json(serializeBoite(boite), { status: 201 });
   } catch (err) {
     // Double-scan : contrainte unique (officine_id, cip13, lot[, numero_serie])
-    // violée. Sans ce catch on remontait un 500 brut au mobile (DioException),
-    // peu actionnable côté UX. Désormais 409 explicite.
+    // violée. On retourne 409 + l'ID + la row existante : le mobile l'utilise
+    // pour ouvrir la modale quick actions (voir fiche, ajuster stock, +1 boîte
+    // si l'user a vraiment une 2e boîte du même lot).
     if (isUniqueViolation(err)) {
-      return apiErrorResponse('conflict', 'Cette boîte est déjà enregistrée dans cette officine.');
+      const existing = await findExistingBoite(db, {
+        officineId: params.officineId,
+        cip13: parsed.data.cip13,
+        lot: parsed.data.lot ?? null,
+        numeroSerie: parsed.data.numero_serie ?? null,
+      });
+      return apiErrorResponse(
+        'conflict',
+        'Cette boîte est déjà enregistrée dans cette officine.',
+        existing ? { existing_boite: serializeBoite(existing) } : undefined,
+      );
     }
     throw err;
   }

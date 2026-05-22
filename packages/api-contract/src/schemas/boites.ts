@@ -17,6 +17,7 @@ export const BoiteSchema = z
     peremption: z.iso.date(),
     unites_initiales: z.number().int().positive().nullable(),
     unites_restantes: z.number().int().min(0).nullable(),
+    nombre_boites: z.number().int().min(1),
     statut: StatutBoiteEnum,
     notes: z.string().max(2000).nullable(),
     ajoutee_par: z.uuid(),
@@ -43,6 +44,7 @@ export const UpdateBoiteInputSchema = z
     statut: StatutBoiteEnum.optional(),
     unites_initiales: z.number().int().positive().nullable().optional(),
     unites_restantes: z.number().int().min(0).nullable().optional(),
+    nombre_boites: z.number().int().min(1).optional(),
     notes: z.string().max(2000).nullable().optional(),
   })
   .openapi('UpdateBoiteInput');

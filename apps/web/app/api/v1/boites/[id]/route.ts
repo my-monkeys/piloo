@@ -92,6 +92,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
     ...(parsed.data.unites_restantes !== undefined && {
       unitesRestantes: parsed.data.unites_restantes,
     }),
+    ...(parsed.data.nombre_boites !== undefined && {
+      nombreBoites: parsed.data.nombre_boites,
+    }),
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
   });
   if (!updated) {

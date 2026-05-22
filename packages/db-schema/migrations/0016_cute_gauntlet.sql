@@ -1,0 +1,1 @@
+ALTER TABLE "boites" ADD COLUMN "nombre_boites" integer DEFAULT 1 NOT NULL;

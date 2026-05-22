@@ -198,6 +198,13 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           if (mounted) context.push(RoutePath.medicamentInfo(boite.cip13));
         case QuickAction.rename:
           await _runRename(boite);
+        case QuickAction.addAnotherBox:
+          // Ne devrait pas remonter ici : ce flow est réservé à
+          // boite_add_screen post-scan-409. Depuis l'officine on accède
+          // déjà à la boîte directement, "+1 boîte" passerait par
+          // adjustStock ou un long-press. Garde-fou explicite pour
+          // satisfaire l'exhaustivité du switch.
+          break;
       }
     } catch (e) {
       if (mounted) PilooToast.error(context, 'Action échouée : $e');
@@ -503,10 +510,16 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
   final exp = state == _BoiteState.perime
       ? null
       : _formatPeremption(b.peremption);
+  // Affiche "× N" devant le lot/CIP quand plusieurs boîtes physiques
+  // partagent ce (cip13, lot). L'user voit d'un coup d'œil qu'il a un
+  // stock multiplié sans qu'on touche aux compteurs unitesRestantes/
+  // unitesInitiales (qui restent par boîte).
+  final metaWithCount =
+      b.nombreBoites > 1 ? '× ${b.nombreBoites} · $meta' : meta;
   return _Boite(
     name: name,
     dci: dci,
-    meta: meta,
+    meta: metaWithCount,
     icon: PhosphorIconsFill.pill,
     count: b.unitesRestantes ?? 1,
     total: b.unitesInitiales,

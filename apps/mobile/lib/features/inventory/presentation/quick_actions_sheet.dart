@@ -26,6 +26,11 @@ enum QuickAction {
   rename,
   markExpired,
   reportMissing,
+  /// Incrémente `nombre_boites` sur la boîte existante. Affiché
+  /// uniquement quand on ouvre la sheet après un 409 conflict côté
+  /// scan : l'user vient de re-scanner un (cip13, lot) déjà connu et
+  /// veut signaler qu'il a une 2e boîte physique du même lot.
+  addAnotherBox,
 }
 
 class QuickActionsContext {
@@ -35,6 +40,7 @@ class QuickActionsContext {
     this.cip13,
     this.recognizedFromBdpm = false,
     this.peremptionDate,
+    this.canAddAnotherBox = false,
   });
 
   /// Label affiché dans le header de la sheet : "Maison · Doliprane 1000 mg".
@@ -52,6 +58,11 @@ class QuickActionsContext {
   /// on masque l'action "Marquer comme périmée" — la péremption est
   /// connue, l'app la calculera automatiquement le jour venu.
   final DateTime? peremptionDate;
+
+  /// Affiche l'action "+1 boîte (j'en ai une autre)". Utilisé quand la
+  /// sheet est ouverte suite à un 409 conflict côté scan — l'user peut
+  /// alors incrémenter `nombre_boites` au lieu d'abandonner.
+  final bool canAddAnotherBox;
 }
 
 /// Affiche la sheet et retourne l'action choisie (ou null si annulé /
@@ -101,6 +112,21 @@ class _QuickActionsSheet extends StatelessWidget {
             ),
             _SheetHeader(info: info),
             const SizedBox(height: 16),
+            // Action en tête quand on vient d'un 409 conflict : c'est
+            // probablement ce que l'user veut faire si elle re-scan le
+            // même lot. Affiché uniquement dans ce contexte.
+            if (info.canAddAnotherBox) ...[
+              _ActionRow(
+                icon: PhosphorIconsRegular.plusCircle,
+                iconColor: PilooColors.primary,
+                iconBg: PilooColors.primarySoft,
+                title: '+1 boîte (j\'en ai une autre)',
+                subtitle: 'Même lot, ajoute simplement au compteur',
+                onTap: () =>
+                    Navigator.of(context).pop(QuickAction.addAnotherBox),
+              ),
+              const SizedBox(height: 8),
+            ],
             // Voir la fiche en premier : c'est l'action la plus consultée
             // (résumé IA + notice ANSM), bien avant l'ajustement de stock.
             _ActionRow(

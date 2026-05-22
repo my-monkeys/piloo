@@ -199,6 +199,9 @@ components:
             - integer
             - "null"
           minimum: 0
+        nombre_boites:
+          type: integer
+          minimum: 1
         statut:
           type: string
           enum:
@@ -233,6 +236,7 @@ components:
         - peremption
         - unites_initiales
         - unites_restantes
+        - nombre_boites
         - statut
         - notes
         - ajoutee_par
@@ -313,6 +317,9 @@ components:
             - integer
             - "null"
           minimum: 0
+        nombre_boites:
+          type: integer
+          minimum: 1
         notes:
           type:
             - string

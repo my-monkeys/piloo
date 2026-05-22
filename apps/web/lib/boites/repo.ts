@@ -30,12 +30,37 @@ export async function createBoite(
     peremption: string;
     unitesInitiales: number | null;
     unitesRestantes: number | null;
+    nombreBoites?: number;
     notes: string | null;
     ajouteePar: string;
   },
 ): Promise<Boite> {
   const [row] = await db.insert(boites).values(input).returning();
   if (!row) throw new Error('createBoite: insert returned no row');
+  return row;
+}
+
+/// Cherche une boîte existante (non soft-deleted) avec le même
+/// (officine, cip13, lot, numero_serie). Utilisé par POST /boites quand
+/// l'insert tape la contrainte unique → on retourne l'ID au mobile pour
+/// que l'UX propose d'incrémenter `nombre_boites` plutôt qu'une erreur.
+export async function findExistingBoite(
+  db: Db,
+  q: { officineId: string; cip13: string; lot: string | null; numeroSerie: string | null },
+): Promise<Boite | undefined> {
+  const [row] = await db
+    .select()
+    .from(boites)
+    .where(
+      and(
+        eq(boites.officineId, q.officineId),
+        eq(boites.cip13, q.cip13),
+        q.lot === null ? isNull(boites.lot) : eq(boites.lot, q.lot),
+        q.numeroSerie === null ? isNull(boites.numeroSerie) : eq(boites.numeroSerie, q.numeroSerie),
+        isNull(boites.deletedAt),
+      ),
+    )
+    .limit(1);
   return row;
 }
 
@@ -46,6 +71,7 @@ export async function updateBoite(
     statut?: 'active' | 'vide' | 'perimee';
     unitesInitiales?: number | null;
     unitesRestantes?: number | null;
+    nombreBoites?: number;
     notes?: string | null;
   },
 ): Promise<Boite | undefined> {
