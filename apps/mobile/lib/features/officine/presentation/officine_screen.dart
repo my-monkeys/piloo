@@ -37,6 +37,8 @@ import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/rappels/data/rappels_provider.dart';
+import 'package:piloo/features/rappels/presentation/rappel_quick_sheet.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_db.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
@@ -205,6 +207,8 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           // adjustStock ou un long-press. Garde-fou explicite pour
           // satisfaire l'exhaustivité du switch.
           break;
+        case QuickAction.setRappel:
+          await _runSetRappel(boite);
       }
     } catch (e) {
       if (mounted) PilooToast.error(context, 'Action échouée : $e');
@@ -233,6 +237,41 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       notes: newNotes,
     );
     if (mounted) PilooToast.success(context, 'Renommée.');
+  }
+
+  /// Ouvre la modale "Rappel rapide" pour configurer matin/midi/soir/
+  /// coucher × quantité sur ce médoc. POST /v1/officines/{id}/rappels.
+  /// Pas de génération automatique des prises planifiées pour ce ship —
+  /// l'user verra son rappel listé, les notifications viendront en suivi.
+  Future<void> _runSetRappel(api.Boite boite) async {
+    final bdpmDb = ref.read(bdpmDbProvider).valueOrNull;
+    final bdpmHit = bdpmDb?.findByCip13(boite.cip13);
+    final medName = bdpmHit != null
+        ? _stripFormeSuffix(bdpmHit.denomination, bdpmHit.forme)
+        : (_splitNotes(boite.notes).name ?? 'Médicament');
+    final unite = bdpmHit?.doseUnit ?? 'comprimé';
+
+    final result = await showRappelQuickSheet(
+      context,
+      medicamentName: medName,
+      suggestedUnite: unite,
+    );
+    if (result == null || !mounted) return;
+
+    final today = DateTime.now();
+    await createRappel(
+      ref,
+      officineId: boite.officineId,
+      cip13: boite.cip13,
+      nomTexte: medName,
+      unite: unite,
+      quantiteMatin: result.matin,
+      quantiteMidi: result.midi,
+      quantiteSoir: result.soir,
+      quantiteCoucher: result.coucher,
+      dateDebut: api.Date(today.year, today.month, today.day),
+    );
+    if (mounted) PilooToast.success(context, 'Rappel créé.');
   }
 
   Future<String?> _askRename(String current) {

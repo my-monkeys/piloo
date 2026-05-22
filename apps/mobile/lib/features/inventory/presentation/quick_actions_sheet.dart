@@ -31,6 +31,11 @@ enum QuickAction {
   /// scan : l'user vient de re-scanner un (cip13, lot) déjà connu et
   /// veut signaler qu'il a une 2e boîte physique du même lot.
   addAnotherBox,
+  /// Ouvre la modale "Rappel rapide" (#98) — matin/midi/soir/coucher
+  /// × quantité, sans passer par une ordonnance. Distinct de
+  /// `markExpired` et autres : c'est de la configuration, pas une
+  /// mutation sur la boîte.
+  setRappel,
 }
 
 class QuickActionsContext {
@@ -127,8 +132,17 @@ class _QuickActionsSheet extends StatelessWidget {
               ),
               const SizedBox(height: 8),
             ],
-            // Voir la fiche en premier : c'est l'action la plus consultée
-            // (résumé IA + notice ANSM), bien avant l'ajustement de stock.
+            _ActionRow(
+              icon: PhosphorIconsRegular.bell,
+              iconColor: PilooColors.accent,
+              iconBg: PilooColors.accentSoft,
+              title: 'Définir un rappel rapide',
+              subtitle: 'Matin · Midi · Soir · Coucher',
+              onTap: () => Navigator.of(context).pop(QuickAction.setRappel),
+            ),
+            const SizedBox(height: 8),
+            // Voir la fiche : 2e position, juste après le rappel.
+            // (Résumé IA + notice ANSM.)
             _ActionRow(
               icon: PhosphorIconsRegular.info,
               iconColor: PilooColors.infoOn,

@@ -1811,6 +1811,229 @@ components:
       required:
         - image_base64
         - mime_type
+    ListRappelsResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Rappel"
+      required:
+        - items
+    Rappel:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        officine_id:
+          type: string
+          format: uuid
+        cip13:
+          type: string
+          pattern: ^\d{13}$
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        unite:
+          type: string
+          minLength: 1
+          maxLength: 32
+        quantite_matin:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_midi:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_soir:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_coucher:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        date_debut:
+          type: string
+          format: date
+        date_fin:
+          type:
+            - string
+            - "null"
+          format: date
+        actif:
+          type: boolean
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+        cree_par_user_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        deleted_at:
+          type:
+            - string
+            - "null"
+          format: date-time
+      required:
+        - id
+        - officine_id
+        - cip13
+        - nom_texte
+        - unite
+        - quantite_matin
+        - quantite_midi
+        - quantite_soir
+        - quantite_coucher
+        - date_debut
+        - date_fin
+        - actif
+        - notes
+        - cree_par_user_id
+        - created_at
+        - updated_at
+        - deleted_at
+    RappelApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    CreateRappelInput:
+      type: object
+      properties:
+        cip13:
+          type: string
+          pattern: ^\d{13}$
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        unite:
+          type: string
+          minLength: 1
+          maxLength: 32
+        quantite_matin:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_midi:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_soir:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_coucher:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        date_debut:
+          type: string
+          format: date
+        date_fin:
+          type:
+            - string
+            - "null"
+          format: date
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
+      required:
+        - cip13
+        - nom_texte
+        - date_debut
+    UpdateRappelInput:
+      type: object
+      properties:
+        nom_texte:
+          type: string
+          minLength: 1
+          maxLength: 255
+        unite:
+          type: string
+          minLength: 1
+          maxLength: 32
+        quantite_matin:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_midi:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_soir:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        quantite_coucher:
+          type:
+            - integer
+            - "null"
+          minimum: 1
+          maximum: 99
+        date_debut:
+          type: string
+          format: date
+        date_fin:
+          type:
+            - string
+            - "null"
+          format: date
+        actif:
+          type: boolean
+        notes:
+          type:
+            - string
+            - "null"
+          maxLength: 2000
   parameters: {}
 paths:
   /health:
@@ -3393,4 +3616,208 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/OcrApiError"
+  /v1/officines/{officineId}/rappels:
+    get:
+      summary: Liste les rappels d'une officine
+      description: Renvoie les rappels non soft-deleted, triés par création décroissante.
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      responses:
+        "200":
+          description: Liste
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListRappelsResponse"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "403":
+          description: Pas d'accès à l'officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+    post:
+      summary: Crée un rappel rapide dans une officine
+      description: Réservé aux rôles owner et editor.
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRappelInput"
+      responses:
+        "201":
+          description: Rappel créé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rappel"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "404":
+          description: Officine introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+  /v1/rappels/{id}:
+    get:
+      summary: Détail d'un rappel
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "200":
+          description: Détail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rappel"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "403":
+          description: Pas d'accès
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "404":
+          description: Inconnu ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+    patch:
+      summary: Met à jour un rappel (quantités, dates, statut actif)
+      description: Réservé aux rôles owner et editor sur l'officine du rappel.
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateRappelInput"
+      responses:
+        "200":
+          description: Rappel mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Rappel"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "404":
+          description: Inconnu ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+    delete:
+      summary: Supprime (soft-delete) un rappel
+      description: Réservé aux rôles owner et editor sur l'officine du rappel.
+      tags:
+        - rappels
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: id
+          in: path
+      responses:
+        "204":
+          description: Supprimé
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "403":
+          description: Rôle insuffisant
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
+        "404":
+          description: Inconnu ou inaccessible
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RappelApiError"
 webhooks: {}
