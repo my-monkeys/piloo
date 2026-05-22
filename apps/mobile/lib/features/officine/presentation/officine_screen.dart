@@ -1181,7 +1181,6 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   /// génériques quand le médoc n'est pas BDPM-résolu (cas du scan inconnu
   /// ou des médocs hors BDPM). Concentre toute la pluralisation/casse
   /// ici pour ne pas la disperser dans le widget tree.
-  String get _doseSingular => widget.presentation?.doseUnit ?? 'comprimé';
   String get _dosePlural => widget.presentation?.doseUnitPlural ?? 'comprimés';
   String get _containerWord => widget.presentation?.container ?? 'boîte';
 
