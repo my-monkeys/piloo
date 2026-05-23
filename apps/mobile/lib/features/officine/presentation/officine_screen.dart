@@ -204,9 +204,59 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           break;
         case QuickAction.setRappel:
           await _runSetRappel(boite);
+        case QuickAction.discard:
+          await _runDiscard(boite);
       }
     } catch (e) {
       if (mounted) PilooToast.error(context, 'Action échouée : $e');
+    }
+  }
+
+  /// "Jeter cette boîte" — soft-delete avec confirmation.
+  /// Si `nombre_boites > 1`, décrémente le compteur au lieu de
+  /// supprimer (cas où l'user a 3 boîtes du même lot et n'en jette
+  /// qu'une).
+  Future<void> _runDiscard(api.Boite boite) async {
+    final nb = boite.nombreBoites;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(nb > 1 ? 'Jeter une boîte ?' : 'Jeter cette boîte ?'),
+        content: Text(
+          nb > 1
+              ? 'Tu as $nb boîtes de ce lot. On décrémente le compteur à ${nb - 1} ?'
+              : 'Cette action retire la boîte de ton inventaire. Tu pourras la rescanner si besoin.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: PilooColors.error),
+            child: Text(nb > 1 ? 'Décrémenter' : 'Jeter'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    if (nb > 1) {
+      await updateBoite(
+        ref,
+        boiteId: boite.id,
+        officineId: boite.officineId,
+        nombreBoites: nb - 1,
+      );
+      if (mounted) PilooToast.success(context, 'Une boîte retirée.');
+    } else {
+      await deleteBoite(
+        ref,
+        boiteId: boite.id,
+        officineId: boite.officineId,
+      );
+      if (mounted) PilooToast.success(context, 'Boîte jetée.');
     }
   }
 

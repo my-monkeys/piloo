@@ -128,6 +128,35 @@ Future<Boite> updateBoite(
   return out.value;
 }
 
+/// DELETE /v1/boites/{id} : soft delete (le serveur set deleted_at).
+/// Fallback enqueue 'soft_delete_boite' en cas d'échec réseau.
+Future<void> deleteBoite(
+  WidgetRef ref, {
+  required String boiteId,
+  required String officineId,
+}) async {
+  final api = ref.read(pilooApiClientProvider).getBoitesApi();
+  try {
+    final res = await api.v1BoitesIdDelete(id: boiteId);
+    if (res.statusCode != 204 && res.statusCode != 200) {
+      throw Exception('Suppression boîte : statut ${res.statusCode}');
+    }
+    ref.invalidate(boitesProvider(officineId));
+  } on DioException catch (e) {
+    if (!_isTransient(e)) rethrow;
+    await enqueueOperation(
+      ref.read(localDatabaseProvider),
+      EnqueueOp(
+        type: 'soft_delete_boite',
+        entityType: 'boite',
+        entityId: boiteId,
+        payload: const {},
+      ),
+    );
+    ref.invalidate(boitesProvider(officineId));
+  }
+}
+
 Future<Boite> createBoite(
   WidgetRef ref, {
   required String officineId,

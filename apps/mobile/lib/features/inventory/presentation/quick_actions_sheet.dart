@@ -26,6 +26,10 @@ enum QuickAction {
   /// Ouvre la modale "Rappel rapide" (#98) — matin/midi/soir/coucher
   /// × quantité, sans passer par une ordonnance.
   setRappel,
+  /// Jeter la boîte (soft-delete). Si `nombre_boites > 1`, décrémente
+  /// au lieu de supprimer. Confirmation native obligatoire avant
+  /// exécution (action destructive).
+  discard,
 }
 
 class QuickActionsContext {
@@ -179,6 +183,16 @@ class _QuickActionsSheet extends StatelessWidget {
               title: 'Signaler un manque',
               onTap: () =>
                   Navigator.of(context).pop(QuickAction.reportMissing),
+            ),
+            const SizedBox(height: 8),
+            // Action destructive en bas — séparée visuellement par sa
+            // couleur error pour réduire le risque de tap accidentel.
+            _ActionRow(
+              icon: PhosphorIconsRegular.trash,
+              iconColor: PilooColors.errorOn,
+              iconBg: PilooColors.error,
+              title: 'Jeter cette boîte',
+              onTap: () => Navigator.of(context).pop(QuickAction.discard),
             ),
             const SizedBox(height: 16),
             _CancelButton(onTap: () => Navigator.of(context).pop()),

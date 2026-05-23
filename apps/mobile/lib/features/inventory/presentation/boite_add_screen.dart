@@ -258,6 +258,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
       case QuickAction.reportMissing:
       case QuickAction.rename:
       case QuickAction.setRappel:
+      case QuickAction.discard:
         // Ces actions vivent sur l'écran officine (modale par boîte).
         // On y retourne, l'user clique la boîte concernée.
         if (!mounted) return;
