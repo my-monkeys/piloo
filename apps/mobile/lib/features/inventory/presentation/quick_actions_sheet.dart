@@ -46,6 +46,7 @@ class QuickActionsContext {
     this.recognizedFromBdpm = false,
     this.peremptionDate,
     this.canAddAnotherBox = false,
+    this.substances = const [],
   });
 
   /// Label affiché dans le header de la sheet : "Maison · Doliprane 1000 mg".
@@ -68,6 +69,12 @@ class QuickActionsContext {
   /// sheet est ouverte suite à un 409 conflict côté scan — l'user peut
   /// alors incrémenter `nombre_boites` au lieu d'abandonner.
   final bool canAddAnotherBox;
+
+  /// Substances actives (DCI). Affichées sous le nom dans le header
+  /// pour que l'user identifie tout de suite ce qu'il a en main —
+  /// utile pour les noms commerciaux peu parlants. Vide si médoc
+  /// hors CIS_COMPO_bdpm.
+  final List<String> substances;
 }
 
 /// Affiche la sheet et retourne l'action choisie (ou null si annulé /
@@ -256,15 +263,39 @@ class _SheetHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 2),
+                // Officine en gris léger pour mettre le médoc en avant.
                 Text(
-                  '${info.officineLabel} · ${info.medicamentName}',
-                  overflow: TextOverflow.ellipsis,
+                  info.officineLabel,
                   style: GoogleFonts.manrope(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: PilooColors.textPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: PilooColors.textTertiary,
                   ),
                 ),
+                const SizedBox(height: 2),
+                // Nom complet sur plusieurs lignes : on retire l'ellipsis
+                // pour ne plus tronquer "DOLIPRANE 1000 mg, comprimé".
+                Text(
+                  info.medicamentName,
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: PilooColors.textPrimary,
+                    height: 1.3,
+                  ),
+                ),
+                if (info.substances.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    info.substances.join(' + '),
+                    style: GoogleFonts.manrope(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: PilooColors.accent,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

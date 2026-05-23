@@ -25,6 +25,7 @@ import 'package:piloo/features/scan/data/camera_permission.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/features/scan/presentation/manual_cip_sheet.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/gs1/gs1_parser.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
@@ -126,6 +127,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
   Future<void> _showExistingBoiteSheet(api.Boite existing, String cip13) async {
     final lookup =
         await ref.read(bdpmLookupProvider(cip13).future).catchError((_) => null);
+    // substances ne sont disponibles que via SQLite local (pas exposé via
+    // l'API REST). On lit en parallèle.
+    final localBdpm = ref.read(bdpmDbProvider).valueOrNull?.findByCip13(cip13);
     if (!mounted) return;
     final officine = ref.read(activeOfficineProvider).valueOrNull;
     final officineLabel = officine?.nom ?? 'Maison';
@@ -144,6 +148,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         recognizedFromBdpm: true,
         peremptionDate: peremption,
         canAddAnotherBox: true,
+        substances: localBdpm?.substances ?? const [],
       ),
     );
     if (!mounted) return;

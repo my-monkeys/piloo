@@ -30,6 +30,7 @@ import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_medicament.dart';
+import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_notice_provider.dart';
 import 'package:piloo/shared/widgets/bdpm_conflict_warning.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
@@ -212,6 +213,8 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
       existing.peremption.month,
       existing.peremption.day,
     );
+    final localBdpm =
+        ref.read(bdpmDbProvider).valueOrNull?.findByCip13(existing.cip13);
     final action = await showQuickActionsSheet(
       context,
       info: QuickActionsContext(
@@ -221,6 +224,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         recognizedFromBdpm: true,
         peremptionDate: peremption,
         canAddAnotherBox: true,
+        substances: localBdpm?.substances ?? const [],
       ),
     );
     if (!mounted || action == null) return;

@@ -137,6 +137,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
         cip13: apiBoite.cip13,
         recognizedFromBdpm: recognized,
         peremptionDate: peremption,
+        substances: bdpmDb?.findByCip13(apiBoite.cip13)?.substances ?? const [],
       ),
     );
     if (action == null || !mounted) return;
@@ -558,16 +559,13 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
   final exp = state == _BoiteState.perime
       ? null
       : _formatPeremption(b.peremption);
-  // Affiche "× N" devant le lot/CIP quand plusieurs boîtes physiques
-  // partagent ce (cip13, lot). L'user voit d'un coup d'œil qu'il a un
-  // stock multiplié sans qu'on touche aux compteurs unitesRestantes/
-  // unitesInitiales (qui restent par boîte).
-  final metaWithCount =
-      b.nombreBoites > 1 ? '× ${b.nombreBoites} · $meta' : meta;
+  // Le multi-boîtes est signalé par un badge numérique sur l'icône
+  // dans _BoiteCard (cf. nombreBoites depuis apiBoite). Pas de
+  // duplication dans meta — la card reste lisible.
   return _Boite(
     name: name,
     dci: dci,
-    meta: metaWithCount,
+    meta: meta,
     icon: _iconForForme(bdpmHit?.forme),
     count: b.unitesRestantes ?? 1,
     total: b.unitesInitiales,
@@ -1059,6 +1057,73 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// Icône de la card boîte avec un badge "× N" en haut-droite quand
+/// l'user a plusieurs boîtes physiques du même lot. Pattern iOS
+/// classique (notification badge) : repérable d'un coup d'œil sans
+/// surcharger le contenu textuel.
+class _BoiteIconWithBadge extends StatelessWidget {
+  const _BoiteIconWithBadge({
+    required this.icon,
+    required this.iconBg,
+    required this.iconFg,
+    required this.nombreBoites,
+  });
+
+  final IconData icon;
+  final Color iconBg;
+  final Color iconFg;
+  final int nombreBoites;
+
+  @override
+  Widget build(BuildContext context) {
+    final showBadge = nombreBoites > 1;
+    // `clipBehavior: none` indispensable pour que le badge déborde du
+    // Container 44×44 sans être tronqué.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(PilooRadius.md),
+          ),
+          alignment: Alignment.center,
+          child: Icon(icon, size: 22, color: iconFg),
+        ),
+        if (showBadge)
+          Positioned(
+            top: -6,
+            right: -8,
+            child: Container(
+              constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: PilooColors.accent,
+                shape: BoxShape.rectangle,
+                borderRadius: BorderRadius.circular(11),
+                // Bord en background couleur pour découper visuellement
+                // le badge de la card (effet "collé par-dessus").
+                border: Border.all(color: PilooColors.background, width: 2),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                '×$nombreBoites',
+                style: GoogleFonts.manrope(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                  height: 1.0,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _BoiteCard extends StatelessWidget {
   const _BoiteCard({required this.boite});
 
@@ -1111,15 +1176,14 @@ class _BoiteCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: iconBg,
-              borderRadius: BorderRadius.circular(PilooRadius.md),
-            ),
-            alignment: Alignment.center,
-            child: Icon(boite.icon, size: 22, color: iconFg),
+          _BoiteIconWithBadge(
+            icon: boite.icon,
+            iconBg: iconBg,
+            iconFg: iconFg,
+            // Badge "× N" affiché uniquement quand l'user a plusieurs
+            // boîtes physiques du même lot (cf. nombreBoites > 1).
+            // Retour user 2026-05-23 : la mention dans meta était noyée.
+            nombreBoites: boite.apiBoite?.nombreBoites ?? 1,
           ),
           const SizedBox(width: 12),
           Expanded(
