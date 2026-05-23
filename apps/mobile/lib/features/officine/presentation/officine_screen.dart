@@ -533,10 +533,16 @@ _Boite _mapApiBoite(api.Boite b, BdpmDb? bdpm) {
     // On retire le suffixe ", <forme>" pour ne garder que le nom + dosage
     // dans la card officine — la forme reviendra comme icône (#98 follow-up).
     name = _stripFormeSuffix(bdpmHit.denomination, bdpmHit.forme);
-    // dci = juste le dosage maintenant que la forme est cachée. Si pas
-    // de dosage non plus, on retombe sur le nom pour ne pas afficher vide.
-    dci = bdpmHit.dosage ?? '';
-    if (dci.isEmpty) dci = name;
+    // dci = molécules actives BDPM (déjà triées côté serveur), concat
+    // pour devenir une clé de groupement stable. Augmentin → "AMOXICILLINE
+    // TRIHYDRATÉE + CLAVULANATE DE POTASSIUM". Permet à 2 Doliprane
+    // de marques différentes de tomber sous la même clé "PARACÉTAMOL".
+    // Fallback dosage si CIS_COMPO ne connait pas le médoc (rare).
+    if (bdpmHit.substances.isNotEmpty) {
+      dci = bdpmHit.substances.join(' + ');
+    } else {
+      dci = bdpmHit.dosage ?? name;
+    }
     meta = b.lot != null ? 'lot ${b.lot}' : 'CIP ${b.cip13}';
   } else if (parts.name != null) {
     name = parts.name!;

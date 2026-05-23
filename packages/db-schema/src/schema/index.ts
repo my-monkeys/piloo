@@ -9,6 +9,7 @@ export * from './ordonnances.ts';
 export * from './prescriptions.ts';
 export * from './prises_planifiees.ts';
 export * from './rappels.ts';
+export * from './substances_actives_bdpm.ts';
 export * from './alertes.ts';
 export * from './sync.ts';
 export * from './devices.ts';

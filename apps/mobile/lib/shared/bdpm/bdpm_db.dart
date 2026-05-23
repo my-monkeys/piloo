@@ -7,6 +7,8 @@
 // Le lookup par CIP13 est le chemin critique post-scan : doit rester
 // sous 50 ms (AC #83). Avec l'index `idx_cip13` côté serveur,
 // la requête prend < 1 ms en pratique.
+import 'dart:convert';
+
 import 'package:sqlite3/sqlite3.dart';
 
 import 'bdpm_medicament.dart';
@@ -112,6 +114,22 @@ class BdpmDb {
       totalDoses: optInt('total_doses'),
       doseUnit: optStr('dose_unit'),
       doseUnitPlural: optStr('dose_unit_plural'),
+      substances: _parseSubstances(optStr('substances_json')),
     );
+  }
+
+  /// Parse `substances_json` (TEXT JSON array) en `List String`. Vide
+  /// si null/malformé — fallback safe pour les médocs sans data CIS_COMPO.
+  static List<String> _parseSubstances(String? raw) {
+    if (raw == null || raw.isEmpty) return const [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded.whereType<String>().toList(growable: false);
+      }
+    } catch (_) {
+      // best-effort, on tolère un fichier SQLite corrompu sans crasher.
+    }
+    return const [];
   }
 }

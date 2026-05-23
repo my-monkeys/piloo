@@ -127,6 +127,13 @@
       "when": 1779487719668,
       "tag": "0017_absurd_nitro",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1779493651692,
+      "tag": "0018_legal_vector",
+      "breakpoints": true
     }
   ]
 }

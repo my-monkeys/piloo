@@ -36,7 +36,7 @@
 // activer le mode `journal_mode=DELETE` (compatible read-only mobile).
 import { DatabaseSync } from 'node:sqlite';
 
-import { medicamentsBdpm, type Db } from '@piloo/db-schema';
+import { medicamentsBdpm, substancesActivesBdpm, type Db } from '@piloo/db-schema';
 
 export interface GenerateBdpmSqliteResult {
   outputPath: string;
@@ -56,6 +56,26 @@ export async function generateBdpmSqlite(
   // souci, donc on charge tout en mémoire pour ne pas avoir à gérer
   // cursor + transaction Postgres.
   const rows = await db.select().from(medicamentsBdpm).orderBy(medicamentsBdpm.cip13);
+
+  // Pré-charge toutes les substances actives indexées par CIS — une
+  // jointure par row serait 20k+ requêtes. On garde une Map<cis, string[]>
+  // avec les substances triées alphabétiquement pour que la clé de
+  // grouping côté mobile soit déterministe.
+  const substanceRows = await db
+    .select({
+      cis: substancesActivesBdpm.cis,
+      denomination: substancesActivesBdpm.denominationSubstance,
+    })
+    .from(substancesActivesBdpm);
+  const substancesByCis = new Map<string, string[]>();
+  for (const s of substanceRows) {
+    const list = substancesByCis.get(s.cis) ?? [];
+    list.push(s.denomination);
+    substancesByCis.set(s.cis, list);
+  }
+  for (const list of substancesByCis.values()) {
+    list.sort((a, b) => a.localeCompare(b, 'fr'));
+  }
 
   const sqlite = new DatabaseSync(outputPath);
   try {
@@ -82,6 +102,7 @@ export async function generateBdpmSqlite(
         statut_amm TEXT,
         taux_remboursement INTEGER,
         ai_summary TEXT,
+        substances_json TEXT,
         version_bdpm TEXT NOT NULL
       ) WITHOUT ROWID;
 
@@ -94,11 +115,12 @@ export async function generateBdpmSqlite(
       INSERT INTO medicaments (
         cip13, cip7, cis, denomination, forme, dosage,
         voie_administration, titulaire, statut_amm,
-        taux_remboursement, ai_summary, version_bdpm
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        taux_remboursement, ai_summary, substances_json, version_bdpm
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     sqlite.exec('BEGIN');
     for (const r of rows) {
+      const subs = substancesByCis.get(r.cis);
       insert.run(
         r.cip13,
         r.cip7,
@@ -111,6 +133,7 @@ export async function generateBdpmSqlite(
         r.statutAmm,
         r.tauxRemboursement,
         r.aiSummary,
+        subs && subs.length > 0 ? JSON.stringify(subs) : null,
         r.versionBdpm,
       );
     }

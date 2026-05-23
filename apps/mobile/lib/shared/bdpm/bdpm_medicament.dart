@@ -22,6 +22,7 @@ class BdpmMedicament {
     this.totalDoses,
     this.doseUnit,
     this.doseUnitPlural,
+    this.substances = const [],
   });
 
   final String cis;
@@ -53,6 +54,12 @@ class BdpmMedicament {
   /// Pluriel ("comprimés", "ml", "g", "ampoules"…) — calculé côté
   /// serveur pour éviter une lib de pluralisation côté mobile.
   final String? doseUnitPlural;
+  /// Substances actives (DCI) du médicament. Une combinaison comme
+  /// Augmentin contient `['AMOXICILLINE TRIHYDRATÉE', 'CLAVULANATE DE
+  /// POTASSIUM']`. Triées alphabétiquement côté serveur pour que la
+  /// concaténation soit une clé de groupement stable.
+  /// Vide si médoc non trouvé dans CIS_COMPO_bdpm.
+  final List<String> substances;
 
   /// Helper d'affichage : "Boîte de 8 comprimés", "Flacon de 200 ml",
   /// ou fallback `libellePresentation` brut, ou null si rien.
