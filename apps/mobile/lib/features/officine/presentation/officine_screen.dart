@@ -149,14 +149,6 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   Future<void> _runAction(api.Boite boite, QuickAction action) async {
     try {
       switch (action) {
-        case QuickAction.markExpired:
-          await updateBoite(
-            ref,
-            boiteId: boite.id,
-            officineId: boite.officineId,
-            statut: api.UpdateBoiteInputStatutEnum.perimee,
-          );
-          if (mounted) PilooToast.success(context, 'Marquée périmée.');
         case QuickAction.adjustStock:
           final adjust = await _askStock(
             boite.unitesRestantes,

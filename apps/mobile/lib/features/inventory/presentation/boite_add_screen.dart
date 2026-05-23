@@ -246,7 +246,6 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         if (!mounted) return;
         context.push(RoutePath.medicamentInfo(existing.cip13));
       case QuickAction.adjustStock:
-      case QuickAction.markExpired:
       case QuickAction.reportMissing:
       case QuickAction.rename:
       case QuickAction.setRappel:
