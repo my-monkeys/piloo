@@ -1040,7 +1040,16 @@ class _GroupedList extends StatelessWidget {
       final section = sections[s];
       if (section.header != null) {
         if (s > 0) items.add(const SizedBox(height: 8));
-        items.add(_SectionHeader(label: section.header!));
+        // Total des boîtes physiques (somme des nombre_boites). Sert
+        // au badge "× N" du header — affiché seulement si > 1.
+        final totalBoites = section.boites.fold<int>(
+          0,
+          (acc, b) => acc + (b.apiBoite?.nombreBoites ?? 1),
+        );
+        items.add(_SectionHeader(
+          label: section.header!,
+          boiteCount: totalBoites,
+        ));
         items.add(const SizedBox(height: 8));
       } else if (s > 0) {
         items.add(const SizedBox(height: 10));
@@ -1097,20 +1106,52 @@ List<List<_Boite>> _groupSameCip(List<_Boite> boites) {
 }
 
 class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.label});
+  const _SectionHeader({required this.label, this.boiteCount = 0});
 
   final String label;
+  /// Nombre total de boîtes physiques du groupe. 0 ou 1 → pas de
+  /// badge (pas d'info utile). 2+ → badge "× N" pour signaler que
+  /// le groupe contient plusieurs boîtes (utile dans le mode
+  /// carrousel par CIP).
+  final int boiteCount;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label.toUpperCase(),
-      style: GoogleFonts.manrope(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.6,
-        color: PilooColors.textTertiary,
-      ),
+    final showBadge = boiteCount > 1;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Text(
+            label.toUpperCase(),
+            style: GoogleFonts.manrope(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+              color: PilooColors.textTertiary,
+            ),
+          ),
+        ),
+        if (showBadge) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: PilooColors.surface,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: PilooColors.border),
+            ),
+            child: Text(
+              '× $boiteCount',
+              style: GoogleFonts.manrope(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: PilooColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
