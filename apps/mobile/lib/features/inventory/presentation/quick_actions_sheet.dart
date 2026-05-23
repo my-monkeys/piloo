@@ -6,13 +6,6 @@
 // de la boîte trouvée. Pour la review visuelle, on l'expose en plus
 // via la route `/_dev/quick-actions` (à défaut d'écran réel post-scan
 // implémenté).
-//
-// 5 actions, chacune avec sa couleur sémantique :
-//  1. Ajuster le stock — primary (action neutre/principale)
-//  2. Voir la fiche médicament — info bleu
-//  3. Marquer comme vide — warning ambre
-//  4. Marquer comme périmée — error rouge
-//  5. Signaler un manque — accent terracotta (notification d'un proche)
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
@@ -24,7 +17,6 @@ enum QuickAction {
   seeInfo,
   adjustStock,
   rename,
-  markExpired,
   reportMissing,
   /// Incrémente `nombre_boites` sur la boîte existante. Affiché
   /// uniquement quand on ouvre la sheet après un 409 conflict côté
@@ -32,9 +24,7 @@ enum QuickAction {
   /// veut signaler qu'il a une 2e boîte physique du même lot.
   addAnotherBox,
   /// Ouvre la modale "Rappel rapide" (#98) — matin/midi/soir/coucher
-  /// × quantité, sans passer par une ordonnance. Distinct de
-  /// `markExpired` et autres : c'est de la configuration, pas une
-  /// mutation sur la boîte.
+  /// × quantité, sans passer par une ordonnance.
   setRappel,
 }
 
@@ -181,21 +171,6 @@ class _QuickActionsSheet extends StatelessWidget {
                 onTap: () => Navigator.of(context).pop(QuickAction.rename),
               ),
             ],
-            // "Marquer comme périmée" : on cache si la péremption est
-            // dans le futur — le cron de péremption (#118) basculera le
-            // statut automatiquement le jour J. Garder l'option quand
-            // la date est manquante (raisonnable de marquer manuellement)
-            // ou déjà passée (l'user veut juste forcer le badge).
-            if (_shouldShowMarkExpired(info.peremptionDate)) ...[
-              const SizedBox(height: 8),
-              _ActionRow(
-                icon: PhosphorIconsRegular.warningOctagon,
-                iconColor: PilooColors.errorOn,
-                iconBg: PilooColors.error,
-                title: 'Marquer comme périmée',
-                onTap: () => Navigator.of(context).pop(QuickAction.markExpired),
-              ),
-            ],
             const SizedBox(height: 8),
             _ActionRow(
               icon: PhosphorIconsRegular.handWaving,
@@ -214,10 +189,18 @@ class _QuickActionsSheet extends StatelessWidget {
   }
 }
 
-bool _shouldShowMarkExpired(DateTime? peremption) {
-  if (peremption == null) return true;
-  return !peremption.isAfter(DateTime.now());
+/// Vrai quand la péremption connue est strictement antérieure à
+/// aujourd'hui. `null` (péremption inconnue) → on n'affiche pas
+/// l'état périmé, pas d'info fiable.
+bool _isExpired(DateTime? peremption) {
+  if (peremption == null) return false;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  return peremption.isBefore(today);
 }
+
+String _formatFr(DateTime d) =>
+    '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
 class _SheetHeader extends StatelessWidget {
   const _SheetHeader({required this.info});
@@ -226,10 +209,26 @@ class _SheetHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final expired = _isExpired(info.peremptionDate);
+    final bgColor = expired ? PilooColors.error : PilooColors.surfaceSubtle;
+    final iconBg = expired ? PilooColors.errorOn : PilooColors.primarySoft;
+    final iconColor = expired ? PilooColors.error : PilooColors.primary;
+    final iconData =
+        expired ? PhosphorIconsFill.warningOctagon : PhosphorIconsFill.pill;
+    final eyebrowColor =
+        expired ? PilooColors.errorOn : PilooColors.textTertiary;
+    final textColor =
+        expired ? PilooColors.errorOn : PilooColors.textPrimary;
+    final subtleColor =
+        expired ? PilooColors.errorOn : PilooColors.textTertiary;
+    final eyebrow = expired
+        ? 'PÉRIMÉ DEPUIS LE ${_formatFr(info.peremptionDate!)}'
+        : 'DÉJÀ DANS VOTRE OFFICINE';
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: PilooColors.surfaceSubtle,
+        color: bgColor,
         borderRadius: BorderRadius.circular(PilooRadius.lg),
       ),
       child: Row(
@@ -238,15 +237,11 @@ class _SheetHeader extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: PilooColors.primarySoft,
+              color: iconBg,
               borderRadius: BorderRadius.circular(PilooRadius.md),
             ),
             alignment: Alignment.center,
-            child: const Icon(
-              PhosphorIconsFill.pill,
-              size: 22,
-              color: PilooColors.primary,
-            ),
+            child: Icon(iconData, size: 22, color: iconColor),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -254,33 +249,30 @@ class _SheetHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'DÉJÀ DANS VOTRE OFFICINE',
+                  eyebrow,
                   style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
-                    color: PilooColors.textTertiary,
+                    color: eyebrowColor,
                   ),
                 ),
                 const SizedBox(height: 2),
-                // Officine en gris léger pour mettre le médoc en avant.
                 Text(
                   info.officineLabel,
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: PilooColors.textTertiary,
+                    color: subtleColor,
                   ),
                 ),
                 const SizedBox(height: 2),
-                // Nom complet sur plusieurs lignes : on retire l'ellipsis
-                // pour ne plus tronquer "DOLIPRANE 1000 mg, comprimé".
                 Text(
                   info.medicamentName,
                   style: GoogleFonts.manrope(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: PilooColors.textPrimary,
+                    color: textColor,
                     height: 1.3,
                   ),
                 ),
@@ -291,7 +283,7 @@ class _SheetHeader extends StatelessWidget {
                     style: GoogleFonts.manrope(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: PilooColors.accent,
+                      color: expired ? PilooColors.errorOn : PilooColors.accent,
                       letterSpacing: 0.2,
                     ),
                   ),
