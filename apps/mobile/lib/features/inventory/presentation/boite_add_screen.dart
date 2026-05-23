@@ -99,6 +99,15 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   String get _expLabel =>
       '${_expMonth.toString().padLeft(2, '0')} / $_expYear';
 
+  /// Vrai quand la péremption saisie (mois+année) est strictement
+  /// antérieure au mois courant. Une boîte expire "à la fin du mois",
+  /// donc on compare (year, month) au mois courant.
+  bool get _isExpiredLot {
+    final now = DateTime.now();
+    return _expYear < now.year ||
+        (_expYear == now.year && _expMonth < now.month);
+  }
+
   @override
   void dispose() {
     _notesCtrl.dispose();
@@ -372,6 +381,10 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (_isExpiredLot) ...[
+                      _ExpiredLotBanner(month: _expMonth, year: _expYear),
+                      const SizedBox(height: 12),
+                    ],
                     _MedicamentPreviewSection(
                       cip13: scanCip,
                     ),
@@ -448,10 +461,15 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
               child: Row(
                 children: [
+                  // Quand le lot est périmé on inverse l'emphase : Annuler
+                  // devient primary pour pousser le bon réflexe, Ajouter
+                  // reste accessible en outline.
                   Expanded(
                     child: PilooButton(
                       label: 'Annuler',
-                      variant: PilooButtonVariant.outline,
+                      variant: _isExpiredLot
+                          ? PilooButtonVariant.primary
+                          : PilooButtonVariant.outline,
                       onPressed: () => context.canPop() ? context.pop() : context.go(RoutePath.today),
                     ),
                   ),
@@ -459,7 +477,9 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                   Expanded(
                     child: PilooButton(
                       label: _saving ? 'Ajout…' : 'Ajouter',
-                      variant: PilooButtonVariant.primary,
+                      variant: _isExpiredLot
+                          ? PilooButtonVariant.outline
+                          : PilooButtonVariant.primary,
                       onPressed: _saving ? null : _save,
                     ),
                   ),
@@ -468,6 +488,66 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bannière rouge affichée en tête de la fiche d'ajout quand le lot
+/// scanné est déjà périmé (mois saisi < mois courant). On laisse
+/// l'utilisateur ajouter quand même (carnet ≠ ordonnance) mais on
+/// signale fort le risque pour éviter qu'il enregistre par réflexe
+/// une boîte qu'il s'apprête à jeter.
+class _ExpiredLotBanner extends StatelessWidget {
+  const _ExpiredLotBanner({required this.month, required this.year});
+
+  final int month;
+  final int year;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: PilooColors.error,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            PhosphorIconsFill.warningOctagon,
+            size: 22,
+            color: PilooColors.errorOn,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Lot déjà périmé',
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: PilooColors.errorOn,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Expiré depuis ${month.toString().padLeft(2, '0')} / $year. Cette boîte est à jeter, inutile de l\'ajouter à votre officine.',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: PilooColors.errorOn,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
