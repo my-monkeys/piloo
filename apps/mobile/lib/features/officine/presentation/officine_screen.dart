@@ -1924,13 +1924,12 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
   List<({String label, int units})> get _chips {
     final t = _effectiveTotal;
     if (t == null || t <= 0) return const [];
-    final lowest = t >= 4 ? 1 : 0;
     return [
       (label: 'Plein · $t', units: t),
       (label: '3/4 · ${((t * 3) / 4).round()}', units: ((t * 3) / 4).round()),
       (label: 'Moitié · ${(t / 2).round()}', units: (t / 2).round()),
       (label: '1/4 · ${(t / 4).round()}', units: (t / 4).round()),
-      (label: 'Vide', units: lowest == 1 ? 1 : 0),
+      (label: 'Vide', units: 0),
     ];
   }
 
