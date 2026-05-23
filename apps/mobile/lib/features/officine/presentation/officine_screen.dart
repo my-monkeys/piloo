@@ -1314,10 +1314,12 @@ class _MoleculeCard extends StatelessWidget {
 /// horizontal → la current glisse hors écran, les behind remontent
 /// progressivement pour prendre la place. Animation continue (pas
 /// un setState après coup).
-/// Carrousel circulaire des boîtes d'un même CIP : on swipe une card
-/// au-dessus pour voir la suivante. Effet "deck de cartes" : on
-/// aperçoit les voisines à gauche / droite. Pattern inspiré du
-/// CodePen `aybukeceylan/RwrRPoO` cité par le user.
+/// Carrousel circulaire des boîtes d'un même CIP. Pattern "deck de
+/// cartes" : la top est au-dessus, les suivantes sont empilées en
+/// dessous (couches Z), décalées vers la droite pour qu'on voie
+/// leur bord. On swipe la top vers la gauche → elle quitte, la
+/// behind1 prend sa place, behind2 prend la place de behind1, etc.
+/// Inspiré du CodePen `aybukeceylan/RwrRPoO`.
 class _BoiteStackCard extends StatefulWidget {
   const _BoiteStackCard({required this.boites, required this.onTap});
 
@@ -1328,17 +1330,20 @@ class _BoiteStackCard extends StatefulWidget {
   State<_BoiteStackCard> createState() => _BoiteStackCardState();
 }
 
-class _BoiteStackCardState extends State<_BoiteStackCard> {
+class _BoiteStackCardState extends State<_BoiteStackCard>
+    with SingleTickerProviderStateMixin {
   late final List<_Boite> _pages = _expandByNombreBoites(widget.boites);
-  late final PageController _controller =
-      PageController(viewportFraction: 0.86, initialPage: 0);
   final GlobalKey _measureKey = GlobalKey();
-  int _currentPage = 0;
-  double _pageValue = 0;
-  // Hauteur intrinsèque mesurée de la card. Tous les éléments d'un
-  // même CIP partagent le même nom/forme galénique → même hauteur.
-  // Fallback à 100 le temps du 1er frame avant mesure.
+  int _topIndex = 0;
+  double _dragX = 0;
   double? _cardHeight;
+  late final AnimationController _ac;
+
+  // Décalage horizontal de chaque card derrière (en px) — visible à
+  // droite de la top. depth 1 = +18, depth 2 = +36.
+  static const double _stepX = 18;
+  // Réduction d'échelle par niveau de profondeur (scale-down).
+  static const double _stepScale = 0.05;
 
   static List<_Boite> _expandByNombreBoites(List<_Boite> boites) {
     final out = <_Boite>[];
@@ -1354,7 +1359,10 @@ class _BoiteStackCardState extends State<_BoiteStackCard> {
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onScroll);
+    _ac = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
     WidgetsBinding.instance.addPostFrameCallback(_measureCard);
   }
 
@@ -1369,86 +1377,130 @@ class _BoiteStackCardState extends State<_BoiteStackCard> {
     }
   }
 
-  void _onScroll() {
-    final v = _controller.page ?? 0;
-    if (v != _pageValue) {
-      setState(() => _pageValue = v);
+  @override
+  void dispose() {
+    _ac.dispose();
+    super.dispose();
+  }
+
+  void _onPanUpdate(DragUpdateDetails d) {
+    setState(() => _dragX += d.delta.dx);
+  }
+
+  Future<void> _onPanEnd(DragEndDetails d) async {
+    final width = MediaQuery.of(context).size.width;
+    final threshold = width * 0.2;
+    final velocity = d.velocity.pixelsPerSecond.dx;
+    final goNext = (_dragX < -threshold || velocity < -400) &&
+        _topIndex < _pages.length - 1;
+    final goPrev = (_dragX > threshold || velocity > 400) && _topIndex > 0;
+
+    if (goNext) {
+      await _animateTo(-width);
+      if (!mounted) return;
+      setState(() {
+        _topIndex++;
+        _dragX = 0;
+      });
+    } else if (goPrev) {
+      await _animateTo(width);
+      if (!mounted) return;
+      setState(() {
+        _topIndex--;
+        _dragX = 0;
+      });
+    } else {
+      await _animateTo(0);
+      if (!mounted) return;
+      setState(() => _dragX = 0);
+    }
+  }
+
+  Future<void> _animateTo(double target) async {
+    final start = _dragX;
+    _ac.reset();
+    final anim = Tween<double>(begin: start, end: target).animate(
+      CurvedAnimation(parent: _ac, curve: Curves.easeOut),
+    );
+    void listener() => setState(() => _dragX = anim.value);
+    anim.addListener(listener);
+    try {
+      await _ac.forward();
+    } finally {
+      anim.removeListener(listener);
     }
   }
 
   @override
-  void dispose() {
-    _controller.removeListener(_onScroll);
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Marge pour l'effet "card un peu remontée" des voisines
-    // (yOffset=8 max) + petite respiration sous la card centrale.
-    final pageHeight = (_cardHeight ?? 100) + 10;
+    final width = MediaQuery.of(context).size.width;
+    final progress = (_dragX / width).clamp(-1.0, 1.0);
+    final absProgress = progress.abs();
+
+    final cardH = _cardHeight ?? 100;
+    // Marge à droite (_stepX * 2) pour laisser visibles les bords
+    // des 2 cards behind. Marge à gauche (8) pour respirer.
+    const reservedRight = _stepX * 2 + 4;
+    // Hauteur juste = cardH (les cards sont centrées verticalement).
+    final stackHeight = cardH + 4;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ClipRect + Stack pour mesurer la card hors-écran (top:
-        // -9999) tout en gardant le SizedBox du PageView au-dessus.
-        // Offstage seul ne layoute pas → pas mesurable.
-        ClipRect(
+        Padding(
+          padding: const EdgeInsets.only(left: 0, right: reservedRight),
           child: SizedBox(
-            height: pageHeight,
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  top: -9999,
-                  child: KeyedSubtree(
-                    key: _measureKey,
-                    child: _BoiteCard(
-                      boite: _pages.first,
-                      suppressMultiBadge: true,
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: PageView.builder(
-            controller: _controller,
-            itemCount: _pages.length,
-            onPageChanged: (i) => setState(() => _currentPage = i),
-            itemBuilder: (context, index) {
-              // delta ∈ [-1, 1] selon la position relative au centre
-              // du PageView. Permet d'animer scale + offset doux.
-              final delta = (index - _pageValue).clamp(-1.0, 1.0);
-              final absDelta = delta.abs();
-              final scale = 1.0 - 0.08 * absDelta;
-              // Les cards voisines remontent un peu pour suggérer
-              // l'effet "dessous". Au centre : offset 0.
-              final yOffset = 8.0 * absDelta;
-
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => widget.onTap(_pages[index]),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  child: Transform.translate(
-                    offset: Offset(0, yOffset),
-                    child: Transform.scale(
-                      scale: scale,
-                      alignment: Alignment.topCenter,
+            height: stackHeight,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => widget.onTap(_pages[_topIndex]),
+              onHorizontalDragUpdate: _onPanUpdate,
+              onHorizontalDragEnd: _onPanEnd,
+              child: Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.topLeft,
+                children: [
+                  // Mesure offscreen (pas dessinée).
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: -9999,
+                    child: KeyedSubtree(
+                      key: _measureKey,
                       child: _BoiteCard(
-                        boite: _pages[index],
+                        boite: _pages.first,
                         suppressMultiBadge: true,
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                  // behind2 — la plus loin (depth 2)
+                  if (_topIndex + 2 < _pages.length)
+                    _buildLayer(
+                      boite: _pages[_topIndex + 2],
+                      depth: 2,
+                      absProgress: absProgress,
+                    ),
+                  // behind1 — juste derrière (depth 1)
+                  if (_topIndex + 1 < _pages.length)
+                    _buildLayer(
+                      boite: _pages[_topIndex + 1],
+                      depth: 1,
+                      absProgress: absProgress,
+                    ),
+                  // top card — suit le doigt.
+                  Transform.translate(
+                    offset: Offset(_dragX, 0),
+                    child: Transform.rotate(
+                      angle: progress * 0.05,
+                      alignment: Alignment.center,
+                      child: _BoiteCard(
+                        boite: _pages[_topIndex],
+                        suppressMultiBadge: true,
+                      ),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -1457,7 +1509,7 @@ class _BoiteStackCardState extends State<_BoiteStackCard> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(_pages.length, (i) {
-              final active = i == _currentPage;
+              final active = i == _topIndex;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -1472,6 +1524,47 @@ class _BoiteStackCardState extends State<_BoiteStackCard> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Layer "behind" : décalée à droite + scale réduit. Pendant un
+  /// swipe (absProgress > 0), elle se rapproche progressivement de
+  /// la position de la depth - 1 (behind1 vers top, behind2 vers
+  /// behind1).
+  Widget _buildLayer({
+    required _Boite boite,
+    required int depth,
+    required double absProgress,
+  }) {
+    // Position de repos (depth pleine) → cible (depth - 1 pendant swipe)
+    final restX = _stepX * depth;
+    final targetX = _stepX * (depth - 1);
+    final restScale = 1.0 - _stepScale * depth;
+    final targetScale = 1.0 - _stepScale * (depth - 1);
+    final restOpacity = depth == 1 ? 0.95 : 0.75;
+    final targetOpacity = depth == 1 ? 1.0 : 0.95;
+
+    final x = restX + (targetX - restX) * absProgress;
+    final scale = restScale + (targetScale - restScale) * absProgress;
+    final opacity = restOpacity + (targetOpacity - restOpacity) * absProgress;
+
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: 0,
+      child: IgnorePointer(
+        child: Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(x, 0),
+            child: Transform.scale(
+              scale: scale,
+              alignment: Alignment.center,
+              child: _BoiteCard(boite: boite, suppressMultiBadge: true),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
