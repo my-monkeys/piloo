@@ -1229,24 +1229,9 @@ class _MoleculeCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(PilooRadius.lg),
             onTap: onToggle,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              padding: const EdgeInsets.fromLTRB(16, 14, 14, 14),
               child: Row(
                 children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: PilooColors.accentSoft,
-                      shape: BoxShape.circle,
-                    ),
-                    alignment: Alignment.center,
-                    child: const Icon(
-                      PhosphorIconsFill.atom,
-                      size: 18,
-                      color: PilooColors.accent,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1254,7 +1239,7 @@ class _MoleculeCard extends StatelessWidget {
                         Text(
                           molecule,
                           style: GoogleFonts.manrope(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                             color: PilooColors.textPrimary,
                             height: 1.2,
@@ -1433,32 +1418,37 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
 
   @override
   Widget build(BuildContext context) {
+    // Re-mesure à chaque build : la hauteur peut changer si la
+    // largeur disponible (donc le wrap du titre) change, ou si on
+    // hot-reload sans hot-restart. Idempotent → pas de boucle.
+    WidgetsBinding.instance.addPostFrameCallback(_measureCard);
     final width = MediaQuery.of(context).size.width;
     final progress = (_dragX / width).clamp(-1.0, 1.0);
-    final absProgress = progress.abs();
 
     final cardH = _cardHeight ?? 100;
-    // Marge à droite (_stepX * 2) pour laisser visibles les bords
-    // des 2 cards behind. Marge à gauche (8) pour respirer.
-    const reservedRight = _stepX * 2 + 4;
-    // Hauteur juste = cardH (les cards sont centrées verticalement).
+    // Pas de padding latéral — les behind débordent dans le padding
+    // de la ListView parente (16 px) grâce à clipBehavior: Clip.none.
+    // La top card prend toute la largeur disponible.
     final stackHeight = cardH + 4;
+
+    // Liste des offsets relatifs à afficher derrière (gauche = négatif,
+    // droite = positif). Ordre du plus loin vers le plus proche pour
+    // le Z-order (derrière = dessiné d'abord).
+    const relativeOffsets = [-2, 2, -1, 1];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 0, right: reservedRight),
-          child: SizedBox(
-            height: stackHeight,
-            child: GestureDetector(
+        SizedBox(
+          height: stackHeight,
+          child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () => widget.onTap(_pages[_topIndex]),
               onHorizontalDragUpdate: _onPanUpdate,
               onHorizontalDragEnd: _onPanEnd,
               child: Stack(
                 clipBehavior: Clip.none,
-                alignment: Alignment.topLeft,
+                alignment: Alignment.topCenter,
                 children: [
                   // Mesure offscreen (pas dessinée).
                   Positioned(
@@ -1473,21 +1463,16 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
                       ),
                     ),
                   ),
-                  // behind2 — la plus loin (depth 2)
-                  if (_topIndex + 2 < _pages.length)
-                    _buildLayer(
-                      boite: _pages[_topIndex + 2],
-                      depth: 2,
-                      absProgress: absProgress,
-                    ),
-                  // behind1 — juste derrière (depth 1)
-                  if (_topIndex + 1 < _pages.length)
-                    _buildLayer(
-                      boite: _pages[_topIndex + 1],
-                      depth: 1,
-                      absProgress: absProgress,
-                    ),
-                  // top card — suit le doigt.
+                  // Cards behind (de chaque côté), ordre Z géré par
+                  // l'ordre de relativeOffsets ci-dessus.
+                  for (final r in relativeOffsets)
+                    if (_topIndex + r >= 0 && _topIndex + r < _pages.length)
+                      _buildLayer(
+                        boite: _pages[_topIndex + r],
+                        relative: r,
+                        progress: progress,
+                      ),
+                  // Top card — suit le doigt.
                   Transform.translate(
                     offset: Offset(_dragX, 0),
                     child: Transform.rotate(
@@ -1503,7 +1488,6 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
               ),
             ),
           ),
-        ),
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Row(
@@ -1527,41 +1511,33 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
     );
   }
 
-  /// Layer "behind" : décalée à droite + scale réduit. Pendant un
-  /// swipe (absProgress > 0), elle se rapproche progressivement de
-  /// la position de la depth - 1 (behind1 vers top, behind2 vers
-  /// behind1).
+  /// Layer "behind" à la position relative `relative` (négatif =
+  /// gauche, positif = droite). Pendant un swipe, l'effective offset
+  /// devient `relative + progress` — toutes les cards glissent
+  /// ensemble dans le sens du doigt.
   Widget _buildLayer({
     required _Boite boite,
-    required int depth,
-    required double absProgress,
+    required int relative,
+    required double progress,
   }) {
-    // Position de repos (depth pleine) → cible (depth - 1 pendant swipe)
-    final restX = _stepX * depth;
-    final targetX = _stepX * (depth - 1);
-    final restScale = 1.0 - _stepScale * depth;
-    final targetScale = 1.0 - _stepScale * (depth - 1);
-    final restOpacity = depth == 1 ? 0.95 : 0.75;
-    final targetOpacity = depth == 1 ? 1.0 : 0.95;
+    // Position effective pendant le swipe : tout glisse de `progress`.
+    // Ex: swipe LEFT (progress=-1) → la card à r=+1 va à r=0 (centre).
+    final effective = relative + progress;
+    final absEff = effective.abs();
+    final x = _stepX * effective;
+    final scale = 1.0 - _stepScale * absEff;
+    // Plus la card est loin (|effective| grand), plus elle s'efface.
+    final opacity = (1.0 - 0.25 * absEff).clamp(0.0, 1.0);
 
-    final x = restX + (targetX - restX) * absProgress;
-    final scale = restScale + (targetScale - restScale) * absProgress;
-    final opacity = restOpacity + (targetOpacity - restOpacity) * absProgress;
-
-    return Positioned(
-      left: 0,
-      right: 0,
-      top: 0,
-      child: IgnorePointer(
-        child: Opacity(
-          opacity: opacity,
-          child: Transform.translate(
-            offset: Offset(x, 0),
-            child: Transform.scale(
-              scale: scale,
-              alignment: Alignment.center,
-              child: _BoiteCard(boite: boite, suppressMultiBadge: true),
-            ),
+    return IgnorePointer(
+      child: Opacity(
+        opacity: opacity,
+        child: Transform.translate(
+          offset: Offset(x, 0),
+          child: Transform.scale(
+            scale: scale,
+            alignment: Alignment.center,
+            child: _BoiteCard(boite: boite, suppressMultiBadge: true),
           ),
         ),
       ),
