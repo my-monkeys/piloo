@@ -21,6 +21,8 @@
 // Données mockées : reproduit fidèlement la maquette pour la review
 // visuelle. Sera branché sur Drift + filter Riverpod quand l'epic
 // Inventory (#11) avancera.
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -497,12 +499,24 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : source.isEmpty
                       ? _EmptyOfficine()
-                      // Bottom padding 140 = tab bar (~105) + safe area
-                      // home indicator (extendBody: true côté _MainShell).
-                      : _GroupedList(
-                          sections: groupBoites(filtered, _grouping),
-                          onBoiteTap: _onBoiteTap,
-                        ),
+                      : _grouping == BoiteGrouping.molecule
+                          // Vue inversée par molécule : 1 card par
+                          // substance active présente dans les boîtes.
+                          // Tap → drill-down sur les médocs qui la
+                          // contiennent.
+                          ? _MoleculeList(
+                              boites: filtered,
+                              bdpmDb: bdpmDb,
+                              onBoiteTap: _onBoiteTap,
+                            )
+                          : _GroupedList(
+                              sections: groupBoites(filtered, _grouping),
+                              onBoiteTap: _onBoiteTap,
+                              // Carousel par CIP seulement en mode
+                              // Médicament.
+                              stackByCip:
+                                  _grouping == BoiteGrouping.medicament,
+                            ),
             ),
           ],
         ),
@@ -943,10 +957,12 @@ class _GroupingToggle extends StatelessWidget {
   final BoiteGrouping value;
   final ValueChanged<BoiteGrouping> onChanged;
 
+  // "Toutes" (plat) retiré 2026-05-23 — peu d'utilité face aux 2 modes
+  // structurés. La logique BoiteGrouping.plat reste en domaine pour
+  // compat tests, on ne l'expose juste plus à l'UI.
   static const _options = [
     (mode: BoiteGrouping.medicament, label: 'Médicament'),
     (mode: BoiteGrouping.molecule, label: 'Molécule'),
-    (mode: BoiteGrouping.plat, label: 'Toutes'),
   ];
 
   @override
@@ -1004,10 +1020,18 @@ class _GroupingToggle extends StatelessWidget {
 }
 
 class _GroupedList extends StatelessWidget {
-  const _GroupedList({required this.sections, required this.onBoiteTap});
+  const _GroupedList({
+    required this.sections,
+    required this.onBoiteTap,
+    this.stackByCip = false,
+  });
 
   final List<BoiteSection<_Boite>> sections;
   final void Function(_Boite boite) onBoiteTap;
+  /// Quand `true`, regroupe les boîtes du même CIP en une card
+  /// swipeable horizontale (1 page par lot). Désactivé pour les
+  /// modes molécule/plat où l'user attend une liste à plat.
+  final bool stackByCip;
 
   @override
   Widget build(BuildContext context) {
@@ -1021,14 +1045,30 @@ class _GroupedList extends StatelessWidget {
       } else if (s > 0) {
         items.add(const SizedBox(height: 10));
       }
-      for (var i = 0; i < section.boites.length; i++) {
+      final renderable = stackByCip
+          ? _groupSameCip(section.boites)
+          : section.boites.map((b) => [b]).toList();
+      for (var i = 0; i < renderable.length; i++) {
         if (i > 0) items.add(const SizedBox(height: 10));
-        final boite = section.boites[i];
-        items.add(GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: () => onBoiteTap(boite),
-          child: _BoiteCard(boite: boite),
-        ));
+        final group = renderable[i];
+        // Compte le nombre de cards physiques rendues (= somme des
+        // nombre_boites). Si > 1 → mode pile, sinon card classique.
+        // Permet une seule boîte avec nombre_boites=2 d'être pile aussi
+        // (matérialise les 2 boîtes physiques en 2 cards distinctes).
+        final physical = group.fold<int>(
+          0,
+          (acc, b) => acc + (b.apiBoite?.nombreBoites ?? 1),
+        );
+        if (physical <= 1) {
+          final boite = group.first;
+          items.add(GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => onBoiteTap(boite),
+            child: _BoiteCard(boite: boite),
+          ));
+        } else {
+          items.add(_BoiteStackCard(boites: group, onTap: onBoiteTap));
+        }
       }
     }
     return ListView(
@@ -1036,6 +1076,24 @@ class _GroupedList extends StatelessWidget {
       children: items,
     );
   }
+}
+
+/// Regroupe les boîtes consécutives du même cip13. Préserve l'ordre
+/// d'origine et la stabilité : 2 paires séparées par un autre CIP
+/// restent 2 paires (pas de fusion à distance).
+List<List<_Boite>> _groupSameCip(List<_Boite> boites) {
+  final groups = <List<_Boite>>[];
+  for (final b in boites) {
+    final cip = b.apiBoite?.cip13;
+    if (groups.isNotEmpty &&
+        cip != null &&
+        groups.last.first.apiBoite?.cip13 == cip) {
+      groups.last.add(b);
+    } else {
+      groups.add([b]);
+    }
+  }
+  return groups;
 }
 
 class _SectionHeader extends StatelessWidget {
@@ -1053,6 +1111,367 @@ class _SectionHeader extends StatelessWidget {
         letterSpacing: 0.6,
         color: PilooColors.textTertiary,
       ),
+    );
+  }
+}
+
+/// Vue "Molécule" inversée : 1 card par substance active présente
+/// dans l'officine, tap → expand → liste des médocs qui contiennent
+/// cette substance (y compris les combinaisons type Augmentin qui
+/// apparaît à la fois sous AMOXICILLINE et CLAVULANATE).
+class _MoleculeList extends StatefulWidget {
+  const _MoleculeList({
+    required this.boites,
+    required this.bdpmDb,
+    required this.onBoiteTap,
+  });
+
+  final List<_Boite> boites;
+  final BdpmDb? bdpmDb;
+  final void Function(_Boite boite) onBoiteTap;
+
+  @override
+  State<_MoleculeList> createState() => _MoleculeListState();
+}
+
+class _MoleculeListState extends State<_MoleculeList> {
+  final Set<String> _expanded = <String>{};
+
+  /// Map molécule → boîtes qui la contiennent. Une boîte avec 2 SA
+  /// (Augmentin = amox+clav) apparaît dans 2 entrées. Tri alpha pour
+  /// stabilité de l'affichage.
+  Map<String, List<_Boite>> _index() {
+    final out = SplayTreeMap<String, List<_Boite>>();
+    for (final b in widget.boites) {
+      final api = b.apiBoite;
+      if (api == null) continue;
+      final hit = widget.bdpmDb?.findByCip13(api.cip13);
+      final subs = hit?.substances ?? const <String>[];
+      if (subs.isEmpty) {
+        // Fallback : groupe "Autres" pour les médocs hors CIS_COMPO
+        out.putIfAbsent('— Sans molécule connue —', () => []).add(b);
+        continue;
+      }
+      for (final s in subs) {
+        out.putIfAbsent(s, () => []).add(b);
+      }
+    }
+    return out;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final index = _index();
+    if (index.isEmpty) return _EmptyOfficine();
+    final keys = index.keys.toList(growable: false);
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 140),
+      itemCount: keys.length,
+      itemBuilder: (_, i) {
+        final mol = keys[i];
+        final boites = index[mol]!;
+        final isOpen = _expanded.contains(mol);
+        return Padding(
+          padding: EdgeInsets.only(bottom: i == keys.length - 1 ? 0 : 10),
+          child: _MoleculeCard(
+            molecule: mol,
+            count: boites.length,
+            isOpen: isOpen,
+            onToggle: () => setState(() {
+              if (isOpen) {
+                _expanded.remove(mol);
+              } else {
+                _expanded.add(mol);
+              }
+            }),
+            boites: boites,
+            onBoiteTap: widget.onBoiteTap,
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _MoleculeCard extends StatelessWidget {
+  const _MoleculeCard({
+    required this.molecule,
+    required this.count,
+    required this.isOpen,
+    required this.onToggle,
+    required this.boites,
+    required this.onBoiteTap,
+  });
+
+  final String molecule;
+  final int count;
+  final bool isOpen;
+  final VoidCallback onToggle;
+  final List<_Boite> boites;
+  final void Function(_Boite) onBoiteTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      decoration: BoxDecoration(
+        color: PilooColors.surface,
+        borderRadius: BorderRadius.circular(PilooRadius.lg),
+        border: Border.all(
+          color: isOpen ? PilooColors.primary : PilooColors.border,
+          width: isOpen ? 1.5 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(PilooRadius.lg),
+            onTap: onToggle,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: PilooColors.accentSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      PhosphorIconsFill.atom,
+                      size: 18,
+                      color: PilooColors.accent,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          molecule,
+                          style: GoogleFonts.manrope(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: PilooColors.textPrimary,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '$count boîte${count > 1 ? 's' : ''}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: PilooColors.textTertiary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedRotation(
+                    duration: const Duration(milliseconds: 180),
+                    turns: isOpen ? 0.5 : 0,
+                    child: const Icon(
+                      PhosphorIconsRegular.caretDown,
+                      size: 18,
+                      color: PilooColors.textTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isOpen) ...[
+            const Divider(height: 1, color: PilooColors.border),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+              child: Column(
+                children: [
+                  for (var j = 0; j < boites.length; j++) ...[
+                    if (j > 0) const SizedBox(height: 8),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => onBoiteTap(boites[j]),
+                      child: _BoiteCard(boite: boites[j]),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Carousel circulaire de cards — 1 card = 1 boîte physique. Pattern
+/// CodePen partagé par l'user 2026-05-23 : 3 cards visibles à un
+/// instant T (current + 2 derrière, décalées vers le bas), swipe
+/// horizontal → la current glisse hors écran, les behind remontent
+/// progressivement pour prendre la place. Animation continue (pas
+/// un setState après coup).
+/// Carrousel circulaire des boîtes d'un même CIP : on swipe une card
+/// au-dessus pour voir la suivante. Effet "deck de cartes" : on
+/// aperçoit les voisines à gauche / droite. Pattern inspiré du
+/// CodePen `aybukeceylan/RwrRPoO` cité par le user.
+class _BoiteStackCard extends StatefulWidget {
+  const _BoiteStackCard({required this.boites, required this.onTap});
+
+  final List<_Boite> boites;
+  final void Function(_Boite boite) onTap;
+
+  @override
+  State<_BoiteStackCard> createState() => _BoiteStackCardState();
+}
+
+class _BoiteStackCardState extends State<_BoiteStackCard> {
+  late final List<_Boite> _pages = _expandByNombreBoites(widget.boites);
+  late final PageController _controller =
+      PageController(viewportFraction: 0.86, initialPage: 0);
+  final GlobalKey _measureKey = GlobalKey();
+  int _currentPage = 0;
+  double _pageValue = 0;
+  // Hauteur intrinsèque mesurée de la card. Tous les éléments d'un
+  // même CIP partagent le même nom/forme galénique → même hauteur.
+  // Fallback à 100 le temps du 1er frame avant mesure.
+  double? _cardHeight;
+
+  static List<_Boite> _expandByNombreBoites(List<_Boite> boites) {
+    final out = <_Boite>[];
+    for (final b in boites) {
+      final nb = b.apiBoite?.nombreBoites ?? 1;
+      for (var i = 0; i < nb; i++) {
+        out.add(b);
+      }
+    }
+    return out;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback(_measureCard);
+  }
+
+  void _measureCard(Duration _) {
+    final ctx = _measureKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject() as RenderBox?;
+    if (box == null || !box.hasSize) return;
+    final h = box.size.height;
+    if (_cardHeight != h) {
+      setState(() => _cardHeight = h);
+    }
+  }
+
+  void _onScroll() {
+    final v = _controller.page ?? 0;
+    if (v != _pageValue) {
+      setState(() => _pageValue = v);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onScroll);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Marge pour l'effet "card un peu remontée" des voisines
+    // (yOffset=8 max) + petite respiration sous la card centrale.
+    final pageHeight = (_cardHeight ?? 100) + 10;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // ClipRect + Stack pour mesurer la card hors-écran (top:
+        // -9999) tout en gardant le SizedBox du PageView au-dessus.
+        // Offstage seul ne layoute pas → pas mesurable.
+        ClipRect(
+          child: SizedBox(
+            height: pageHeight,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: -9999,
+                  child: KeyedSubtree(
+                    key: _measureKey,
+                    child: _BoiteCard(
+                      boite: _pages.first,
+                      suppressMultiBadge: true,
+                    ),
+                  ),
+                ),
+                Positioned.fill(
+                  child: PageView.builder(
+            controller: _controller,
+            itemCount: _pages.length,
+            onPageChanged: (i) => setState(() => _currentPage = i),
+            itemBuilder: (context, index) {
+              // delta ∈ [-1, 1] selon la position relative au centre
+              // du PageView. Permet d'animer scale + offset doux.
+              final delta = (index - _pageValue).clamp(-1.0, 1.0);
+              final absDelta = delta.abs();
+              final scale = 1.0 - 0.08 * absDelta;
+              // Les cards voisines remontent un peu pour suggérer
+              // l'effet "dessous". Au centre : offset 0.
+              final yOffset = 8.0 * absDelta;
+
+              return GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => widget.onTap(_pages[index]),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Transform.translate(
+                    offset: Offset(0, yOffset),
+                    child: Transform.scale(
+                      scale: scale,
+                      alignment: Alignment.topCenter,
+                      child: _BoiteCard(
+                        boite: _pages[index],
+                        suppressMultiBadge: true,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(top: 10),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_pages.length, (i) {
+              final active = i == _currentPage;
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.symmetric(horizontal: 3),
+                width: active ? 18 : 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: active ? PilooColors.primary : PilooColors.border,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              );
+            }),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1125,9 +1544,13 @@ class _BoiteIconWithBadge extends StatelessWidget {
 }
 
 class _BoiteCard extends StatelessWidget {
-  const _BoiteCard({required this.boite});
+  const _BoiteCard({required this.boite, this.suppressMultiBadge = false});
 
   final _Boite boite;
+  /// Quand la card est rendue à l'intérieur d'un `_BoiteStackCard`,
+  /// chaque boîte physique est déjà matérialisée en une card distincte
+  /// — le badge "× N" devient redondant.
+  final bool suppressMultiBadge;
 
   @override
   Widget build(BuildContext context) {
@@ -1182,8 +1605,10 @@ class _BoiteCard extends StatelessWidget {
             iconFg: iconFg,
             // Badge "× N" affiché uniquement quand l'user a plusieurs
             // boîtes physiques du même lot (cf. nombreBoites > 1).
-            // Retour user 2026-05-23 : la mention dans meta était noyée.
-            nombreBoites: boite.apiBoite?.nombreBoites ?? 1,
+            // Caché en mode pile (les cards sont déjà dupliquées).
+            nombreBoites: suppressMultiBadge
+                ? 1
+                : (boite.apiBoite?.nombreBoites ?? 1),
           ),
           const SizedBox(width: 12),
           Expanded(
