@@ -367,6 +367,15 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     };
     final q = _searchQuery.trim().toLowerCase();
     if (q.isEmpty) return byStatut;
+    // En mode Molécule on filtre uniquement sur la DCI (les substances
+    // actives jointes par ' + ') pour rester cohérent avec ce que
+    // l'utilisateur voit dans la liste. Sinon on garde la recherche
+    // large nom + dci + meta.
+    if (_grouping == BoiteGrouping.molecule) {
+      return byStatut
+          .where((b) => b.dci.toLowerCase().contains(q))
+          .toList(growable: false);
+    }
     return byStatut
         .where((b) =>
             b.name.toLowerCase().contains(q) ||
@@ -440,6 +449,9 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
               child: _SearchBox(
                 value: _searchQuery,
                 onChanged: (q) => setState(() => _searchQuery = q),
+                hint: _grouping == BoiteGrouping.molecule
+                    ? 'Rechercher une molécule…'
+                    : 'Rechercher un médicament…',
               ),
             ),
             Padding(
@@ -800,10 +812,15 @@ class _OfficineSwitcher extends StatelessWidget {
 }
 
 class _SearchBox extends StatefulWidget {
-  const _SearchBox({required this.value, required this.onChanged});
+  const _SearchBox({
+    required this.value,
+    required this.onChanged,
+    this.hint = 'Rechercher…',
+  });
 
   final String value;
   final ValueChanged<String> onChanged;
+  final String hint;
 
   @override
   State<_SearchBox> createState() => _SearchBoxState();
@@ -859,7 +876,7 @@ class _SearchBoxState extends State<_SearchBox> {
                 enabledBorder: InputBorder.none,
                 focusedBorder: InputBorder.none,
                 disabledBorder: InputBorder.none,
-                hintText: 'Rechercher un médicament…',
+                hintText: widget.hint,
                 hintStyle: GoogleFonts.manrope(
                   fontSize: 14,
                   color: PilooColors.textTertiary,
