@@ -480,16 +480,41 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                     label: activeOfficine?.nom ?? 'Maison',
                     onTap: () => _showOfficineSwitcher(context, ref),
                   ),
-                  Flexible(
-                    child: Text(
-                      '${source.length} boîte${source.length > 1 ? 's' : ''}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 12,
-                        color: PilooColors.textTertiary,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          '${source.length} boîte${source.length > 1 ? 's' : ''}',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: PilooColors.textTertiary,
+                          ),
+                          textAlign: TextAlign.right,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      textAlign: TextAlign.right,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                      if (activeOfficine != null) ...[
+                        const SizedBox(width: 10),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => context.push(
+                            RoutePath.partages(activeOfficine.id),
+                          ),
+                          child: const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 4,
+                            ),
+                            child: Icon(
+                              PhosphorIconsRegular.users,
+                              size: 18,
+                              color: PilooColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
