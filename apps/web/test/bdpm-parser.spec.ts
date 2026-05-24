@@ -56,6 +56,7 @@ describe('parseCipLine', () => {
       cis: '60002283',
       cip7: '3400934567890', // BDPM met le CIP13 à la place du CIP7 dans certaines lignes ; ici col 1 = code historique
       cip13: '3400934567890',
+      libellePresentation: 'plaquette(s) PVC PVDC aluminium de 8 comprimé(s)',
       tauxRemboursement: 65,
     });
   });
