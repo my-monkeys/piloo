@@ -11,10 +11,12 @@
 // tard ; pour l'instant on bascule juste localement).
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
@@ -82,6 +84,15 @@ class _OfficinesListScreenState extends ConsumerState<OfficinesListScreen> {
                   ),
                 ),
               ),
+              _SheetAction(
+                icon: PhosphorIconsRegular.users,
+                label: 'Membres',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.push(RoutePath.partages(officine.id));
+                },
+              ),
+              const SizedBox(height: 8),
               _SheetAction(
                 icon: PhosphorIconsRegular.pencilSimple,
                 label: 'Renommer',

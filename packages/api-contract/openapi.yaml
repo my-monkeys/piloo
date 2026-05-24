@@ -1714,6 +1714,106 @@ components:
       required:
         - officine_id
         - role
+    PartagesList:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartageMember"
+        pending_invitations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PendingMemberInvitation"
+      required:
+        - members
+        - pending_invitations
+    PartageMember:
+      type: object
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        invited_at:
+          type: string
+          format: date-time
+        accepted_at:
+          type: string
+          format: date-time
+      required:
+        - user_id
+        - email
+        - display_name
+        - role
+        - invited_at
+        - accepted_at
+    PendingMemberInvitation:
+      type: object
+      properties:
+        invitation_id:
+          type: string
+          format: uuid
+        email:
+          type:
+            - string
+            - "null"
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+        expires_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+      required:
+        - invitation_id
+        - email
+        - role
+        - expires_at
+        - created_at
+    PartagesApiError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: {}
+          required:
+            - code
+            - message
+      required:
+        - error
+    UpdatePartageRoleInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+            - owner
+            - editor
+            - viewer
+      required:
+        - role
     OcrOrdonnanceResponse:
       type: object
       properties:
@@ -3580,6 +3680,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/InvitationApiError"
+  /v1/officines/{officineId}/partages:
+    get:
+      summary: Liste les membres + invitations en attente d'une officine
+      description: "Lecture autorisée aux 3 rôles (owner / editor / viewer). Retourne deux listes séparées : membres actifs et invitations encore valides."
+      tags:
+        - partages
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+      responses:
+        "200":
+          description: Liste membres + invitations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesList"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "403":
+          description: Non membre de cette officine
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "404":
+          description: Officine inconnue
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+  /v1/officines/{officineId}/partages/{userId}:
+    patch:
+      summary: Change le rôle d'un membre
+      description: Owner uniquement. Refuse si la modification rétrograderait le dernier owner (au moins 1 owner actif requis par officine).
+      tags:
+        - partages
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: userId
+          in: path
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePartageRoleInput"
+      responses:
+        "200":
+          description: Membre mis à jour
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartageMember"
+        "400":
+          description: Body invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "403":
+          description: Pas owner
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "404":
+          description: Membre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "409":
+          description: "Dernier owner : rétrogradation refusée"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+    delete:
+      summary: Révoque un membre (ou self-leave)
+      description: Owner uniquement pour révoquer un autre, OU n'importe quel membre pour se retirer lui-même. Refuse si c'est le dernier owner.
+      tags:
+        - partages
+      parameters:
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: officineId
+          in: path
+        - schema:
+            type: string
+            format: uuid
+          required: true
+          name: userId
+          in: path
+      responses:
+        "204":
+          description: Membre révoqué
+        "401":
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "403":
+          description: Pas autorisé
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "404":
+          description: Membre introuvable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
+        "409":
+          description: "Dernier owner : suppression refusée"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartagesApiError"
   /v1/ocr/ordonnance:
     post:
       summary: Extrait le contenu d'une photo d'ordonnance via vision LLM

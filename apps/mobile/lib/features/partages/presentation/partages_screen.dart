@@ -1,83 +1,139 @@
-// Écran S2 Gestion partages (#131).
+// Écran S2 Gestion partages (#131 + branchement API #339).
 // Maquette : `8dyxn` du fichier docs/design/piloo-mobile.pen.
 //
 // Permet à l'owner d'une officine de :
-//  - voir la liste des membres (Owner / Éditeur / Lecteur / invité
-//    en attente)
+//  - voir la liste des membres + invitations en attente
 //  - changer le rôle d'un membre (dropdown sur le badge)
 //  - retirer un membre (bottom sheet de confirmation)
 //  - inviter quelqu'un (push S3 #133)
-//
-// L'owner ne peut pas se révoquer (pas de dropdown sur son badge).
-// Pour la review on accepte juste les changements de rôle en local.
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/partages/data/partages_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
+import 'package:piloo/shared/widgets/piloo_toast.dart';
 
 enum _Role { proprietaire, editeur, lecteur }
 
+_Role _roleFromApi(api.PartageMemberRoleEnum r) {
+  if (r == api.PartageMemberRoleEnum.owner) return _Role.proprietaire;
+  if (r == api.PartageMemberRoleEnum.editor) return _Role.editeur;
+  return _Role.lecteur;
+}
+
+_Role _roleFromPendingApi(api.PendingMemberInvitationRoleEnum r) {
+  if (r == api.PendingMemberInvitationRoleEnum.owner) return _Role.proprietaire;
+  if (r == api.PendingMemberInvitationRoleEnum.editor) return _Role.editeur;
+  return _Role.lecteur;
+}
+
+api.UpdatePartageRoleInputRoleEnum _roleToApi(_Role r) => switch (r) {
+      _Role.proprietaire => api.UpdatePartageRoleInputRoleEnum.owner,
+      _Role.editeur => api.UpdatePartageRoleInputRoleEnum.editor,
+      _Role.lecteur => api.UpdatePartageRoleInputRoleEnum.viewer,
+    };
+
 class _Member {
   const _Member({
+    required this.userId,
     required this.initials,
     required this.avatarColor,
     required this.name,
     required this.email,
     required this.role,
     this.invitationPending = false,
+    this.isSelf = false,
   });
 
+  /// null pour une invitation pending (pas d'user encore lié).
+  final String? userId;
   final String initials;
   final Color avatarColor;
   final String name;
   final String email;
   final _Role role;
-  // Si vrai, le sous-titre (email) passe en warning et l'email est
-  // suffixé par "· invitation en attente".
+  /// Vrai pour une invitation pending — pas de dropdown rôle, pas
+  /// de révocation (on supprime l'invitation côté backend, pas un
+  /// membre).
   final bool invitationPending;
+  /// Vrai si c'est l'user courant : pas d'action destructive sur
+  /// soi-même (pas de dropdown rôle, pas de bouton retirer). Pour
+  /// quitter une officine, l'user passera par un futur écran dédié.
+  final bool isSelf;
 }
 
-class PartagesScreen extends StatefulWidget {
+class PartagesScreen extends ConsumerWidget {
   const PartagesScreen({this.officineId, super.key});
 
   final String? officineId;
 
   @override
-  State<PartagesScreen> createState() => _PartagesScreenState();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final id = officineId;
+    if (id == null || id.isEmpty) {
+      return const _MissingOfficineScaffold();
+    }
+    final partagesAsync = ref.watch(partagesProvider(id));
+    final session = ref.watch(sessionProvider).value;
+    final currentUserId = session?.userId;
+
+    return Scaffold(
+      backgroundColor: PilooColors.background,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const _Header(officineLabel: 'Officine'),
+            Expanded(
+              child: partagesAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'Impossible de charger les membres.\n$e',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.manrope(
+                        color: PilooColors.error,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+                data: (data) => _LoadedBody(
+                  officineId: id,
+                  data: data,
+                  currentUserId: currentUserId,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: PilooButton(
+                label: "+ Inviter quelqu'un",
+                variant: PilooButtonVariant.primary,
+                onPressed: () => context.push(RoutePath.invite(id)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class _PartagesScreenState extends State<PartagesScreen> {
-  // Données mockées — branchement Drift + API plus tard.
-  late List<_Member> _members = const [
-    _Member(
-      initials: 'MD',
-      avatarColor: PilooColors.primary,
-      name: 'Maxime Durand (toi)',
-      email: 'maxime@exemple.fr',
-      role: _Role.proprietaire,
-    ),
-    _Member(
-      initials: 'SL',
-      avatarColor: PilooColors.accent,
-      name: 'Sophie Laurent',
-      email: 'sophie.l@exemple.fr',
-      role: _Role.editeur,
-    ),
-    _Member(
-      initials: 'PM',
-      avatarColor: PilooColors.primarySoft,
-      name: 'Paul Martin',
-      email: 'paul.m@exemple.fr',
-      role: _Role.lecteur,
-      invitationPending: true,
-    ),
-  ];
+class _MissingOfficineScaffold extends StatelessWidget {
+  const _MissingOfficineScaffold();
 
   @override
   Widget build(BuildContext context) {
@@ -85,48 +141,20 @@ class _PartagesScreenState extends State<PartagesScreen> {
       backgroundColor: PilooColors.background,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _Header(officineLabel: 'Maison'),
+            const _Header(officineLabel: ''),
             Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _Eyebrow(label: 'MEMBRES · ${_members.length}'),
-                    const SizedBox(height: 8),
-                    _MembersCard(
-                      members: _members,
-                      onRoleChange: (idx, role) => setState(() {
-                        final m = _members[idx];
-                        _members = [
-                          ..._members.sublist(0, idx),
-                          _Member(
-                            initials: m.initials,
-                            avatarColor: m.avatarColor,
-                            name: m.name,
-                            email: m.email,
-                            role: role,
-                            invitationPending: m.invitationPending,
-                          ),
-                          ..._members.sublist(idx + 1),
-                        ];
-                      }),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Text(
+                    "Aucune officine sélectionnée. Reviens en arrière et choisis-en une.",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.manrope(
+                      color: PilooColors.textSecondary,
+                      fontSize: 13,
                     ),
-                    const SizedBox(height: 16),
-                    _RolesHelp(),
-                  ],
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: PilooButton(
-                label: '+ Inviter quelqu\'un',
-                variant: PilooButtonVariant.primary,
-                onPressed: () => context.push(
-                  RoutePath.invite(widget.officineId ?? 'maison'),
+                  ),
                 ),
               ),
             ),
@@ -135,6 +163,142 @@ class _PartagesScreenState extends State<PartagesScreen> {
       ),
     );
   }
+}
+
+/// Corps quand les données API sont chargées. Convertit le payload
+/// API en liste de `_Member` (mix membres actifs + invitations en
+/// attente) et délègue le rendu aux sous-widgets de présentation.
+class _LoadedBody extends ConsumerWidget {
+  const _LoadedBody({
+    required this.officineId,
+    required this.data,
+    required this.currentUserId,
+  });
+
+  final String officineId;
+  final api.PartagesList data;
+  final String? currentUserId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final members = <_Member>[
+      for (final m in data.members)
+        _Member(
+          userId: m.userId,
+          initials: _initialsFromName(m.displayName, m.email),
+          avatarColor: _colorForUserId(m.userId),
+          name: m.displayName + (m.userId == currentUserId ? ' (toi)' : ''),
+          email: m.email,
+          role: _roleFromApi(m.role),
+          isSelf: m.userId == currentUserId,
+        ),
+      for (final inv in data.pendingInvitations)
+        _Member(
+          userId: null,
+          initials: _initialsFromEmail(inv.email),
+          avatarColor: PilooColors.primarySoft,
+          name: inv.email ?? 'Invitation par lien',
+          email: inv.email ?? 'Lien partageable',
+          role: _roleFromPendingApi(inv.role),
+          invitationPending: true,
+        ),
+    ];
+
+    Future<void> handleRoleChange(int idx, _Role newRole) async {
+      final m = members[idx];
+      final uid = m.userId;
+      if (uid == null) return;
+      try {
+        await updateMemberRole(
+          ref,
+          officineId: officineId,
+          userId: uid,
+          role: _roleToApi(newRole),
+        );
+        if (context.mounted) PilooToast.success(context, 'Rôle mis à jour.');
+      } catch (e) {
+        if (context.mounted) PilooToast.error(context, 'Échec : $e');
+      }
+    }
+
+    Future<void> handleRevoke(int idx) async {
+      final m = members[idx];
+      final uid = m.userId;
+      if (uid == null) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Retirer ce membre ?'),
+          content: Text(
+            '${m.name} n\'aura plus accès à cette officine. Tu pourras la ou le réinviter plus tard.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: TextButton.styleFrom(foregroundColor: PilooColors.error),
+              child: const Text('Retirer'),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !context.mounted) return;
+      try {
+        await revokeMember(ref, officineId: officineId, userId: uid);
+        if (context.mounted) PilooToast.success(context, 'Membre retiré.');
+      } catch (e) {
+        if (context.mounted) PilooToast.error(context, 'Échec : $e');
+      }
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _Eyebrow(label: 'MEMBRES · ${members.length}'),
+          const SizedBox(height: 8),
+          _MembersCard(
+            members: members,
+            onRoleChange: handleRoleChange,
+            onRevoke: handleRevoke,
+          ),
+          const SizedBox(height: 16),
+          const _RolesHelp(),
+        ],
+      ),
+    );
+  }
+}
+
+String _initialsFromName(String name, String email) {
+  final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+  if (parts.isEmpty) return _initialsFromEmail(email);
+  final first = parts.first.substring(0, 1).toUpperCase();
+  final second = parts.length > 1
+      ? parts.elementAt(1).substring(0, 1).toUpperCase()
+      : '';
+  return '$first$second';
+}
+
+String _initialsFromEmail(String? email) {
+  if (email == null || email.isEmpty) return '?';
+  return email.substring(0, 1).toUpperCase();
+}
+
+/// Couleur d'avatar stable basée sur l'userId — évite que tout le
+/// monde apparaisse en vert (qui suggérerait à tort un rôle owner).
+Color _colorForUserId(String userId) {
+  final palette = [
+    PilooColors.primary,
+    PilooColors.accent,
+    PilooColors.infoOn,
+  ];
+  final h = userId.hashCode.abs();
+  return palette[h % palette.length];
 }
 
 class _Header extends StatelessWidget {
@@ -163,13 +327,14 @@ class _Header extends StatelessWidget {
                     color: PilooColors.textPrimary,
                   ),
                 ),
-                Text(
-                  officineLabel,
-                  style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    color: PilooColors.textSecondary,
+                if (officineLabel.isNotEmpty)
+                  Text(
+                    officineLabel,
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      color: PilooColors.textSecondary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),
@@ -203,13 +368,35 @@ class _Eyebrow extends StatelessWidget {
 }
 
 class _MembersCard extends StatelessWidget {
-  const _MembersCard({required this.members, required this.onRoleChange});
+  const _MembersCard({
+    required this.members,
+    required this.onRoleChange,
+    required this.onRevoke,
+  });
 
   final List<_Member> members;
-  final void Function(int index, _Role newRole) onRoleChange;
+  final Future<void> Function(int index, _Role newRole) onRoleChange;
+  final Future<void> Function(int index) onRevoke;
 
   @override
   Widget build(BuildContext context) {
+    if (members.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: PilooColors.surface,
+          borderRadius: BorderRadius.circular(PilooRadius.lg),
+          border: Border.all(color: PilooColors.border),
+        ),
+        child: Text(
+          'Aucun membre.',
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: PilooColors.textSecondary,
+          ),
+        ),
+      );
+    }
     return Container(
       decoration: BoxDecoration(
         color: PilooColors.surface,
@@ -225,6 +412,7 @@ class _MembersCard extends StatelessWidget {
           return _MemberRow(
             member: members[idx],
             onRoleChange: (r) => onRoleChange(idx, r),
+            onRevoke: () => onRevoke(idx),
           );
         }),
       ),
@@ -233,14 +421,22 @@ class _MembersCard extends StatelessWidget {
 }
 
 class _MemberRow extends StatelessWidget {
-  const _MemberRow({required this.member, required this.onRoleChange});
+  const _MemberRow({
+    required this.member,
+    required this.onRoleChange,
+    required this.onRevoke,
+  });
 
   final _Member member;
   final ValueChanged<_Role> onRoleChange;
+  final VoidCallback onRevoke;
 
   @override
   Widget build(BuildContext context) {
     final isOwner = member.role == _Role.proprietaire;
+    // Pas d'action destructive sur soi-même ni sur une invitation
+    // pending (on n'a pas encore d'userId à supprimer).
+    final canEdit = !isOwner && !member.isSelf && !member.invitationPending;
     final emailColor = member.invitationPending
         ? PilooColors.warningOn
         : PilooColors.textTertiary;
@@ -285,11 +481,22 @@ class _MemberRow extends StatelessWidget {
           const SizedBox(width: 10),
           _RoleBadge(
             role: member.role,
-            // Owner : badge fixe sans dropdown (un owner ne peut pas
-            // se révoquer ni se changer en éditeur — il faut transférer
-            // d'abord la propriété).
-            onChange: isOwner ? null : onRoleChange,
+            onChange: canEdit ? onRoleChange : null,
           ),
+          if (canEdit) ...[
+            const SizedBox(width: 6),
+            IconButton(
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 32, height: 32),
+              icon: const Icon(
+                PhosphorIconsRegular.trash,
+                color: PilooColors.error,
+              ),
+              onPressed: onRevoke,
+              tooltip: 'Retirer',
+            ),
+          ],
         ],
       ),
     );
@@ -304,8 +511,6 @@ class _Avatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Si le fond est clair (primary-soft pour Paul mock), on rend le
-    // texte en primary plutôt qu'en blanc pour rester lisible.
     final fg = color == PilooColors.primarySoft
         ? PilooColors.primary
         : Colors.white;
@@ -337,10 +542,7 @@ class _RoleBadge extends StatelessWidget {
   });
 
   final _Role role;
-  // Si null → badge fixe (cas owner).
   final ValueChanged<_Role>? onChange;
-  // Override du fond pour contextes spéciaux (ex: card LES RÔLES en
-  // \$surface-subtle où le badge Lecteur disparaîtrait sinon).
   final Color? bgOverride;
 
   ({Color bg, Color fg, String label}) get _style => switch (role) {
@@ -427,7 +629,7 @@ class _RoleBadge extends StatelessWidget {
                   ),
                 ),
               ),
-              for (final r in [_Role.editeur, _Role.lecteur])
+              for (final r in [_Role.proprietaire, _Role.editeur, _Role.lecteur])
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: GestureDetector(
@@ -450,9 +652,9 @@ class _RoleBadge extends StatelessWidget {
                           Expanded(
                             child: Text(
                               switch (r) {
+                                _Role.proprietaire => 'Propriétaire',
                                 _Role.editeur => 'Éditeur',
                                 _Role.lecteur => 'Lecteur',
-                                _Role.proprietaire => 'Propriétaire',
                               },
                               style: GoogleFonts.manrope(
                                 fontSize: 15,
@@ -481,9 +683,8 @@ class _RoleBadge extends StatelessWidget {
 }
 
 class _RolesHelp extends StatelessWidget {
-  // Une ligne par rôle, chaque rôle dans le même badge coloré que celui
-  // utilisé sur les rows membres pour que le mapping visuel soit
-  // immédiat.
+  const _RolesHelp();
+
   static const _entries = [
     (role: _Role.proprietaire, desc: 'tout, y compris gérer les partages'),
     (role: _Role.editeur, desc: 'modifier boîtes & ordonnances'),
@@ -533,15 +734,10 @@ class _RoleHelpRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Badge fixe (sans dropdown) — réutilise la même mécanique de
-        // style que les badges des rows membres. On force le bg blanc
-        // pour le Lecteur sinon il se confond avec la card help (qui
-        // est en \$surface-subtle, comme la couleur native du badge).
         _RoleBadge(
           role: role,
           onChange: null,
-          bgOverride:
-              role == _Role.lecteur ? PilooColors.surface : null,
+          bgOverride: role == _Role.lecteur ? PilooColors.surface : null,
         ),
         const SizedBox(width: 10),
         Expanded(

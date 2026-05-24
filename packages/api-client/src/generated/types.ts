@@ -2687,6 +2687,225 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/officines/{officineId}/partages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liste les membres + invitations en attente d'une officine
+         * @description Lecture autorisée aux 3 rôles (owner / editor / viewer). Retourne deux listes séparées : membres actifs et invitations encore valides.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste membres + invitations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesList"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Non membre de cette officine */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Officine inconnue */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/officines/{officineId}/partages/{userId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Révoque un membre (ou self-leave)
+         * @description Owner uniquement pour révoquer un autre, OU n'importe quel membre pour se retirer lui-même. Refuse si c'est le dernier owner.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Membre révoqué */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Pas autorisé */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Membre introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Dernier owner : suppression refusée */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Change le rôle d'un membre
+         * @description Owner uniquement. Refuse si la modification rétrograderait le dernier owner (au moins 1 owner actif requis par officine).
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                    userId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdatePartageRoleInput"];
+                };
+            };
+            responses: {
+                /** @description Membre mis à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartageMember"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Pas owner */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Membre introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+                /** @description Dernier owner : rétrogradation refusée */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PartagesApiError"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/v1/ocr/ordonnance": {
         parameters: {
             query?: never;
@@ -2755,6 +2974,319 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/officines/{officineId}/rappels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Liste les rappels d'une officine
+         * @description Renvoie les rappels non soft-deleted, triés par création décroissante.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Liste */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ListRappelsResponse"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Pas d'accès à l'officine */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Officine introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Crée un rappel rapide dans une officine
+         * @description Réservé aux rôles owner et editor.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    officineId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["CreateRappelInput"];
+                };
+            };
+            responses: {
+                /** @description Rappel créé */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Rappel"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Officine introuvable */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/rappels/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Détail d'un rappel */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Détail */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Rappel"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Pas d'accès */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Inconnu ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Supprime (soft-delete) un rappel
+         * @description Réservé aux rôles owner et editor sur l'officine du rappel.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Supprimé */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Inconnu ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Met à jour un rappel (quantités, dates, statut actif)
+         * @description Réservé aux rôles owner et editor sur l'officine du rappel.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["UpdateRappelInput"];
+                };
+            };
+            responses: {
+                /** @description Rappel mis à jour */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Rappel"];
+                    };
+                };
+                /** @description Body invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Non authentifié */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Rôle insuffisant */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+                /** @description Inconnu ou inaccessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RappelApiError"];
+                    };
+                };
+            };
+        };
         trace?: never;
     };
 }
@@ -2836,6 +3368,7 @@ export interface components {
             peremption: string;
             unites_initiales: number | null;
             unites_restantes: number | null;
+            nombre_boites: number;
             /** @enum {string} */
             statut: "active" | "vide" | "perimee";
             notes: string | null;
@@ -2872,6 +3405,7 @@ export interface components {
             statut?: "active" | "vide" | "perimee";
             unites_initiales?: number | null;
             unites_restantes?: number | null;
+            nombre_boites?: number;
             notes?: string | null;
         };
         ListPrisesResponse: {
@@ -3395,6 +3929,46 @@ export interface components {
             /** @enum {string} */
             role: "owner" | "editor" | "viewer";
         };
+        PartagesList: {
+            members: components["schemas"]["PartageMember"][];
+            pending_invitations: components["schemas"]["PendingMemberInvitation"][];
+        };
+        PartageMember: {
+            /** Format: uuid */
+            user_id: string;
+            email: string;
+            display_name: string;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            /** Format: date-time */
+            invited_at: string;
+            /** Format: date-time */
+            accepted_at: string;
+        };
+        PendingMemberInvitation: {
+            /** Format: uuid */
+            invitation_id: string;
+            email: string | null;
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+            /** Format: date-time */
+            expires_at: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        PartagesApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        UpdatePartageRoleInput: {
+            /** @enum {string} */
+            role: "owner" | "editor" | "viewer";
+        };
         OcrOrdonnanceResponse: {
             prescripteur: string | null;
             specialite: string | null;
@@ -3424,6 +3998,73 @@ export interface components {
             image_base64: string;
             /** @enum {string} */
             mime_type: "image/jpeg" | "image/png" | "image/webp" | "image/heic";
+        };
+        ListRappelsResponse: {
+            items: components["schemas"]["Rappel"][];
+        };
+        Rappel: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            officine_id: string;
+            cip13: string;
+            nom_texte: string;
+            unite: string;
+            quantite_matin: number | null;
+            quantite_midi: number | null;
+            quantite_soir: number | null;
+            quantite_coucher: number | null;
+            /** Format: date */
+            date_debut: string;
+            /** Format: date */
+            date_fin: string | null;
+            actif: boolean;
+            notes: string | null;
+            /** Format: uuid */
+            cree_par_user_id: string;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            updated_at: string;
+            /** Format: date-time */
+            deleted_at: string | null;
+        };
+        RappelApiError: {
+            error: {
+                code: string;
+                message: string;
+                details?: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        CreateRappelInput: {
+            cip13: string;
+            nom_texte: string;
+            unite?: string;
+            quantite_matin?: number | null;
+            quantite_midi?: number | null;
+            quantite_soir?: number | null;
+            quantite_coucher?: number | null;
+            /** Format: date */
+            date_debut: string;
+            /** Format: date */
+            date_fin?: string | null;
+            notes?: string | null;
+        };
+        UpdateRappelInput: {
+            nom_texte?: string;
+            unite?: string;
+            quantite_matin?: number | null;
+            quantite_midi?: number | null;
+            quantite_soir?: number | null;
+            quantite_coucher?: number | null;
+            /** Format: date */
+            date_debut?: string;
+            /** Format: date */
+            date_fin?: string | null;
+            actif?: boolean;
+            notes?: string | null;
         };
     };
     responses: never;
