@@ -25,9 +25,7 @@ class DemoModeNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
     final raw = await ref.read(secureStorageProvider).read(_kDemoModeKey);
-    // DEBUG temp Phase 1 : forcer true pour valider les fixtures en sim.
-    // À retirer en Phase 3 quand le toggle UI sera en place.
-    return raw == 'true' || true;
+    return raw == 'true';
   }
 
   Future<void> enable() async {

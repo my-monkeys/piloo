@@ -6,6 +6,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/db/db_provider.dart';
 import 'package:piloo/shared/notifications/notifications_service.dart';
@@ -28,6 +30,13 @@ class PrisesDayKey {
 final prisesDayProvider =
     FutureProvider.family<List<api.PriseTimelineItem>, PrisesDayKey>(
   (ref, key) async {
+    // Mode démo (#351) : on retourne les prises fixtures pour la
+    // date d'aujourd'hui. Les autres jours restent vides — l'user
+    // ne peut pas naviguer trop loin pendant le tour de toute façon.
+    if (isDemoMode(ref)) {
+      final today = isoDate(DateTime.now());
+      return key.date == today ? demoPrisesToday() : const [];
+    }
     final client = ref.read(pilooApiClientProvider).getPrisesApi();
     final parts = key.date.split('-').map(int.parse).toList(growable: false);
     final res = await client.v1PrisesGet(

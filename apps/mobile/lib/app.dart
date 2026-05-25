@@ -7,6 +7,7 @@ import 'core/router/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/data/session.dart';
 import 'features/auth/presentation/session_provider.dart';
+import 'features/onboarding/presentation/onboarding_overlay.dart';
 import 'shared/notifications/fcm_service.dart';
 import 'shared/sync/sync_providers.dart';
 
@@ -59,6 +60,18 @@ class _PilooAppState extends ConsumerState<PilooApp> {
       theme: pilooLightTheme(),
       routerConfig: _router,
       debugShowCheckedModeBanner: false,
+      // Stack global pour superposer l'overlay du tour guidé (#351).
+      // OnboardingOverlay = SizedBox.shrink si demoMode = false.
+      // L'overlay retourne lui-même un Positioned, donc direct child
+      // du Stack (sans Positioned.fill autour qui casserait le layout).
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            const OnboardingOverlay(),
+          ],
+        );
+      },
     );
   }
 

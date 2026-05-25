@@ -9,10 +9,17 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 final partagesProvider =
     FutureProvider.family<api.PartagesList, String>((ref, officineId) async {
+  // Mode démo (#351) : retourne un partages list solo (user fictif
+  // owner) pour montrer l'écran Membres peuplé.
+  if (isDemoMode(ref)) {
+    return demoPartages();
+  }
   final client = ref.read(pilooApiClientProvider).getPartagesApi();
   try {
     final res = await client.v1OfficinesOfficineIdPartagesGet(officineId: officineId);
