@@ -47,7 +47,7 @@ export async function GET(request: Request): Promise<Response> {
   return Response.json(
     {
       date,
-      items: rows.map((r) => serializePriseTimelineItem(r.prise, r.prescription)),
+      items: rows.map((r) => serializePriseTimelineItem(r.prise, r.prescription, r.rappel)),
     },
     { status: 200 },
   );

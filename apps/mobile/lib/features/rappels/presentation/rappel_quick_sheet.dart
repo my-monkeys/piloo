@@ -14,6 +14,21 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 
+/// Durée d'un rappel. `null` = à vie (date_fin nullable côté DB).
+/// Sinon, nombre de jours à ajouter à dateDebut pour calculer dateFin.
+enum RappelDuree {
+  uneSemaine(7, '1 semaine'),
+  unMois(30, '1 mois'),
+  troisMois(90, '3 mois'),
+  sixMois(180, '6 mois'),
+  unAn(365, '1 an'),
+  aVie(null, 'À vie');
+
+  const RappelDuree(this.jours, this.label);
+  final int? jours;
+  final String label;
+}
+
 class RappelQuickResult {
   const RappelQuickResult({
     required this.matin,
@@ -21,6 +36,7 @@ class RappelQuickResult {
     required this.soir,
     required this.coucher,
     required this.unite,
+    required this.duree,
   });
 
   final int? matin;
@@ -28,6 +44,7 @@ class RappelQuickResult {
   final int? soir;
   final int? coucher;
   final String unite;
+  final RappelDuree duree;
 
   bool get hasAtLeastOneMoment =>
       matin != null || midi != null || soir != null || coucher != null;
@@ -74,6 +91,9 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
   int? _midi;
   int? _soir;
   int? _coucher;
+  // Défaut "à vie" : couvre le cas le plus fréquent (médoc chronique).
+  // L'user peut ajuster pour les cures ponctuelles (antibio = 1 semaine).
+  RappelDuree _duree = RappelDuree.aVie;
 
   bool get _canSubmit =>
       _matin != null || _midi != null || _soir != null || _coucher != null;
@@ -171,6 +191,11 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
               onToggle: (v) => _toggle('coucher', v),
               onQtyChange: (n) => _setQty('coucher', n),
             ),
+            const SizedBox(height: 16),
+            _DureeSelector(
+              value: _duree,
+              onChange: (d) => setState(() => _duree = d),
+            ),
             const SizedBox(height: 20),
             Row(
               children: [
@@ -187,6 +212,7 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
                                 soir: _soir,
                                 coucher: _coucher,
                                 unite: widget.suggestedUnite,
+                                duree: _duree,
                               ),
                             )
                         : null,
@@ -470,6 +496,90 @@ class _PrimaryButton extends StatelessWidget {
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: disabled ? PilooColors.textTertiary : Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Sélecteur de durée du rappel (7j / 30j / 90j / 180j / 365j / à vie).
+/// Présenté comme une grille de pills 2 lignes × 3, l'option active
+/// avec border primary + bg primarySoft. "À vie" est l'option par
+/// défaut (cas chronique le plus fréquent).
+class _DureeSelector extends StatelessWidget {
+  const _DureeSelector({required this.value, required this.onChange});
+
+  final RappelDuree value;
+  final ValueChanged<RappelDuree> onChange;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'DURÉE',
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: PilooColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final d in RappelDuree.values)
+              _DureePill(
+                label: d.label,
+                active: d == value,
+                onTap: () => onChange(d),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _DureePill extends StatelessWidget {
+  const _DureePill({
+    required this.label,
+    required this.active,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: active ? PilooColors.primarySoft : PilooColors.surface,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: active ? PilooColors.primary : PilooColors.border,
+              width: active ? 1.5 : 1,
+            ),
+          ),
+          child: Text(
+            label,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: active ? PilooColors.primary : PilooColors.textPrimary,
             ),
           ),
         ),

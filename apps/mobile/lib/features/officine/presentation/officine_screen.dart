@@ -304,6 +304,10 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     if (result == null || !mounted) return;
 
     final today = DateTime.now();
+    final dureeJours = result.duree.jours;
+    final fin = dureeJours == null
+        ? null
+        : today.add(Duration(days: dureeJours));
     await createRappel(
       ref,
       officineId: boite.officineId,
@@ -315,6 +319,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       quantiteSoir: result.soir,
       quantiteCoucher: result.coucher,
       dateDebut: api.Date(today.year, today.month, today.day),
+      dateFin: fin == null ? null : api.Date(fin.year, fin.month, fin.day),
     );
     if (mounted) PilooToast.success(context, 'Rappel créé.');
   }
