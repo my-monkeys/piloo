@@ -20,7 +20,7 @@
 // Les datetimes sont en UTC, calculées depuis `dateDebut` (Date locale du
 // patient) + heure de prise. On suppose `dateDebut` à 00:00 dans la TZ
 // du patient — l'appelant fournit déjà une Date qui représente minuit local.
-import type { NewPrisePlanifiee, Posologie, Prescription } from '@piloo/db-schema';
+import type { NewPrisePlanifiee, Posologie, Prescription, Rappel } from '@piloo/db-schema';
 
 export type Moment = 'matin' | 'midi' | 'soir' | 'coucher';
 
@@ -171,6 +171,81 @@ export function generatePrisesForWindow(
         prescriptionId: prescription.id,
         officineId: options.officineId,
         datetimePrevue: composeDatetime(options.windowStart, offset, horaire),
+        statut: 'prevue',
+      });
+    }
+  }
+  return result;
+}
+
+export interface RappelGenerateOptions {
+  /// Officine de rattachement (dénormalisée sur prises_planifiees).
+  officineId: string;
+  /// Minuit local du premier jour de génération (inclus). Typiquement
+  /// `max(rappel.dateDebut, today)` pour ne pas créer de prises rétro.
+  windowStart: Date;
+  /// Nombre de jours à générer à partir de windowStart. Le caller borne
+  /// au min entre la fenêtre voulue et la durée restante du rappel.
+  windowDays: number;
+  horairesUtilisateur?: Partial<Record<Moment, string>>;
+}
+
+/// Construit la liste de moments cochés sur le rappel (matin/midi/...)
+/// en filtrant les quantités null. L'ordre suit l'ordre naturel d'une
+/// journée pour rester déterministe.
+function momentsFromRappel(
+  rappel: Pick<Rappel, 'quantiteMatin' | 'quantiteMidi' | 'quantiteSoir' | 'quantiteCoucher'>,
+): Moment[] {
+  const out: Moment[] = [];
+  if (rappel.quantiteMatin !== null) out.push('matin');
+  if (rappel.quantiteMidi !== null) out.push('midi');
+  if (rappel.quantiteSoir !== null) out.push('soir');
+  if (rappel.quantiteCoucher !== null) out.push('coucher');
+  return out;
+}
+
+/**
+ * Génère les prises pour un rappel rapide (#343). Contrairement aux
+ * prescriptions, les rappels n'ont pas de `posologie` JSON ni de
+ * fréquence — c'est forcément quotidien sur les moments cochés.
+ *
+ * La fenêtre [windowStart, windowStart + windowDays) doit être bornée
+ * par le caller pour respecter `rappel.dateFin` (s'il existe). Si la
+ * fenêtre déborde, les prises post-fin sont simplement ignorées par le
+ * caller — la fonction ne fait pas la vérif pour rester simple/pure.
+ */
+export function generatePrisesForRappel(
+  rappel: Pick<
+    Rappel,
+    'id' | 'quantiteMatin' | 'quantiteMidi' | 'quantiteSoir' | 'quantiteCoucher'
+  >,
+  options: RappelGenerateOptions,
+): NewPrisePlanifiee[] {
+  if (options.windowDays <= 0) return [];
+
+  const moments = momentsFromRappel(rappel);
+  if (moments.length === 0) return [];
+
+  // On réutilise buildHorairesForDay avec une posologie synthétique
+  // pour ne pas dupliquer le mapping moment → heure.
+  const horaires = buildHorairesForDay(
+    {
+      moments,
+      frequence: 'quotidien',
+      unitesParPrise: 1,
+      unite: 'comprime',
+    },
+    options.horairesUtilisateur,
+  );
+  if (horaires.length === 0) return [];
+
+  const result: NewPrisePlanifiee[] = [];
+  for (let dayOffset = 0; dayOffset < options.windowDays; dayOffset++) {
+    for (const horaire of horaires) {
+      result.push({
+        rappelId: rappel.id,
+        officineId: options.officineId,
+        datetimePrevue: composeDatetime(options.windowStart, dayOffset, horaire),
         statut: 'prevue',
       });
     }

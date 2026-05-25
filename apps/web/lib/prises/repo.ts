@@ -8,15 +8,21 @@
 import {
   prescriptions,
   prisesPlanifiees,
+  rappels,
   type Db,
   type PrisePlanifiee,
   type Prescription,
+  type Rappel,
 } from '@piloo/db-schema';
-import { and, asc, eq, gte, isNull, lt } from 'drizzle-orm';
+import { and, asc, eq, gte, isNull, lt, or } from 'drizzle-orm';
 
-export interface PriseWithPrescription {
+/// Item de timeline : exactement un des deux champs source est non-null
+/// (cf. CHECK constraint `prises_source_xor`). Les consumers doivent
+/// gérer les deux cas.
+export interface PriseWithSource {
   prise: PrisePlanifiee;
-  prescription: Prescription;
+  prescription: Prescription | null;
+  rappel: Rappel | null;
 }
 
 export interface ListPrisesForDayParams {
@@ -29,33 +35,51 @@ export interface ListPrisesForDayParams {
 export async function listPrisesForDay(
   db: Db,
   params: ListPrisesForDayParams,
-): Promise<PriseWithPrescription[]> {
+): Promise<PriseWithSource[]> {
   const rows = await db
-    .select({ prise: prisesPlanifiees, prescription: prescriptions })
+    .select({
+      prise: prisesPlanifiees,
+      prescription: prescriptions,
+      rappel: rappels,
+    })
     .from(prisesPlanifiees)
-    .innerJoin(prescriptions, eq(prisesPlanifiees.prescriptionId, prescriptions.id))
+    .leftJoin(prescriptions, eq(prisesPlanifiees.prescriptionId, prescriptions.id))
+    .leftJoin(rappels, eq(prisesPlanifiees.rappelId, rappels.id))
     .where(
       and(
         eq(prisesPlanifiees.officineId, params.officineId),
         gte(prisesPlanifiees.datetimePrevue, params.dayStart),
         lt(prisesPlanifiees.datetimePrevue, params.dayEnd),
         isNull(prisesPlanifiees.deletedAt),
-        isNull(prescriptions.deletedAt),
+        // Filtre soft-delete sur la source applicable.
+        or(
+          and(isNull(prisesPlanifiees.rappelId), isNull(prescriptions.deletedAt)),
+          and(isNull(prisesPlanifiees.prescriptionId), isNull(rappels.deletedAt)),
+        ),
       ),
     )
     .orderBy(asc(prisesPlanifiees.datetimePrevue));
 
-  return rows.map((r) => ({ prise: r.prise, prescription: r.prescription }));
+  return rows.map((r) => ({
+    prise: r.prise,
+    prescription: r.prescription,
+    rappel: r.rappel,
+  }));
 }
 
-export async function findPriseById(db: Db, id: string): Promise<PriseWithPrescription | null> {
+export async function findPriseById(db: Db, id: string): Promise<PriseWithSource | null> {
   const [row] = await db
-    .select({ prise: prisesPlanifiees, prescription: prescriptions })
+    .select({
+      prise: prisesPlanifiees,
+      prescription: prescriptions,
+      rappel: rappels,
+    })
     .from(prisesPlanifiees)
-    .innerJoin(prescriptions, eq(prisesPlanifiees.prescriptionId, prescriptions.id))
+    .leftJoin(prescriptions, eq(prisesPlanifiees.prescriptionId, prescriptions.id))
+    .leftJoin(rappels, eq(prisesPlanifiees.rappelId, rappels.id))
     .where(and(eq(prisesPlanifiees.id, id), isNull(prisesPlanifiees.deletedAt)))
     .limit(1);
-  return row ? { prise: row.prise, prescription: row.prescription } : null;
+  return row ? { prise: row.prise, prescription: row.prescription, rappel: row.rappel } : null;
 }
 
 export interface UpdatePriseParams {
@@ -101,3 +125,7 @@ export async function updatePrise(
   if (updated.length === 0) return null;
   return findPriseById(db, id);
 }
+
+// Alias rétrocompatible pour les callers historiques qui n'ont pas
+// encore migré vers PriseWithSource. À retirer quand tout est migré.
+export type PriseWithPrescription = PriseWithSource;

@@ -1,12 +1,16 @@
 // packages/db-schema/src/schema/prises_planifiees.ts
 // Source : docs/data-model.md §"prises_planifiees". Occurrences générées
-// depuis une prescription. `officine_id` est dénormalisé pour servir l'index
-// timeline `(officine_id, datetime_prevue)` sans avoir à joindre.
+// soit depuis une prescription (ordonnance), soit depuis un rappel rapide
+// (#343). Exactement une des deux FK doit être set — cf. check SQL ajouté
+// dans la migration (drizzle ne génère pas les CHECK depuis le schéma).
+// `officine_id` est dénormalisé pour servir l'index timeline
+// `(officine_id, datetime_prevue)` sans avoir à joindre.
 // Le passage en `oubliee` se fait par cron (≥1h après horaire prévu, cf. #118).
 import { index, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
 import { officines } from './officines.ts';
 import { prescriptions } from './prescriptions.ts';
+import { rappels } from './rappels.ts';
 import { users } from './users.ts';
 
 export const statutPriseEnum = pgEnum('statut_prise', ['prevue', 'prise', 'sautee', 'oubliee']);
@@ -17,9 +21,12 @@ export const prisesPlanifiees = pgTable(
     id: uuid()
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    prescriptionId: uuid()
-      .notNull()
-      .references(() => prescriptions.id, { onDelete: 'restrict' }),
+    /// Source ordonnance — null quand la prise vient d'un rappel rapide.
+    prescriptionId: uuid().references(() => prescriptions.id, {
+      onDelete: 'restrict',
+    }),
+    /// Source rappel rapide — null quand la prise vient d'une prescription.
+    rappelId: uuid().references(() => rappels.id, { onDelete: 'restrict' }),
     officineId: uuid()
       .notNull()
       .references(() => officines.id, { onDelete: 'restrict' }),
@@ -44,6 +51,7 @@ export const prisesPlanifiees = pgTable(
   (table) => [
     index('idx_prises_officine_datetime').on(table.officineId, table.datetimePrevue),
     index('idx_prises_statut_datetime').on(table.statut, table.datetimePrevue),
+    index('idx_prises_rappel').on(table.rappelId),
   ],
 );
 

@@ -1,11 +1,73 @@
-// Serializers DB → wire format pour /v1/prises (#114).
+// Serializers DB → wire format pour /v1/prises (#114, #343).
+//
+// Pour les prises issues d'un rappel rapide (rappelId != null), on
+// construit une "prescription synthétique" portant les infos du rappel.
+// Choix pragmatique : éviter de modifier le contrat PriseTimelineItem
+// (rendre `prescription` nullable casse le client Dart généré qui ne
+// supporte pas bien `.nullable()` sur les $ref). À refactorer le jour
+// où on veut vraiment distinguer les deux sources côté mobile.
 import type { PriseTimelineItem } from '@piloo/api-contract';
-import type { PrisePlanifiee, Prescription } from '@piloo/db-schema';
+import type { PrisePlanifiee, Prescription, Rappel } from '@piloo/db-schema';
+
+/// Mappe l'heure d'une prise (UTC, HH) sur le moment du rappel pour
+/// remonter la quantité correspondante. Le rappel a 4 colonnes
+/// quantite_matin/midi/soir/coucher ; on choisit selon la fourchette
+/// horaire UTC qui correspond aux defaults (08/12/19/22).
+function rappelQuantityForDatetime(prise: PrisePlanifiee, rappel: Rappel): number | null {
+  const hour = prise.datetimePrevue.getUTCHours();
+  if (hour < 10) return rappel.quantiteMatin;
+  if (hour < 16) return rappel.quantiteMidi;
+  if (hour < 21) return rappel.quantiteSoir;
+  return rappel.quantiteCoucher;
+}
+
+function buildSyntheticPrescriptionFromRappel(
+  prise: PrisePlanifiee,
+  rappel: Rappel,
+): PriseTimelineItem['prescription'] {
+  const qty = rappelQuantityForDatetime(prise, rappel);
+  return {
+    id: rappel.id,
+    // ordonnance_id requiert un UUID valide. On réutilise rappel.id —
+    // le mobile ne navigue pas vers /ordonnances/{id} depuis les
+    // prises rappel pour l'instant.
+    ordonnance_id: rappel.id,
+    nom_texte: rappel.nomTexte,
+    cip13: rappel.cip13,
+    indication: null,
+    posologie: {
+      unitesParPrise: qty ?? 1,
+      unite: rappel.unite,
+      frequence: 'quotidien',
+      // Pas de `moments`/`horaires` exposés : la timeline n'a besoin
+      // que du nom + unité + dosage par prise.
+    },
+  };
+}
 
 export function serializePriseTimelineItem(
   prise: PrisePlanifiee,
-  prescription: Prescription,
+  prescription: Prescription | null,
+  rappel: Rappel | null = null,
 ): PriseTimelineItem {
+  const presPayload: PriseTimelineItem['prescription'] = prescription
+    ? {
+        id: prescription.id,
+        ordonnance_id: prescription.ordonnanceId,
+        nom_texte: prescription.nomTexte,
+        cip13: prescription.cip13,
+        indication: prescription.indication,
+        // Le `posologie` JSONB est passé tel quel — la forme évolue produit
+        // et le mobile la rend avec ses propres règles d'affichage.
+        posologie: prescription.posologie as unknown as Record<string, unknown>,
+      }
+    : rappel
+      ? buildSyntheticPrescriptionFromRappel(prise, rappel)
+      : (() => {
+          throw new Error(
+            `Prise ${prise.id} sans source (ni prescription ni rappel) — bug d'invariant.`,
+          );
+        })();
   return {
     id: prise.id,
     officine_id: prise.officineId,
@@ -13,16 +75,7 @@ export function serializePriseTimelineItem(
     datetime_validation: prise.datetimeValidation?.toISOString() ?? null,
     statut: prise.statut,
     notes: prise.notes,
-    prescription: {
-      id: prescription.id,
-      ordonnance_id: prescription.ordonnanceId,
-      nom_texte: prescription.nomTexte,
-      cip13: prescription.cip13,
-      indication: prescription.indication,
-      // Le `posologie` JSONB est passé tel quel — la forme évolue produit
-      // et le mobile la rend avec ses propres règles d'affichage.
-      posologie: prescription.posologie as unknown as Record<string, unknown>,
-    },
+    prescription: presPayload,
   };
 }
 

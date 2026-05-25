@@ -19,7 +19,10 @@ const StatutPriseEnum = z.enum(['prevue', 'prise', 'sautee', 'oubliee']);
 const PosologieSchema = z.record(z.string(), z.unknown()).openapi('Posologie');
 
 // Sous-objet prescription dénormalisé dans chaque prise — évite un
-// /v1/prescriptions/:id par item dans la timeline.
+// /v1/prescriptions/:id par item dans la timeline. Pour une prise
+// issue d'un rappel rapide (#343), on remplit cet objet avec les
+// données du rappel (id = rappel.id, ordonnance_id = rappel.id,
+// posologie synthétique). Côté mobile, l'affichage reste uniforme.
 const PriseTimelinePrescriptionSchema = z
   .object({
     id: z.uuid(),

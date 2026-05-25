@@ -56,7 +56,10 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   });
   if (!updated) return apiErrorResponse('not_found', 'Prise introuvable.');
 
-  return Response.json(serializePriseTimelineItem(updated.prise, updated.prescription), {
-    status: 200,
-  });
+  return Response.json(
+    serializePriseTimelineItem(updated.prise, updated.prescription, updated.rappel),
+    {
+      status: 200,
+    },
+  );
 }

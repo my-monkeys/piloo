@@ -134,6 +134,13 @@
       "when": 1779493651692,
       "tag": "0018_legal_vector",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1779704367817,
+      "tag": "0019_common_captain_cross",
+      "breakpoints": true
     }
   ]
 }
