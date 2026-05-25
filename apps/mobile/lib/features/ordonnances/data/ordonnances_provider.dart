@@ -3,6 +3,7 @@ import 'package:built_collection/built_collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/features/today/data/prises_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 final ordonnancesProvider =
@@ -93,5 +94,10 @@ Future<api.OrdonnanceWithPrescriptions> duplicateOrdonnance(
     throw Exception('POST ordonnances (duplicate) : ${res.statusCode}');
   }
   ref.invalidate(ordonnancesProvider(officineId));
+  // Le POST côté serveur génère aussi les prises pour les prescriptions.
+  // On invalide TOUS les jours en cache pour que la timeline Aujourd'hui
+  // (et les jours déjà chargés en navigation) prenne ces nouvelles
+  // prises au prochain rebuild.
+  ref.invalidate(prisesDayProvider);
   return res.data!;
 }

@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 
+import 'package:piloo/features/today/data/prises_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 final rappelsProvider =
@@ -61,5 +62,10 @@ Future<Rappel> createRappel(
     );
   }
   ref.invalidate(rappelsProvider(officineId));
+  // Le POST /rappels génère aussi les prises pour les 30 prochains
+  // jours côté serveur (#343). On invalide TOUS les jours en cache
+  // pour que la timeline Aujourd'hui (et les jours déjà chargés en
+  // navigation) prenne ces nouvelles prises au prochain rebuild.
+  ref.invalidate(prisesDayProvider);
   return res.data!;
 }
