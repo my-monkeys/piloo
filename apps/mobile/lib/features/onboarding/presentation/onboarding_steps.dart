@@ -3,13 +3,26 @@
 // Chaque étape pointe sur un onglet (route) à afficher en arrière-plan
 // pendant que l'overlay tooltip apparaît au-dessus. Le tour suit l'ordre
 // naturel d'utilisation : Aujourd'hui → Officine → Scan → Partages → Fin.
+//
+// `target` désigne le widget à mettre en spotlight : le backdrop sombre
+// est percé d'un trou autour du Rect résolu via `GlobalKey`. Les targets
+// vivent dans `onboarding_targets.dart`.
 import 'package:piloo/core/router/routes.dart';
+
+enum TourTarget {
+  none,
+  scanFab,
+  firstPriseCard,
+  firstBoiteCard,
+  perimeChip,
+}
 
 class OnboardingStep {
   const OnboardingStep({
     required this.tab,
     required this.title,
     required this.body,
+    this.target = TourTarget.none,
   });
 
   /// RouteName.* du tab à mettre en arrière-plan pendant cette étape.
@@ -17,6 +30,7 @@ class OnboardingStep {
   final String? tab;
   final String title;
   final String body;
+  final TourTarget target;
 }
 
 const onboardingSteps = <OnboardingStep>[
@@ -25,24 +39,40 @@ const onboardingSteps = <OnboardingStep>[
     title: "Bienvenue dans Piloo",
     body:
         "Voici votre carnet médicaments. On commence par l'écran Aujourd'hui, "
-        "qui liste vos prises du jour. Tape sur le rond gauche pour confirmer "
-        "qu'une prise a été faite.",
+        "qui liste vos prises du jour.",
+  ),
+  OnboardingStep(
+    tab: RouteName.today,
+    title: "Confirmer une prise",
+    body:
+        "Tape sur le rond gauche d'une prise pour la marquer comme faite. "
+        "Long-press pour ouvrir le menu (sauter, reporter, modifier la dose).",
+    target: TourTarget.firstPriseCard,
   ),
   OnboardingStep(
     tab: RouteName.officine,
-    title: "Votre officine",
+    title: "Vos boîtes",
     body:
-        "Toutes vos boîtes dans une seule vue. Les boîtes périmées sont "
-        "signalées en rouge, et celles en stock bas en orange. Tape une "
-        "boîte pour ouvrir les actions rapides.",
+        "Toutes vos boîtes dans une seule vue. Tape une carte pour voir le "
+        "stock restant, le lot et les actions rapides.",
+    target: TourTarget.firstBoiteCard,
+  ),
+  OnboardingStep(
+    tab: RouteName.officine,
+    title: "Filtre Périmé",
+    body:
+        "Les boîtes périmées sont comptées ici. Tape pour ne voir qu'elles — "
+        "pratique pour faire le tri régulièrement.",
+    target: TourTarget.perimeChip,
   ),
   OnboardingStep(
     tab: RouteName.officine,
     title: "Scanner une nouvelle boîte",
     body:
-        "Le bouton scanner central (orange) reconnaît automatiquement les "
-        "datamatrix sur les boîtes françaises. Pas besoin de saisir le nom — "
-        "Piloo le récupère depuis la BDPM officielle.",
+        "Le bouton orange central reconnaît automatiquement les datamatrix "
+        "des boîtes françaises. Pas besoin de saisir le nom — Piloo le "
+        "récupère depuis la BDPM officielle.",
+    target: TourTarget.scanFab,
   ),
   OnboardingStep(
     tab: RouteName.more,

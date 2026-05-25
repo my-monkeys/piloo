@@ -21,6 +21,7 @@ import 'package:piloo_api_client/piloo_api_client.dart' as api;
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
+import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
 import 'package:piloo/features/today/data/prises_provider.dart';
 import 'package:piloo/features/today/presentation/prise_actions_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_day_picker.dart';
@@ -282,54 +283,75 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
                   ? const Center(child: CircularProgressIndicator())
                   : !hasAny
                       ? _EmptyDay(date: _date)
-                      : SingleChildScrollView(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 4, 20, 140),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _Section(
-                                icon: PhosphorIconsFill.sunHorizon,
-                                label: 'Matin',
-                                countLabel: _countLabel(matin),
-                                countColor: _countColor(matin),
-                                prises: matin,
-                                onPriseTap: _onPriseTap,
-                                onPriseLongPress: _onPriseLongPress,
-                              ),
-                              const SizedBox(height: 16),
-                              _Section(
-                                icon: PhosphorIconsFill.sun,
-                                label: 'Midi',
-                                countLabel: _countLabel(midi),
-                                countColor: _countColor(midi),
-                                prises: midi,
-                                onPriseTap: _onPriseTap,
-                                onPriseLongPress: _onPriseLongPress,
-                              ),
-                              const SizedBox(height: 16),
-                              _Section(
-                                icon: PhosphorIconsFill.moon,
-                                label: 'Soir',
-                                countLabel: _countLabel(soir),
-                                countColor: _countColor(soir),
-                                prises: soir,
-                                onPriseTap: _onPriseTap,
-                                onPriseLongPress: _onPriseLongPress,
-                              ),
-                              const SizedBox(height: 16),
-                              _Section(
-                                icon: PhosphorIconsFill.moonStars,
-                                label: 'Coucher',
-                                countLabel: _countLabel(coucher),
-                                countColor: _countColor(coucher),
-                                prises: coucher,
-                                onPriseTap: _onPriseTap,
-                                onPriseLongPress: _onPriseLongPress,
-                              ),
-                            ],
-                          ),
-                        ),
+                      : Builder(builder: (context) {
+                          // La firstCardKey va à la 1ère section non vide
+                          // (= 1ère prise visible). Sert au spotlight du
+                          // tour onboarding (#351).
+                          final tourKey =
+                              ref.read(onboardingTargetsProvider).firstPriseCard;
+                          Key? matinKey, midiKey, soirKey, coucherKey;
+                          if (matin.isNotEmpty) {
+                            matinKey = tourKey;
+                          } else if (midi.isNotEmpty) {
+                            midiKey = tourKey;
+                          } else if (soir.isNotEmpty) {
+                            soirKey = tourKey;
+                          } else if (coucher.isNotEmpty) {
+                            coucherKey = tourKey;
+                          }
+                          return SingleChildScrollView(
+                            padding:
+                                const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _Section(
+                                  icon: PhosphorIconsFill.sunHorizon,
+                                  label: 'Matin',
+                                  countLabel: _countLabel(matin),
+                                  countColor: _countColor(matin),
+                                  prises: matin,
+                                  onPriseTap: _onPriseTap,
+                                  onPriseLongPress: _onPriseLongPress,
+                                  firstCardKey: matinKey,
+                                ),
+                                const SizedBox(height: 16),
+                                _Section(
+                                  icon: PhosphorIconsFill.sun,
+                                  label: 'Midi',
+                                  countLabel: _countLabel(midi),
+                                  countColor: _countColor(midi),
+                                  prises: midi,
+                                  onPriseTap: _onPriseTap,
+                                  onPriseLongPress: _onPriseLongPress,
+                                  firstCardKey: midiKey,
+                                ),
+                                const SizedBox(height: 16),
+                                _Section(
+                                  icon: PhosphorIconsFill.moon,
+                                  label: 'Soir',
+                                  countLabel: _countLabel(soir),
+                                  countColor: _countColor(soir),
+                                  prises: soir,
+                                  onPriseTap: _onPriseTap,
+                                  onPriseLongPress: _onPriseLongPress,
+                                  firstCardKey: soirKey,
+                                ),
+                                const SizedBox(height: 16),
+                                _Section(
+                                  icon: PhosphorIconsFill.moonStars,
+                                  label: 'Coucher',
+                                  countLabel: _countLabel(coucher),
+                                  countColor: _countColor(coucher),
+                                  prises: coucher,
+                                  onPriseTap: _onPriseTap,
+                                  onPriseLongPress: _onPriseLongPress,
+                                  firstCardKey: coucherKey,
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
             ),
           ],
         ),
@@ -359,6 +381,7 @@ class _Section extends StatelessWidget {
     required this.prises,
     required this.onPriseTap,
     required this.onPriseLongPress,
+    this.firstCardKey,
   });
 
   final IconData icon;
@@ -368,6 +391,8 @@ class _Section extends StatelessWidget {
   final List<_Prise> prises;
   final Future<void> Function(_Prise) onPriseTap;
   final Future<void> Function(_Prise) onPriseLongPress;
+  /// Clé attachée à la première card pour le tour onboarding (#351).
+  final Key? firstCardKey;
 
   @override
   Widget build(BuildContext context) {
@@ -408,6 +433,7 @@ class _Section extends StatelessWidget {
         const SizedBox(height: 8),
         ...List.generate(prises.length, (i) {
           return Padding(
+            key: i == 0 ? firstCardKey : null,
             padding: EdgeInsets.only(top: i == 0 ? 0 : 8),
             child: _PriseCard(
               prise: prises[i],

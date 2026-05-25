@@ -39,6 +39,7 @@ import 'package:piloo/features/partages/presentation/partages_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/settings/presentation/horaires_screen.dart';
 import 'package:piloo/features/settings/presentation/notifications_screen.dart';
+import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
 import 'package:piloo/features/settings/presentation/bdpm_status_screen.dart';
 import 'package:piloo/features/settings/presentation/security_screen.dart';
@@ -384,6 +385,7 @@ class _MainShellState extends ConsumerState<_MainShell> {
             .goBranch(i, initialLocation: i == widget.shell.currentIndex),
       ),
       floatingActionButton: PilooScanFab(
+        key: ref.read(onboardingTargetsProvider).scanFab,
         onTap: () => GoRouter.of(context).goNamed(RouteName.scan),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
