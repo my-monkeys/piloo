@@ -1510,17 +1510,59 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
     super.dispose();
   }
 
-  void _onPanUpdate(DragUpdateDetails d) {
-    setState(() => _dragX += d.delta.dx);
+  // Tracking pointer pour le drag horizontal en mode Listener pure :
+  // on n'absorbe le pointer (et donc on n'arrête le scroll vertical
+  // parent) que si le mouvement est CLAIREMENT horizontal. Évite que
+  // les swipes verticaux lents soient confondus avec un drag carrousel
+  // (bug ressenti utilisateur 2026-05-25).
+  Offset _pointerStart = Offset.zero;
+  Offset _pointerLast = Offset.zero;
+  DateTime _pointerStartTime = DateTime.now();
+  bool _draggingH = false;
+
+  void _onPointerDown(PointerDownEvent e) {
+    _pointerStart = e.position;
+    _pointerLast = e.position;
+    _pointerStartTime = DateTime.now();
+    _draggingH = false;
   }
 
-  Future<void> _onPanEnd(DragEndDetails d) async {
+  void _onPointerMove(PointerMoveEvent e) {
+    final dx = e.position.dx - _pointerStart.dx;
+    final dy = e.position.dy - _pointerStart.dy;
+    if (!_draggingH) {
+      // Seuils :
+      // - kSlop horizontal : au-delà de 12 px sur l'axe X
+      // - mouvement clairement horizontal : |dx| > 1.5 × |dy|
+      // Tant que l'un des deux n'est pas vérifié, on laisse le
+      // ListView parent scroller normalement.
+      if (dx.abs() < 12) return;
+      if (dx.abs() < 1.5 * dy.abs()) return;
+      _draggingH = true;
+      // À l'instant où on commence à drag horizontalement, on initialise
+      // _dragX avec le mouvement déjà parcouru pour un suivi continu.
+      setState(() => _dragX = dx);
+      _pointerLast = e.position;
+      return;
+    }
+    final delta = e.position.dx - _pointerLast.dx;
+    _pointerLast = e.position;
+    setState(() => _dragX += delta);
+  }
+
+  Future<void> _onPointerUp(PointerUpEvent e) async {
+    if (!_draggingH) return;
     final width = MediaQuery.of(context).size.width;
     final threshold = width * 0.2;
-    final velocity = d.velocity.pixelsPerSecond.dx;
-    final goNext = (_dragX < -threshold || velocity < -400) &&
+    final elapsed =
+        DateTime.now().difference(_pointerStartTime).inMilliseconds;
+    final velocityX = elapsed > 0
+        ? (e.position.dx - _pointerStart.dx) * 1000 / elapsed
+        : 0.0;
+    _draggingH = false;
+    final goNext = (_dragX < -threshold || velocityX < -400) &&
         _topIndex < _pages.length - 1;
-    final goPrev = (_dragX > threshold || velocity > 400) && _topIndex > 0;
+    final goPrev = (_dragX > threshold || velocityX > 400) && _topIndex > 0;
 
     if (goNext) {
       await _animateTo(-width);
@@ -1583,11 +1625,17 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
       children: [
         SizedBox(
           height: stackHeight,
-          child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
+          child: Listener(
+            onPointerDown: _onPointerDown,
+            onPointerMove: _onPointerMove,
+            onPointerUp: _onPointerUp,
+            child: GestureDetector(
+              // Le tap reste géré par GestureDetector (claim léger).
+              // Le drag horizontal est géré au niveau Listener au-dessus
+              // pour ne pas jouer dans la gesture arena et bloquer le
+              // scroll vertical du ListView parent.
+              behavior: HitTestBehavior.translucent,
               onTap: () => widget.onTap(_pages[_topIndex]),
-              onHorizontalDragUpdate: _onPanUpdate,
-              onHorizontalDragEnd: _onPanEnd,
               child: Stack(
                 clipBehavior: Clip.none,
                 alignment: Alignment.topCenter,
@@ -1630,6 +1678,7 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
               ),
             ),
           ),
+        ),
         Padding(
           padding: const EdgeInsets.only(top: 10),
           child: Row(
