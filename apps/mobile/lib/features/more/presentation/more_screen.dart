@@ -69,16 +69,6 @@ class MoreScreen extends ConsumerWidget {
           label: 'Ordonnances',
           routeName: RouteName.ordonnances,
         ),
-        // Raccourci vers la création d'ordonnance (= "rappel" dans le
-        // langage user). Réutilise OrdonnanceCreateScreen qui sait déjà
-        // gérer médicament + matin/midi/soir/coucher + nb de doses +
-        // génération des prises planifiées. Avant 2026-05-22 : entrée
-        // dédiée "Rappels simples" qui faisait double emploi.
-        const _Row(
-          icon: PhosphorIconsRegular.bell,
-          label: 'Nouveau rappel',
-          routeName: RouteName.ordonnanceCreate,
-        ),
         const _Row(
           icon: PhosphorIconsRegular.bellRinging,
           label: 'Notifications',
