@@ -1602,10 +1602,11 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
 
   @override
   Widget build(BuildContext context) {
-    // Re-mesure à chaque build : la hauteur peut changer si la
-    // largeur disponible (donc le wrap du titre) change, ou si on
-    // hot-reload sans hot-restart. Idempotent → pas de boucle.
-    WidgetsBinding.instance.addPostFrameCallback(_measureCard);
+    // La mesure se fait une seule fois post-mount via initState. Re-
+    // mesurer à chaque build provoquait des setState en cascade qui
+    // perturbaient le scroll vertical du ListView parent (jitter qui
+    // ramenait l'utilisateur vers le bas). Si le wrap change, la card
+    // s'ajustera au prochain mount via _onPostMeasure.
     final width = MediaQuery.of(context).size.width;
     final progress = (_dragX / width).clamp(-1.0, 1.0);
 

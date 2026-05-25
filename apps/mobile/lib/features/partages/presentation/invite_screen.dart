@@ -11,12 +11,14 @@
 // serveur génère le token + envoie l'email Brevo (best-effort) au
 // destinataire avec un lien d'acceptation.
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/core/config/api_config.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
@@ -84,18 +86,114 @@ class _InviteScreenState extends ConsumerState<InviteScreen> {
       if (res.statusCode != 201 && res.statusCode != 200) {
         throw Exception('Statut ${res.statusCode}');
       }
+      final invitation = res.data;
+      if (invitation == null) {
+        throw Exception('Invitation créée mais réponse vide.');
+      }
       if (!mounted) return;
-      PilooToast.success(context, "Invitation envoyée à $email.");
-      Future.delayed(const Duration(milliseconds: 600), () {
-        if (mounted) {
-          context.canPop() ? context.pop() : context.go(RoutePath.today);
-        }
-      });
+      // L'email Brevo part en background côté serveur. On affiche en plus
+      // un sheet "Lien copiable" pour permettre l'envoi manuel (SMS,
+      // WhatsApp, etc.) — utile quand le destinataire ne consulte pas
+      // ses mails ou que le mail est en spam.
+      await _showInviteLinkSheet(email, invitation.id);
+      if (!mounted) return;
+      context.canPop() ? context.pop() : context.go(RoutePath.today);
     } catch (e) {
       if (mounted) PilooToast.error(context, "Échec de l'envoi : $e");
     } finally {
       if (mounted) setState(() => _sending = false);
     }
+  }
+
+  /// Affiche une bottom sheet avec le lien d'invitation copiable.
+  /// Permet à l'user d'envoyer le lien manuellement (SMS, WhatsApp,
+  /// etc.) en plus du mail Brevo envoyé en background.
+  Future<void> _showInviteLinkSheet(String email, String invitationId) async {
+    final link = '${ApiConfig.baseUrl}/invitations/$invitationId';
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: PilooColors.background,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Invitation envoyée',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.fraunces(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: PilooColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Un mail est parti vers $email. Tu peux aussi copier le lien et le partager directement (SMS, WhatsApp…).',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.manrope(
+                  fontSize: 13,
+                  color: PilooColors.textSecondary,
+                  height: 1.45,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                decoration: BoxDecoration(
+                  color: PilooColors.surfaceSubtle,
+                  borderRadius: BorderRadius.circular(PilooRadius.md),
+                  border: Border.all(color: PilooColors.border),
+                ),
+                child: SelectableText(
+                  link,
+                  maxLines: 3,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: PilooColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              PilooButton(
+                label: 'Copier le lien',
+                variant: PilooButtonVariant.primary,
+                onPressed: () async {
+                  await Clipboard.setData(ClipboardData(text: link));
+                  if (ctx.mounted) {
+                    PilooToast.success(ctx, 'Lien copié.');
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              PilooButton(
+                label: 'Fermer',
+                variant: PilooButtonVariant.outline,
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   api.CreateInvitationInputRoleEnum _toWireRole(_InviteRole r) {
