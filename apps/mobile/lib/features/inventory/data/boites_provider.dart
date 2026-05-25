@@ -11,6 +11,8 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 
+import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/db/db_provider.dart';
 import 'package:piloo/shared/sync/enqueue.dart';
@@ -26,6 +28,12 @@ class BoiteConflictException implements Exception {
 
 final boitesProvider =
     FutureProvider.family<List<Boite>, String>((ref, officineId) async {
+  // Mode démo (#351) : on retourne des fixtures hardcodées au lieu de
+  // hitter l'API. Permet à l'onboarding guidé de montrer l'écran
+  // Officine peuplé sans qu'un compte vierge soit toujours vide.
+  if (isDemoMode(ref)) {
+    return demoBoites();
+  }
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
   final res = await api.v1OfficinesOfficineIdBoitesGet(officineId: officineId);
   if (res.statusCode != 200 || res.data == null) {

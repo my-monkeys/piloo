@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/data/session_storage.dart';
 import 'features/auth/presentation/session_provider.dart';
+import 'features/onboarding/data/demo_mode_provider.dart';
 import 'firebase_options.dart';
 import 'shared/db/db_provider.dart';
 import 'shared/db/local_db.dart';
@@ -32,7 +33,8 @@ Future<void> main() async {
   // Storage natif (Keychain iOS / EncryptedSharedPreferences Android).
   // En tests on override avec `InMemorySecureStorage` — voir
   // test/features/auth/session_provider_test.dart.
-  final storage = SessionStorage(FlutterSecureStorageImpl());
+  final secureStorage = FlutterSecureStorageImpl();
+  final storage = SessionStorage(secureStorage);
   final db = LocalDatabase();
 
   final notifPlugin = FlutterLocalNotificationsPlugin();
@@ -51,6 +53,7 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
+        secureStorageProvider.overrideWithValue(secureStorage),
         localDatabaseProvider.overrideWithValue(db),
         notificationsServiceProvider.overrideWithValue(notifService),
         fcmServiceProvider.overrideWithValue(fcm),
