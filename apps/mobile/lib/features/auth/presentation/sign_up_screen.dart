@@ -28,7 +28,7 @@ import 'package:piloo/features/auth/data/auth_api_provider.dart';
 import 'package:piloo/features/auth/data/session.dart';
 import 'package:piloo/features/auth/data/social_sign_in_service.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
-import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
+import 'package:piloo/features/onboarding/presentation/onboarding_tour_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_checkbox.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
@@ -90,7 +90,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
           // Active le tour guidé en mode démo (#351) — l'app affiche
           // des fixtures + overlay tooltips pour le nouvel utilisateur.
           // ignore: unawaited_futures
-          ref.read(demoModeProvider.notifier).enable();
+          ref.read(tourStepProvider.notifier).start();
           if (!mounted) return;
           context.go(RoutePath.today);
         case SignUpPendingVerification(:final email):
@@ -124,7 +124,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
       final session = await doSignIn();
       await ref.read(sessionProvider.notifier).signIn(session);
       // ignore: unawaited_futures
-      ref.read(demoModeProvider.notifier).enable();
+      ref.read(tourStepProvider.notifier).start();
       if (!mounted) return;
       context.go(RoutePath.today);
     } on SocialSignInCancelled {

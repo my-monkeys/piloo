@@ -13,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
+import 'package:piloo/core/router/router.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
@@ -27,11 +28,17 @@ class OnboardingOverlay extends ConsumerWidget {
     final demoMode = ref.watch(demoModeProvider).valueOrNull ?? false;
     if (!demoMode) return const Positioned(left: 0, top: 0, child: SizedBox.shrink());
 
-    // Note : pas de nav auto entre les étapes — le context du builder
-    // est au-dessus du Navigator, `context.goNamed` ne fonctionne pas
-    // fiable depuis ici. Pour le MVP, l'user navigue lui-même entre les
-    // tabs en suivant les indications de la card. Une version "spotlight
-    // + nav auto" sera dans un suivi.
+    // Nav auto au changement d'étape : on lit le router via le provider
+    // (override dans main.dart), pas via context.goNamed qui ne marche
+    // pas depuis le MaterialApp.builder (hors Navigator).
+    ref.listen<int>(tourStepProvider, (prev, next) {
+      if (prev == next || next >= onboardingSteps.length) return;
+      final tab = onboardingSteps[next].tab;
+      if (tab == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(routerProvider).goNamed(tab);
+      });
+    });
 
     final stepIndex = ref.watch(tourStepProvider);
     if (stepIndex >= onboardingSteps.length) {

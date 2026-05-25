@@ -56,6 +56,17 @@ import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
 import 'routes.dart';
 
+/// Provider du router courant — override dans `app.dart` après
+/// l'instanciation `buildRouter()`. Permet à n'importe quel widget
+/// (y compris hors du Navigator, type overlays au niveau Material
+/// App.builder) de pousser une route via `ref.read(routerProvider)
+/// .goNamed(...)`.
+final routerProvider = Provider<GoRouter>((ref) {
+  throw UnimplementedError(
+    'routerProvider must be overridden in app.dart after buildRouter().',
+  );
+});
+
 GoRouter buildRouter() {
   // Override dev-only : permet de booter directement sur n'importe quelle
   // route via `flutter run --dart-define=PILOO_BOOT_ROUTE=/sign-in`. Si vide,

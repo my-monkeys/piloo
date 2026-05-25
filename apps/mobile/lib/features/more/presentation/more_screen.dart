@@ -29,7 +29,6 @@ import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
-import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/features/onboarding/presentation/onboarding_tour_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
@@ -113,10 +112,8 @@ class MoreScreen extends ConsumerWidget {
           iconBg: PilooColors.primarySoft,
           iconFg: PilooColors.primary,
           onTap: () {
-            // Relance le tour : re-active demoMode + reset step à 0.
-            ref.read(tourStepProvider.notifier).reset();
             // ignore: discarded_futures
-            ref.read(demoModeProvider.notifier).enable();
+            ref.read(tourStepProvider.notifier).start();
           },
         ),
         const _Row(

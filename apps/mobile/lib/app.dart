@@ -19,17 +19,15 @@ class PilooApp extends ConsumerStatefulWidget {
 }
 
 class _PilooAppState extends ConsumerState<PilooApp> {
-  // Le router est instancié une fois pour la durée de vie de l'app — il
-  // détient l'état de navigation (shell, history) qui doit persister
-  // pendant tout le cycle de vie.
-  late final _router = buildRouter();
+  // Router lu depuis routerProvider (override dans main.dart). Instancié
+  // au boot pour pouvoir être consommé aussi par l'overlay onboarding
+  // (#351) hors du Navigator. Le dispose se fait via le ProviderScope.
   StreamSubscription<String>? _fcmRefreshSub;
   bool _fcmRegistered = false;
 
   @override
   void dispose() {
     _fcmRefreshSub?.cancel();
-    _router.dispose();
     super.dispose();
   }
 
@@ -58,7 +56,7 @@ class _PilooAppState extends ConsumerState<PilooApp> {
     return MaterialApp.router(
       title: 'Piloo',
       theme: pilooLightTheme(),
-      routerConfig: _router,
+      routerConfig: ref.watch(routerProvider),
       debugShowCheckedModeBanner: false,
       // Stack global pour superposer l'overlay du tour guidé (#351).
       // OnboardingOverlay = SizedBox.shrink si demoMode = false.
