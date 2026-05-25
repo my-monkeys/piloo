@@ -14,16 +14,23 @@
 // Pour le POC, données saisies maintenues en state local. La création
 // serveur (transaction unique) sera câblée avec le client OpenAPI
 // quand il sera généré.
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/ordonnances/data/ocr_provider.dart';
+import 'package:piloo/features/ordonnances/data/ordonnances_provider.dart';
+import 'package:piloo/features/today/data/prises_provider.dart';
+import 'package:piloo/shared/api/api_client_provider.dart';
 import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
@@ -125,13 +132,108 @@ class _OrdonnanceCreateScreenState
     return p;
   }
 
+  bool _saving = false;
+
   void _next() {
     if (_step < 3) {
       setState(() => _step++);
     } else {
-      // Terminer : POST /ordonnances + ses prescriptions en 1 tx.
-      context.canPop() ? context.pop() : context.go(RoutePath.ordonnances);
+      _save();
     }
+  }
+
+  Future<void> _save() async {
+    if (_saving) return;
+    final officineId = ref.read(activeOfficineProvider).valueOrNull?.id;
+    if (officineId == null) {
+      PilooToast.error(context, 'Aucune officine active.');
+      return;
+    }
+    if (_prescriptions.isEmpty) {
+      PilooToast.error(context, 'Ajoute au moins une prescription.');
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final prescripteur =
+          _prescripteurCtrl.text.trim().isEmpty ? null : _prescripteurCtrl.text.trim();
+      final prescriptions = _prescriptions
+          .map((p) => (api.CreatePrescriptionInputBuilder()
+                ..nomTexte = p.medName
+                ..posologie = _buildPosologie(p)
+                ..dureeJours = _parseDureeJours(p.duration)
+                ..notes = p.withMeal ? 'À prendre avec un repas' : null)
+              .build())
+          .toList();
+      final input = (api.CreateOrdonnanceInputBuilder()
+            ..prescripteur = prescripteur
+            ..datePrescription = api.Date(_date.year, _date.month, _date.day)
+            ..source_ = api.CreateOrdonnanceInputSource_Enum.manuelle
+            ..prescriptions =
+                ListBuilder<api.CreatePrescriptionInput>(prescriptions))
+          .build();
+      final client = ref.read(pilooApiClientProvider).getOrdonnancesApi();
+      final res = await client.v1OfficinesOfficineIdOrdonnancesPost(
+        officineId: officineId,
+        createOrdonnanceInput: input,
+      );
+      if (res.statusCode != 201) {
+        throw Exception('POST /ordonnances : statut ${res.statusCode}');
+      }
+      // Le serveur génère les prises_planifiees pour chaque prescription
+      // (à durée fixe = générées entièrement ; à vie = fenêtre glissante
+      // alimentée par cron). On invalide la timeline + la liste d'ordos.
+      ref.invalidate(ordonnancesProvider(officineId));
+      ref.invalidate(prisesDayProvider);
+      if (mounted) {
+        PilooToast.success(context, 'Ordonnance créée.');
+        context.canPop() ? context.pop() : context.go(RoutePath.ordonnances);
+      }
+    } catch (e) {
+      if (mounted) PilooToast.error(context, 'Création échouée : $e');
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  MapBuilder<String, JsonObject?> _buildPosologie(_Prescription p) {
+    // Le schéma Posologie côté contract est un map JSON ouvert. On
+    // y met snake_case conforme à ce que le serveur attend (cf.
+    // packages/db-schema/src/schema/prescriptions.ts).
+    return MapBuilder<String, JsonObject?>({
+      'unites_par_prise': JsonObject(p.unitsPerTake),
+      'unite': JsonObject(p.medForm),
+      'frequence': JsonObject('quotidien'),
+      'moments': JsonObject(
+        p.moments.map(_momentToWire).toList(growable: false),
+      ),
+    });
+  }
+
+  static String _momentToWire(_Moment m) => switch (m) {
+        _Moment.matin => 'matin',
+        _Moment.midi => 'midi',
+        _Moment.soir => 'soir',
+        _Moment.coucher => 'coucher',
+      };
+
+  /// "À vie" → null. "7 jours" → 7. "1 mois" → 30. "3 mois" → 90.
+  /// "1 an" → 365. Texte libre → tente d'extraire le nombre puis garde
+  /// l'unité après. Faute de mieux : null (= à vie).
+  int? _parseDureeJours(String raw) {
+    final s = raw.trim().toLowerCase();
+    if (s.isEmpty || s == 'à vie' || s == 'a vie') return null;
+    final match = RegExp(r'(\d+)\s*(jour|mois|an|sem)').firstMatch(s);
+    if (match == null) return null;
+    final n = int.tryParse(match.group(1)!);
+    if (n == null) return null;
+    return switch (match.group(2)) {
+      'jour' => n,
+      'sem' => n * 7,
+      'mois' => n * 30,
+      'an' => n * 365,
+      _ => n,
+    };
   }
 
   void _back() {

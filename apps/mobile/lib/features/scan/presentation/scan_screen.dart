@@ -24,6 +24,8 @@ import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/scan/data/camera_permission.dart';
 import 'package:piloo/features/scan/data/scan_result.dart';
 import 'package:piloo/features/scan/presentation/manual_cip_sheet.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/partages/data/partages_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_lookup_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/gs1/gs1_parser.dart';
@@ -139,6 +141,11 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
       existing.peremption.month,
       existing.peremption.day,
     );
+    final partages =
+        ref.read(partagesProvider(existing.officineId)).valueOrNull;
+    final session = ref.read(sessionProvider).value;
+    final hasOtherMembers = partages != null &&
+        partages.members.any((m) => m.userId != session?.userId);
     final action = await showQuickActionsSheet(
       context,
       info: QuickActionsContext(
@@ -149,6 +156,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen>
         peremptionDate: peremption,
         canAddAnotherBox: true,
         substances: localBdpm?.substances ?? const [],
+        hasOtherMembers: hasOtherMembers,
       ),
     );
     if (!mounted) return;

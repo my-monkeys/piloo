@@ -41,6 +41,7 @@ class QuickActionsContext {
     this.peremptionDate,
     this.canAddAnotherBox = false,
     this.substances = const [],
+    this.hasOtherMembers = false,
   });
 
   /// Label affiché dans le header de la sheet : "Maison · Doliprane 1000 mg".
@@ -69,6 +70,12 @@ class QuickActionsContext {
   /// utile pour les noms commerciaux peu parlants. Vide si médoc
   /// hors CIS_COMPO_bdpm.
   final List<String> substances;
+
+  /// Vrai si l'officine est partagée avec au moins un autre membre
+  /// actif. Sert à conditionner l'action "Signaler un manque" — sans
+  /// destinataire, le bouton n'a aucun effet utile. Sera étendu plus
+  /// tard à des "contacts externes" hors partage (#TODO).
+  final bool hasOtherMembers;
 }
 
 /// Affiche la sheet et retourne l'action choisie (ou null si annulé /
@@ -175,15 +182,20 @@ class _QuickActionsSheet extends StatelessWidget {
                 onTap: () => Navigator.of(context).pop(QuickAction.rename),
               ),
             ],
-            const SizedBox(height: 8),
-            _ActionRow(
-              icon: PhosphorIconsRegular.handWaving,
-              iconColor: PilooColors.accent,
-              iconBg: PilooColors.accentSoft,
-              title: 'Signaler un manque',
-              onTap: () =>
-                  Navigator.of(context).pop(QuickAction.reportMissing),
-            ),
+            // "Signaler un manque" : seulement utile si l'officine est
+            // partagée avec d'autres membres qui peuvent recevoir la
+            // notification. Sans destinataire, le bouton est cosmétique.
+            if (info.hasOtherMembers) ...[
+              const SizedBox(height: 8),
+              _ActionRow(
+                icon: PhosphorIconsRegular.handWaving,
+                iconColor: PilooColors.accent,
+                iconBg: PilooColors.accentSoft,
+                title: 'Signaler un manque',
+                onTap: () =>
+                    Navigator.of(context).pop(QuickAction.reportMissing),
+              ),
+            ],
             const SizedBox(height: 8),
             // Action destructive en bas — séparée visuellement par sa
             // couleur error pour réduire le risque de tap accidentel.

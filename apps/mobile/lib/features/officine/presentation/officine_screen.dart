@@ -37,8 +37,10 @@ import 'package:piloo/features/inventory/data/boites_provider.dart';
 import 'package:piloo/features/inventory/presentation/quick_actions_sheet.dart';
 import 'package:piloo/features/officine/data/grouping_pref.dart';
 import 'package:piloo/features/officine/domain/boite_grouping.dart';
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/partages/data/partages_provider.dart';
 import 'package:piloo/features/rappels/data/rappels_provider.dart';
 import 'package:piloo/features/rappels/presentation/rappel_quick_sheet.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
@@ -131,6 +133,15 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       apiBoite.peremption.month,
       apiBoite.peremption.day,
     );
+    // Officine partagée ? On évite l'action "Signaler un manque" quand
+    // l'user est seul (personne à notifier). On utilise le provider
+    // partages déjà câblé pour les écrans Membres ; en cas d'erreur
+    // (offline, endpoint indispo) on traite comme "seul" → action cachée.
+    final partages =
+        ref.read(partagesProvider(apiBoite.officineId)).valueOrNull;
+    final session = ref.read(sessionProvider).value;
+    final hasOtherMembers = partages != null &&
+        partages.members.any((m) => m.userId != session?.userId);
     final action = await showQuickActionsSheet(
       context,
       info: QuickActionsContext(
@@ -140,6 +151,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
         recognizedFromBdpm: recognized,
         peremptionDate: peremption,
         substances: bdpmDb?.findByCip13(apiBoite.cip13)?.substances ?? const [],
+        hasOtherMembers: hasOtherMembers,
       ),
     );
     if (action == null || !mounted) return;
