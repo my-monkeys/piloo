@@ -69,3 +69,4 @@ apps/mobile/lib/gen/openapi/
 
 # Temp browser auto files
 .tmp-*
+.playwright-mcp/
