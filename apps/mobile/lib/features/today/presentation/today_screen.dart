@@ -581,20 +581,25 @@ class _EmptyDay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              PhosphorIconsRegular.calendarBlank,
-              size: 48,
-              color: PilooColors.textTertiary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _isToday ? 'Rien de prévu aujourd\'hui' : 'Rien de prévu ce jour',
+    // Compensation tab bar overlay (extendBody=true côté _MainShell) :
+    // le contenu Expanded inclut la zone sous la tab bar, donc un
+    // Center sans correction tombe trop bas visuellement.
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 120),
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                PhosphorIconsRegular.calendarBlank,
+                size: 48,
+                color: PilooColors.textTertiary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _isToday ? 'Rien de prévu aujourd\'hui' : 'Rien de prévu ce jour',
               style: GoogleFonts.fraunces(
                 fontSize: 17,
                 fontWeight: FontWeight.w500,
@@ -612,6 +617,7 @@ class _EmptyDay extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

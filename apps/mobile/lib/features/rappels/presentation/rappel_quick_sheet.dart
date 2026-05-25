@@ -360,23 +360,46 @@ class _QtyStepper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Empilement vertical chiffre / unité pour éviter le wrap de mots
+    // longs ("comprimé", "gélule"…) sur 2 lignes quand la largeur dispo
+    // est étroite. Unité toujours au singulier (cohérent avec le format
+    // "1 comprimé" → "2 comprimé" lisible et compact).
     return Row(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _StepBtn(
           icon: PhosphorIconsRegular.minus,
           onTap: value > 1 ? () => onChange(value - 1) : null,
         ),
-        Container(
-          width: 56,
-          alignment: Alignment.center,
-          child: Text(
-            '$value $unite${value > 1 ? 's' : ''}',
-            style: GoogleFonts.manrope(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: PilooColors.textPrimary,
-            ),
+        SizedBox(
+          width: 64,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Text(
+                '$value',
+                style: GoogleFonts.manrope(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: PilooColors.textPrimary,
+                  height: 1.1,
+                ),
+              ),
+              Text(
+                unite,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.manrope(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                  color: PilooColors.textTertiary,
+                  height: 1.1,
+                ),
+              ),
+            ],
           ),
         ),
         _StepBtn(

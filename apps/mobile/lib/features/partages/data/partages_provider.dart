@@ -5,6 +5,7 @@
 //   GET    /v1/officines/{id}/partages           → PartagesList
 //   PATCH  /v1/officines/{id}/partages/{userId}  → change rôle
 //   DELETE /v1/officines/{id}/partages/{userId}  → revoke / leave
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
@@ -13,11 +14,32 @@ import 'package:piloo/shared/api/api_client_provider.dart';
 final partagesProvider =
     FutureProvider.family<api.PartagesList, String>((ref, officineId) async {
   final client = ref.read(pilooApiClientProvider).getPartagesApi();
-  final res = await client.v1OfficinesOfficineIdPartagesGet(officineId: officineId);
-  if (res.statusCode != 200 || res.data == null) {
-    throw Exception('GET /v1/officines/$officineId/partages : ${res.statusCode}');
+  try {
+    final res = await client.v1OfficinesOfficineIdPartagesGet(officineId: officineId);
+    if (res.statusCode != 200 || res.data == null) {
+      throw Exception('Réponse inattendue (${res.statusCode}).');
+    }
+    return res.data!;
+  } on DioException catch (e) {
+    // Désérialisation foirée (body HTML, pas l'array attendu) →
+    // typiquement l'endpoint n'existe pas encore en prod. Message
+    // user-friendly plutôt que le stack trace cryptique.
+    final isDeserError = e.error?.toString().contains('Deserializing') ?? false;
+    if (isDeserError) {
+      throw Exception(
+        "Le partage d'officine n'est pas encore disponible sur ce serveur. "
+        "Réessaie dans quelques minutes.",
+      );
+    }
+    final code = e.response?.statusCode;
+    if (code == 403) {
+      throw Exception("Tu n'as pas les droits sur cette officine.");
+    }
+    if (code == 404) {
+      throw Exception('Officine introuvable.');
+    }
+    throw Exception('Réseau indisponible. Vérifie ta connexion.');
   }
-  return res.data!;
 });
 
 Future<api.PartageMember> updateMemberRole(
