@@ -1,0 +1,18 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "5C67TFSJ2B.fr.mymonkey.piloo",
+        "paths": [
+          "/invitations/*"
+        ]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": [
+      "5C67TFSJ2B.fr.mymonkey.piloo"
+    ]
+  }
+}

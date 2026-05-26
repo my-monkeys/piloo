@@ -8,6 +8,11 @@
 	<array>
 		<string>Default</string>
 	</array>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:piloo.vercel.app</string>
+		<string>webcredentials:piloo.vercel.app</string>
+	</array>
 	<key>keychain-access-groups</key>
 	<array>
 		<string>$(AppIdentifierPrefix)fr.mymonkey.piloo</string>

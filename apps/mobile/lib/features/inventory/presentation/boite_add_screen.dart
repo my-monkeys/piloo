@@ -37,7 +37,7 @@ import 'package:piloo/shared/widgets/piloo_button.dart';
 import 'package:piloo/shared/widgets/piloo_circle_back_button.dart';
 import 'package:piloo/shared/widgets/piloo_toast.dart';
 
-enum _StockLevel { plein, troisQuarts, moitie, unQuart, presqueVide }
+enum _StockLevel { plein, troisQuarts, moitie, unQuart, presqueVide, exact }
 
 class BoiteAddScreen extends ConsumerStatefulWidget {
   const BoiteAddScreen({super.key});
@@ -50,6 +50,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   _StockLevel _stock = _StockLevel.plein;
   final _notesCtrl = TextEditingController();
   final _lotCtrl = TextEditingController();
+  final _exactStockCtrl = TextEditingController();
   /// Nombre total de doses dans la boîte (taille de la présentation).
   /// Vide tant que l'user ne l'a pas renseigné — sans ça les chips
   /// fractionnels (3/4, 1/4, etc.) ne peuvent pas calculer correctement.
@@ -113,6 +114,7 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
     _notesCtrl.dispose();
     _lotCtrl.dispose();
     _totalDosesCtrl.dispose();
+    _exactStockCtrl.dispose();
     super.dispose();
   }
 
@@ -292,6 +294,10 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
   /// l'ancien comportement (3/4 = 24 même pour une boîte de 8), MAIS
   /// l'utilisateur devrait renseigner _totalDoses pour un calcul correct.
   int? _stockToUnits(_StockLevel level) {
+    if (level == _StockLevel.exact) {
+      final v = int.tryParse(_exactStockCtrl.text.trim());
+      return v;
+    }
     final total = _totalDoses;
     if (total != null) {
       return switch (level) {
@@ -300,16 +306,16 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
         _StockLevel.moitie => (total / 2).round(),
         _StockLevel.unQuart => (total / 4).round(),
         _StockLevel.presqueVide => total >= 4 ? 1 : 0,
+        _StockLevel.exact => null,
       };
     }
-    // Fallback historique — utilisé seulement si l'user ne renseigne pas
-    // _totalDoses. À éviter en pratique.
     return switch (level) {
       _StockLevel.plein => null,
       _StockLevel.troisQuarts => 24,
       _StockLevel.moitie => 16,
       _StockLevel.unQuart => 8,
       _StockLevel.presqueVide => 2,
+      _StockLevel.exact => null,
     };
   }
 
@@ -451,6 +457,8 @@ class _BoiteAddScreenState extends ConsumerState<BoiteAddScreen> {
                       value: _stock,
                       total: _totalDoses,
                       onChanged: (v) => setState(() => _stock = v),
+                      exactController: _exactStockCtrl,
+                      onExactChanged: () => setState(() {}),
                     ),
                     const SizedBox(height: 16),
                     _NotesField(controller: _notesCtrl),
@@ -806,21 +814,26 @@ class _ValueRow extends StatelessWidget {
 }
 
 class _StockChips extends StatelessWidget {
-  const _StockChips({required this.value, required this.onChanged, this.total});
+  const _StockChips({
+    required this.value,
+    required this.onChanged,
+    this.total,
+    this.exactController,
+    this.onExactChanged,
+  });
 
   final _StockLevel value;
   final ValueChanged<_StockLevel> onChanged;
-  /// Taille totale de la boîte (renseignée via _TotalDosesField). Quand
-  /// connue, les labels affichent les doses correspondantes
-  /// (ex. "3/4 (6)" pour une boîte de 8) — sinon juste le libellé fractionnel.
   final int? total;
+  final TextEditingController? exactController;
+  final VoidCallback? onExactChanged;
 
-  static const _options = [
+  static const _presets = [
     (_StockLevel.plein, 'Plein'),
     (_StockLevel.troisQuarts, '3/4'),
     (_StockLevel.moitie, 'Moitié'),
     (_StockLevel.unQuart, '1/4'),
-    (_StockLevel.presqueVide, 'Presque vide'),
+    (_StockLevel.presqueVide, '~Vide'),
   ];
 
   String _labelFor(_StockLevel level, String base) {
@@ -831,6 +844,7 @@ class _StockChips extends StatelessWidget {
       _StockLevel.moitie => (total! / 2).round(),
       _StockLevel.unQuart => (total! / 4).round(),
       _StockLevel.presqueVide => total! >= 4 ? 1 : 0,
+      _StockLevel.exact => 0,
     };
     return '$base · $n';
   }
@@ -839,15 +853,68 @@ class _StockChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return _Field(
       label: 'NIVEAU INITIAL',
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          for (var i = 0; i < _options.length; i++) ...[
-            if (i > 0) const SizedBox(width: 6),
-            Expanded(
-              child: _StockChip(
-                label: _labelFor(_options[i].$1, _options[i].$2),
-                selected: value == _options[i].$1,
-                onTap: () => onChanged(_options[i].$1),
+          Row(
+            children: [
+              for (var i = 0; i < _presets.length; i++) ...[
+                if (i > 0) const SizedBox(width: 6),
+                Expanded(
+                  child: _StockChip(
+                    label: _labelFor(_presets[i].$1, _presets[i].$2),
+                    selected: value == _presets[i].$1,
+                    onTap: () => onChanged(_presets[i].$1),
+                  ),
+                ),
+              ],
+              const SizedBox(width: 6),
+              SizedBox(
+                width: 56,
+                child: _StockChip(
+                  label: 'Exact',
+                  selected: value == _StockLevel.exact,
+                  onTap: () => onChanged(_StockLevel.exact),
+                ),
+              ),
+            ],
+          ),
+          if (value == _StockLevel.exact && exactController != null) ...[
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 44,
+              child: TextField(
+                controller: exactController,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.done,
+                onChanged: (_) => onExactChanged?.call(),
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  color: PilooColors.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Nombre de doses restantes',
+                  hintStyle: GoogleFonts.manrope(
+                    fontSize: 13,
+                    color: PilooColors.textTertiary,
+                  ),
+                  filled: true,
+                  fillColor: PilooColors.surfaceSubtle,
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                    borderSide: BorderSide(color: PilooColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                    borderSide: BorderSide(color: PilooColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(PilooRadius.md),
+                    borderSide: BorderSide(color: PilooColors.primary, width: 1.5),
+                  ),
+                ),
               ),
             ),
           ],
