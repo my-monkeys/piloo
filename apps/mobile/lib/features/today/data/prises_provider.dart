@@ -1,12 +1,20 @@
 // Provider Riverpod des prises d'un jour pour une officine donnée.
 //
+// Pattern stale-while-revalidate : émet d'abord les données en cache
+// local (SQLite via api_cache) pour un affichage instantané, puis
+// fetch le réseau en arrière-plan et émet la réponse fraîche.
+//
 // Lit GET /v1/prises?officine_id=...&date=YYYY-MM-DD (#114).
-// Le format `date` attendu est YYYY-MM-DD strict — pas de DateTime.
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
+import 'package:piloo/shared/db/api_cache.dart';
 import 'package:piloo/shared/db/db_provider.dart';
 import 'package:piloo/shared/notifications/notifications_service.dart';
 import 'package:piloo/shared/sync/enqueue.dart';
@@ -26,30 +34,82 @@ class PrisesDayKey {
 }
 
 final prisesDayProvider =
-    FutureProvider.family<List<api.PriseTimelineItem>, PrisesDayKey>(
-  (ref, key) async {
-    final client = ref.read(pilooApiClientProvider).getPrisesApi();
-    final parts = key.date.split('-').map(int.parse).toList(growable: false);
-    final res = await client.v1PrisesGet(
-      officineId: key.officineId,
-      date: api.Date(parts[0], parts[1], parts[2]),
-    );
-    if (res.statusCode != 200 || res.data == null) {
-      throw Exception('GET /v1/prises : statut ${res.statusCode}');
+    StreamProvider.family<List<api.PriseTimelineItem>, PrisesDayKey>(
+  (ref, key) async* {
+    if (isDemoMode(ref)) {
+      final today = isoDate(DateTime.now());
+      yield key.date == today ? demoPrisesToday() : const [];
+      return;
     }
-    final items = res.data!.items.toList();
-    // Replanifie les notifs locales uniquement pour la query "aujourd'hui"
-    // — la timeline future est consultative, on ne veut pas spammer
-    // l'utilisateur avec des rappels J+15.
-    if (key.date == isoDate(DateTime.now())) {
-      // fire-and-forget : ne bloque pas la chaîne de chargement.
-      // Ignorer l'erreur car les permissions OS peuvent être refusées.
-      // ignore: unawaited_futures
-      ref.read(notificationsServiceProvider).scheduleForPrises(items);
+
+    final cache = ApiCacheRepo(ref.read(localDatabaseProvider));
+    final cacheKey = 'prises:${key.officineId}:${key.date}';
+
+    // 1) Émet le cache immédiatement s'il existe.
+    final cached = await cache.get(cacheKey);
+    List<api.PriseTimelineItem>? cachedItems;
+    if (cached != null) {
+      try {
+        cachedItems = _deserializePrises(cached);
+        yield cachedItems;
+      } catch (_) {
+        // Cache corrompu — on l'ignore et on attend le réseau.
+        await cache.invalidate(cacheKey);
+      }
     }
-    return items;
+
+    // 2) Fetch réseau en parallèle (ou comme seule source si pas de cache).
+    try {
+      final items = await _fetchFromApi(ref, key);
+      await cache.put(cacheKey, _serializePrises(items));
+      yield items;
+    } catch (e) {
+      if (cachedItems != null) return;
+      rethrow;
+    }
   },
 );
+
+Future<List<api.PriseTimelineItem>> _fetchFromApi(
+  Ref ref,
+  PrisesDayKey key,
+) async {
+  final client = ref.read(pilooApiClientProvider).getPrisesApi();
+  final parts = key.date.split('-').map(int.parse).toList(growable: false);
+  final res = await client.v1PrisesGet(
+    officineId: key.officineId,
+    date: api.Date(parts[0], parts[1], parts[2]),
+  );
+  if (res.statusCode != 200 || res.data == null) {
+    throw Exception('GET /v1/prises : statut ${res.statusCode}');
+  }
+  final items = res.data!.items.toList();
+  if (key.date == isoDate(DateTime.now())) {
+    // ignore: unawaited_futures
+    ref.read(notificationsServiceProvider).scheduleForPrises(items);
+  }
+  return items;
+}
+
+String _serializePrises(List<api.PriseTimelineItem> items) {
+  final list = items
+      .map((item) => api.standardSerializers.serializeWith(
+            api.PriseTimelineItem.serializer,
+            item,
+          ))
+      .toList();
+  return jsonEncode(list);
+}
+
+List<api.PriseTimelineItem> _deserializePrises(String json) {
+  final decoded = jsonDecode(json) as List<dynamic>;
+  return decoded
+      .map((e) => api.standardSerializers.deserializeWith(
+            api.PriseTimelineItem.serializer,
+            e,
+          )!)
+      .toList();
+}
 
 /// Helper YYYY-MM-DD UTC d'un DateTime.
 String isoDate(DateTime d) {
@@ -92,18 +152,17 @@ Future<void> updatePriseStatut(
       ),
     );
   }
-  // Annule la notif locale associée — la prise n'a plus besoin de
-  // rappel puisqu'elle vient d'être validée/sautée (ou queue de l'être).
   // ignore: unawaited_futures
   ref.read(notificationsServiceProvider).cancelForPrise(priseId);
+  // Invalide le cache local + le provider pour forcer un re-fetch.
+  final cache = ApiCacheRepo(ref.read(localDatabaseProvider));
+  await cache.invalidate('prises:$officineId:$date');
   ref.invalidate(
     prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
   );
 }
 
-/// PATCH /v1/prises/{id} avec un nouvel horaire prévu (#120). Sert
-/// au tap long pour déplacer ponctuellement une prise. Fallback
-/// enqueue offline (#57).
+/// PATCH /v1/prises/{id} avec un nouvel horaire prévu (#120).
 Future<void> updatePriseDatetime(
   WidgetRef ref, {
   required String priseId,
@@ -134,19 +193,15 @@ Future<void> updatePriseDatetime(
       ),
     );
   }
-  // Annule la notif locale et laisse `scheduleForPrises` (déclenché
-  // par invalidate) reposer la notification au nouveau créneau.
   // ignore: unawaited_futures
   ref.read(notificationsServiceProvider).cancelForPrise(priseId);
+  final cache = ApiCacheRepo(ref.read(localDatabaseProvider));
+  await cache.invalidate('prises:$officineId:$date');
   ref.invalidate(
     prisesDayProvider(PrisesDayKey(officineId: officineId, date: date)),
   );
 }
 
-/// Vrai pour les erreurs réseau (offline, timeout, DNS, conn refused).
-/// Faux pour les 4xx/5xx serveur (à propager comme exception).
-/// Aligné sur boites_provider._isTransient — dupliqué localement pour
-/// éviter une dépendance croisée entre features.
 bool _isTransient(DioException e) {
   switch (e.type) {
     case DioExceptionType.connectionTimeout:

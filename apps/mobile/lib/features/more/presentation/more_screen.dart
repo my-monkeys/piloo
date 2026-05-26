@@ -29,6 +29,7 @@ import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/onboarding/presentation/onboarding_tour_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
@@ -44,6 +45,7 @@ class _Row {
     this.iconBg = PilooColors.primarySoft,
     this.iconFg = PilooColors.primary,
     this.routeName,
+    this.onTap,
   });
 
   final IconData icon;
@@ -52,6 +54,9 @@ class _Row {
   final Color iconBg;
   final Color iconFg;
   final String? routeName;
+  /// Surcharge la nav par defaut quand l'action n'est pas un push de
+  /// route (ex: relancer un tour, toggle un flag local).
+  final VoidCallback? onTap;
 }
 
 class MoreScreen extends ConsumerWidget {
@@ -100,20 +105,30 @@ class MoreScreen extends ConsumerWidget {
     ),
   ];
 
-  static const _help = [
-    _Row(
-      icon: PhosphorIconsRegular.question,
-      label: 'Aide & FAQ',
-      iconBg: PilooColors.surfaceSubtle,
-      iconFg: PilooColors.textPrimary,
-    ),
-    _Row(
-      icon: PhosphorIconsFill.info,
-      label: "Ce n'est pas un dispositif médical",
-      iconBg: PilooColors.accentSoft,
-      iconFg: PilooColors.accent,
-    ),
-  ];
+  List<_Row> _helpRows(WidgetRef ref) => [
+        _Row(
+          icon: PhosphorIconsRegular.playCircle,
+          label: 'Revoir le tour guidé',
+          iconBg: PilooColors.primarySoft,
+          iconFg: PilooColors.primary,
+          onTap: () {
+            // ignore: discarded_futures
+            ref.read(tourStepProvider.notifier).start();
+          },
+        ),
+        const _Row(
+          icon: PhosphorIconsRegular.question,
+          label: 'Aide & FAQ',
+          iconBg: PilooColors.surfaceSubtle,
+          iconFg: PilooColors.textPrimary,
+        ),
+        const _Row(
+          icon: PhosphorIconsFill.info,
+          label: "Ce n'est pas un dispositif médical",
+          iconBg: PilooColors.accentSoft,
+          iconFg: PilooColors.accent,
+        ),
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -163,7 +178,7 @@ class MoreScreen extends ConsumerWidget {
                   const SizedBox(height: 18),
                   _Section(label: 'PRÉFÉRENCES', rows: _prefs),
                   const SizedBox(height: 18),
-                  _Section(label: 'AIDE & LÉGAL', rows: _help),
+                  _Section(label: 'AIDE & LÉGAL', rows: _helpRows(ref)),
                   const SizedBox(height: 18),
                   _LogoutButton(onTap: () async {
                     await ref.read(sessionProvider.notifier).signOut();
@@ -336,10 +351,12 @@ class _RowItem extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () {
-        // pushNamed() résout le name de route → path enregistré
-        // (cf. router.dart). `context.push('/${row.routeName!}')`
-        // construisait à tort un path depuis le name (ex. '/settings-bdpm')
-        // au lieu du vrai path (ex. '/settings/bdpm').
+        // onTap custom prend la main si fourni (ex: relancer le tour),
+        // sinon push de route par défaut.
+        if (row.onTap != null) {
+          row.onTap!();
+          return;
+        }
         if (row.routeName != null) {
           context.pushNamed(row.routeName!);
         }

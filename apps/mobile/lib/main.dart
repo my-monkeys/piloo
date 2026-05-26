@@ -5,9 +5,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
+import 'core/router/router.dart';
 import 'core/storage/secure_storage.dart';
 import 'features/auth/data/session_storage.dart';
 import 'features/auth/presentation/session_provider.dart';
+import 'features/onboarding/data/demo_mode_provider.dart';
 import 'firebase_options.dart';
 import 'shared/db/db_provider.dart';
 import 'shared/db/local_db.dart';
@@ -32,8 +34,13 @@ Future<void> main() async {
   // Storage natif (Keychain iOS / EncryptedSharedPreferences Android).
   // En tests on override avec `InMemorySecureStorage` — voir
   // test/features/auth/session_provider_test.dart.
-  final storage = SessionStorage(FlutterSecureStorageImpl());
+  final secureStorage = FlutterSecureStorageImpl();
+  final storage = SessionStorage(secureStorage);
   final db = LocalDatabase();
+  // Router instancié ici (vs avant dans _PilooAppState) pour pouvoir
+  // l'exposer via routerProvider — l'overlay onboarding (#351) en a
+  // besoin pour naviguer entre tabs hors du Navigator.
+  final router = buildRouter();
 
   final notifPlugin = FlutterLocalNotificationsPlugin();
   final notifService = NotificationsService(notifPlugin);
@@ -51,9 +58,11 @@ Future<void> main() async {
     ProviderScope(
       overrides: [
         sessionStorageProvider.overrideWithValue(storage),
+        secureStorageProvider.overrideWithValue(secureStorage),
         localDatabaseProvider.overrideWithValue(db),
         notificationsServiceProvider.overrideWithValue(notifService),
         fcmServiceProvider.overrideWithValue(fcm),
+        routerProvider.overrideWithValue(router),
       ],
       child: const PilooApp(),
     ),

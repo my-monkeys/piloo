@@ -7,6 +7,7 @@ import 'core/router/router.dart';
 import 'core/theme/theme.dart';
 import 'features/auth/data/session.dart';
 import 'features/auth/presentation/session_provider.dart';
+import 'features/onboarding/presentation/onboarding_overlay.dart';
 import 'shared/notifications/fcm_service.dart';
 import 'shared/sync/sync_providers.dart';
 
@@ -18,17 +19,15 @@ class PilooApp extends ConsumerStatefulWidget {
 }
 
 class _PilooAppState extends ConsumerState<PilooApp> {
-  // Le router est instancié une fois pour la durée de vie de l'app — il
-  // détient l'état de navigation (shell, history) qui doit persister
-  // pendant tout le cycle de vie.
-  late final _router = buildRouter();
+  // Router lu depuis routerProvider (override dans main.dart). Instancié
+  // au boot pour pouvoir être consommé aussi par l'overlay onboarding
+  // (#351) hors du Navigator. Le dispose se fait via le ProviderScope.
   StreamSubscription<String>? _fcmRefreshSub;
   bool _fcmRegistered = false;
 
   @override
   void dispose() {
     _fcmRefreshSub?.cancel();
-    _router.dispose();
     super.dispose();
   }
 
@@ -57,8 +56,20 @@ class _PilooAppState extends ConsumerState<PilooApp> {
     return MaterialApp.router(
       title: 'Piloo',
       theme: pilooLightTheme(),
-      routerConfig: _router,
+      routerConfig: ref.watch(routerProvider),
       debugShowCheckedModeBanner: false,
+      // Stack global pour superposer l'overlay du tour guidé (#351).
+      // OnboardingOverlay = SizedBox.shrink si demoMode = false.
+      // L'overlay retourne lui-même un Positioned, donc direct child
+      // du Stack (sans Positioned.fill autour qui casserait le layout).
+      builder: (context, child) {
+        return Stack(
+          children: [
+            if (child != null) child,
+            const OnboardingOverlay(),
+          ],
+        );
+      },
     );
   }
 

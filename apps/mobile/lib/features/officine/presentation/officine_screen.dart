@@ -40,6 +40,7 @@ import 'package:piloo/features/officine/domain/boite_grouping.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
+import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
 import 'package:piloo/features/partages/data/partages_provider.dart';
 import 'package:piloo/features/rappels/data/rappels_provider.dart';
 import 'package:piloo/features/rappels/presentation/rappel_quick_sheet.dart';
@@ -574,11 +575,14 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                     onTap: () => setState(() => _filter = _Filter.actif),
                   ),
                   const SizedBox(width: 8),
-                  _FilterChip(
-                    label: 'Périmé · $perimeCount',
-                    accent: PilooColors.errorOn,
-                    selected: _filter == _Filter.perime,
-                    onTap: () => setState(() => _filter = _Filter.perime),
+                  KeyedSubtree(
+                    key: ref.read(onboardingTargetsProvider).perimeChip,
+                    child: _FilterChip(
+                      label: 'Périmé · $perimeCount',
+                      accent: PilooColors.errorOn,
+                      selected: _filter == _Filter.perime,
+                      onTap: () => setState(() => _filter = _Filter.perime),
+                    ),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
@@ -612,6 +616,9 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
                               // Médicament.
                               stackByCip:
                                   _grouping == BoiteGrouping.medicament,
+                              firstBoiteKey: ref
+                                  .read(onboardingTargetsProvider)
+                                  .firstBoiteCard,
                             ),
             ),
           ],
@@ -1125,6 +1132,7 @@ class _GroupedList extends StatelessWidget {
     required this.sections,
     required this.onBoiteTap,
     this.stackByCip = false,
+    this.firstBoiteKey,
   });
 
   final List<BoiteSection<_Boite>> sections;
@@ -1133,10 +1141,14 @@ class _GroupedList extends StatelessWidget {
   /// swipeable horizontale (1 page par lot). Désactivé pour les
   /// modes molécule/plat où l'user attend une liste à plat.
   final bool stackByCip;
+  /// Clé attachée à la toute première carte rendue pour le tour
+  /// onboarding (#351).
+  final Key? firstBoiteKey;
 
   @override
   Widget build(BuildContext context) {
     final items = <Widget>[];
+    var firstBoiteRendered = false;
     for (var s = 0; s < sections.length; s++) {
       final section = sections[s];
       if (section.header != null) {
@@ -1169,15 +1181,21 @@ class _GroupedList extends StatelessWidget {
           0,
           (acc, b) => acc + (b.apiBoite?.nombreBoites ?? 1),
         );
+        final cardKey = !firstBoiteRendered ? firstBoiteKey : null;
+        firstBoiteRendered = true;
         if (physical <= 1) {
           final boite = group.first;
           items.add(GestureDetector(
+            key: cardKey,
             behavior: HitTestBehavior.opaque,
             onTap: () => onBoiteTap(boite),
             child: _BoiteCard(boite: boite),
           ));
         } else {
-          items.add(_BoiteStackCard(boites: group, onTap: onBoiteTap));
+          items.add(KeyedSubtree(
+            key: cardKey,
+            child: _BoiteStackCard(boites: group, onTap: onBoiteTap),
+          ));
         }
       }
     }

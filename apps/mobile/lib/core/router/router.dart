@@ -39,6 +39,7 @@ import 'package:piloo/features/partages/presentation/partages_screen.dart';
 import 'package:piloo/features/scan/presentation/scan_screen.dart';
 import 'package:piloo/features/settings/presentation/horaires_screen.dart';
 import 'package:piloo/features/settings/presentation/notifications_screen.dart';
+import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
 import 'package:piloo/features/settings/presentation/bdpm_status_screen.dart';
 import 'package:piloo/features/settings/presentation/security_screen.dart';
@@ -55,6 +56,17 @@ import 'package:piloo/features/auth/presentation/welcome_screen.dart';
 import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
 import 'routes.dart';
+
+/// Provider du router courant — override dans `app.dart` après
+/// l'instanciation `buildRouter()`. Permet à n'importe quel widget
+/// (y compris hors du Navigator, type overlays au niveau Material
+/// App.builder) de pousser une route via `ref.read(routerProvider)
+/// .goNamed(...)`.
+final routerProvider = Provider<GoRouter>((ref) {
+  throw UnimplementedError(
+    'routerProvider must be overridden in app.dart after buildRouter().',
+  );
+});
 
 GoRouter buildRouter() {
   // Override dev-only : permet de booter directement sur n'importe quelle
@@ -373,6 +385,7 @@ class _MainShellState extends ConsumerState<_MainShell> {
             .goBranch(i, initialLocation: i == widget.shell.currentIndex),
       ),
       floatingActionButton: PilooScanFab(
+        key: ref.read(onboardingTargetsProvider).scanFab,
         onTap: () => GoRouter.of(context).goNamed(RouteName.scan),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,

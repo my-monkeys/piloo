@@ -29,13 +29,20 @@ class LocalDatabase extends _$LocalDatabase {
   LocalDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
         onCreate: (m) async {
           await m.createAll();
           await _createPendingOpsIndex(m);
+          await m.database.customStatement('''
+            CREATE TABLE IF NOT EXISTS api_cache (
+              key TEXT PRIMARY KEY,
+              response_json TEXT NOT NULL,
+              fetched_at TEXT NOT NULL
+            )
+          ''');
         },
         onUpgrade: (m, from, to) async {
           if (from < 2) {
@@ -48,6 +55,15 @@ class LocalDatabase extends _$LocalDatabase {
             // v3 : nouvelle table miroir bdpm_notices_local (cache
             // local notices ANSM, cf. bdpm_notice_provider.dart).
             await m.createTable(bdpmNoticesLocal);
+          }
+          if (from < 5) {
+            await m.database.customStatement('''
+              CREATE TABLE IF NOT EXISTS api_cache (
+                key TEXT PRIMARY KEY,
+                response_json TEXT NOT NULL,
+                fetched_at TEXT NOT NULL
+              )
+            ''');
           }
           if (from < 4) {
             // v4 (2026-05-22) : suppression de la table `rappels`.
