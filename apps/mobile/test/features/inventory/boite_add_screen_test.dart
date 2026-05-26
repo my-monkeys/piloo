@@ -107,7 +107,7 @@ void main() {
       expect(find.text('3/4'), findsOneWidget);
       expect(find.text('Moitié'), findsOneWidget);
       expect(find.text('1/4'), findsOneWidget);
-      expect(find.text('Presque vide'), findsOneWidget);
+      expect(find.text('~Vide'), findsOneWidget);
       expect(find.text('NOTES (OPTIONNEL)'), findsOneWidget);
       expect(find.text('Annuler'), findsOneWidget);
       expect(find.text('Ajouter'), findsOneWidget);
