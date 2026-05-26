@@ -112,6 +112,23 @@ export async function acceptInvitation(
         updatedAt: now,
       })
       .where(eq(invitations.id, invitation.id));
+
+    // Soft-delete les autres invitations pending pour la même officine
+    // et le même email (cas où l'user a été invité plusieurs fois avant
+    // d'accepter — l'ancienne reste sinon visible comme "en attente").
+    if (invitation.email) {
+      await tx
+        .update(invitations)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(
+          and(
+            eq(invitations.officineId, invitation.officineId),
+            eq(invitations.email, invitation.email),
+            isNull(invitations.acceptedAt),
+            isNull(invitations.deletedAt),
+          ),
+        );
+    }
   });
   return {
     officineId: invitation.officineId,
