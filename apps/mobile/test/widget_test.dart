@@ -3,17 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:piloo/app.dart';
+import 'package:piloo/core/router/router.dart';
 import 'package:piloo/core/storage/secure_storage.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/features/auth/data/session_storage.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 
 Widget _harness() {
+  final inMemory = InMemorySecureStorage();
   return ProviderScope(
     overrides: [
       sessionStorageProvider.overrideWithValue(
-        SessionStorage(InMemorySecureStorage()),
+        SessionStorage(inMemory),
       ),
+      secureStorageProvider.overrideWithValue(inMemory),
+      routerProvider.overrideWithValue(buildRouter()),
     ],
     child: const PilooApp(),
   );
