@@ -21,10 +21,10 @@ LocalDatabase makeDb() {
 }
 
 void main() {
-  group('LocalDatabase v4', () {
-    test('schemaVersion vaut 4', () {
+  group('LocalDatabase v5', () {
+    test('schemaVersion vaut 5', () {
       final db = makeDb();
-      expect(db.schemaVersion, 4);
+      expect(db.schemaVersion, 5);
     });
 
     test('table rappels ABSENTE (supprimée en v4)', () async {
