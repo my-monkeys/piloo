@@ -69,6 +69,22 @@ Future<api.PartageMember> updateMemberRole(
   return res.data!;
 }
 
+/// Annule (soft-delete) une invitation pending.
+/// Utilise Dio direct car l'endpoint DELETE /v1/invitations/{id}
+/// n'est pas dans le client OpenAPI généré.
+Future<void> cancelInvitation(
+  WidgetRef ref, {
+  required String invitationId,
+}) async {
+  final dio = ref.read(pilooApiClientProvider).dio;
+  final res = await dio.delete<void>(
+    '/v1/invitations/$invitationId',
+  );
+  if (res.statusCode != 204 && res.statusCode != 200) {
+    throw Exception('DELETE invitation : ${res.statusCode}');
+  }
+}
+
 Future<void> revokeMember(
   WidgetRef ref, {
   required String officineId,

@@ -7,12 +7,14 @@
 //  - retirer un membre (bottom sheet de confirmation)
 //  - inviter quelqu'un (push S3 #133)
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/core/config/api_config.dart';
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
@@ -52,23 +54,26 @@ class _Member {
     required this.role,
     this.invitationPending = false,
     this.isSelf = false,
+    this.invitationId,
+    this.expiresAt,
   });
 
-  /// null pour une invitation pending (pas d'user encore lié).
   final String? userId;
   final String initials;
   final Color avatarColor;
   final String name;
   final String email;
   final _Role role;
-  /// Vrai pour une invitation pending — pas de dropdown rôle, pas
-  /// de révocation (on supprime l'invitation côté backend, pas un
-  /// membre).
   final bool invitationPending;
-  /// Vrai si c'est l'user courant : pas d'action destructive sur
-  /// soi-même (pas de dropdown rôle, pas de bouton retirer). Pour
-  /// quitter une officine, l'user passera par un futur écran dédié.
   final bool isSelf;
+  final String? invitationId;
+  final DateTime? expiresAt;
+
+  bool get isExpired =>
+      expiresAt != null && expiresAt!.isBefore(DateTime.now());
+
+  String get inviteLink =>
+      '${ApiConfig.baseUrl}/invitations/$invitationId';
 }
 
 class PartagesScreen extends ConsumerWidget {
@@ -201,6 +206,8 @@ class _LoadedBody extends ConsumerWidget {
           email: inv.email ?? 'Lien partageable',
           role: _roleFromPendingApi(inv.role),
           invitationPending: true,
+          invitationId: inv.invitationId,
+          expiresAt: inv.expiresAt.toLocal(),
         ),
     ];
 
@@ -254,6 +261,36 @@ class _LoadedBody extends ConsumerWidget {
       }
     }
 
+    Future<void> handleCopyLink(int idx) async {
+      final m = members[idx];
+      if (m.invitationId == null) return;
+      await Clipboard.setData(ClipboardData(text: m.inviteLink));
+      if (context.mounted) PilooToast.success(context, 'Lien copié.');
+    }
+
+    Future<void> handleCancelInvitation(int idx) async {
+      final m = members[idx];
+      if (m.invitationId == null) return;
+      try {
+        await cancelInvitation(ref, invitationId: m.invitationId!);
+        if (context.mounted) PilooToast.success(context, 'Invitation annulée.');
+      } catch (e) {
+        if (context.mounted) PilooToast.error(context, 'Échec : $e');
+      }
+    }
+
+    Future<void> handleResend(int idx) async {
+      final m = members[idx];
+      if (m.invitationId == null) return;
+      try {
+        // Annule l'ancienne puis recrée (le backend nettoie les doublons).
+        await cancelInvitation(ref, invitationId: m.invitationId!);
+        context.push(RoutePath.invite(officineId));
+      } catch (e) {
+        if (context.mounted) PilooToast.error(context, 'Échec : $e');
+      }
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
       child: Column(
@@ -265,6 +302,9 @@ class _LoadedBody extends ConsumerWidget {
             members: members,
             onRoleChange: handleRoleChange,
             onRevoke: handleRevoke,
+            onCopyLink: handleCopyLink,
+            onCancelInvitation: handleCancelInvitation,
+            onResend: handleResend,
           ),
           const SizedBox(height: 16),
           const _RolesHelp(),
@@ -372,11 +412,17 @@ class _MembersCard extends StatelessWidget {
     required this.members,
     required this.onRoleChange,
     required this.onRevoke,
+    this.onCopyLink,
+    this.onCancelInvitation,
+    this.onResend,
   });
 
   final List<_Member> members;
   final Future<void> Function(int index, _Role newRole) onRoleChange;
   final Future<void> Function(int index) onRevoke;
+  final Future<void> Function(int index)? onCopyLink;
+  final Future<void> Function(int index)? onCancelInvitation;
+  final Future<void> Function(int index)? onResend;
 
   @override
   Widget build(BuildContext context) {
@@ -413,6 +459,11 @@ class _MembersCard extends StatelessWidget {
             member: members[idx],
             onRoleChange: (r) => onRoleChange(idx, r),
             onRevoke: () => onRevoke(idx),
+            onCopyLink: onCopyLink != null ? () => onCopyLink!(idx) : null,
+            onCancel: onCancelInvitation != null
+                ? () => onCancelInvitation!(idx)
+                : null,
+            onResend: onResend != null ? () => onResend!(idx) : null,
           );
         }),
       ),
@@ -425,21 +476,43 @@ class _MemberRow extends StatelessWidget {
     required this.member,
     required this.onRoleChange,
     required this.onRevoke,
+    this.onCopyLink,
+    this.onCancel,
+    this.onResend,
   });
 
   final _Member member;
   final ValueChanged<_Role> onRoleChange;
   final VoidCallback onRevoke;
+  final VoidCallback? onCopyLink;
+  final VoidCallback? onCancel;
+  final VoidCallback? onResend;
+
+  String _expiryLabel() {
+    final exp = member.expiresAt;
+    if (exp == null) return 'invitation en attente';
+    if (exp.isBefore(DateTime.now())) return 'expirée';
+    final diff = exp.difference(DateTime.now());
+    if (diff.inHours >= 24) return 'expire dans ${diff.inDays}j';
+    if (diff.inHours >= 1) return 'expire dans ${diff.inHours}h';
+    return 'expire dans ${diff.inMinutes}min';
+  }
 
   @override
   Widget build(BuildContext context) {
     final isOwner = member.role == _Role.proprietaire;
-    // Pas d'action destructive sur soi-même ni sur une invitation
-    // pending (on n'a pas encore d'userId à supprimer).
     final canEdit = !isOwner && !member.isSelf && !member.invitationPending;
-    final emailColor = member.invitationPending
-        ? PilooColors.warningOn
-        : PilooColors.textTertiary;
+    final isPending = member.invitationPending;
+
+    if (isPending) {
+      return _PendingInvitationRow(
+        member: member,
+        expiryLabel: _expiryLabel(),
+        onCopyLink: onCopyLink,
+        onCancel: onCancel,
+        onResend: member.isExpired ? onResend : null,
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.all(14),
@@ -466,13 +539,11 @@ class _MemberRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  member.invitationPending
-                      ? '${member.email} · invitation en attente'
-                      : member.email,
+                  member.email,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.manrope(
                     fontSize: 12,
-                    color: emailColor,
+                    color: PilooColors.textTertiary,
                   ),
                 ),
               ],
@@ -498,6 +569,141 @@ class _MemberRow extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _PendingInvitationRow extends StatelessWidget {
+  const _PendingInvitationRow({
+    required this.member,
+    required this.expiryLabel,
+    this.onCopyLink,
+    this.onCancel,
+    this.onResend,
+  });
+
+  final _Member member;
+  final String expiryLabel;
+  final VoidCallback? onCopyLink;
+  final VoidCallback? onCancel;
+  final VoidCallback? onResend;
+
+  @override
+  Widget build(BuildContext context) {
+    final isExpired = member.isExpired;
+    final statusColor = isExpired ? PilooColors.error : PilooColors.warningOn;
+
+    return Padding(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              _Avatar(
+                initials: member.initials,
+                color: member.avatarColor,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      member.name,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: PilooColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      expiryLabel,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: statusColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _RoleBadge(role: member.role, onChange: null),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              if (onCopyLink != null)
+                _SmallAction(
+                  icon: PhosphorIconsRegular.copy,
+                  label: 'Copier le lien',
+                  onTap: onCopyLink!,
+                ),
+              if (onResend != null) ...[
+                const SizedBox(width: 8),
+                _SmallAction(
+                  icon: PhosphorIconsRegular.arrowCounterClockwise,
+                  label: 'Renvoyer',
+                  onTap: onResend!,
+                ),
+              ],
+              const Spacer(),
+              if (onCancel != null)
+                _SmallAction(
+                  icon: PhosphorIconsRegular.x,
+                  label: 'Annuler',
+                  onTap: onCancel!,
+                  destructive: true,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SmallAction extends StatelessWidget {
+  const _SmallAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.destructive = false,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool destructive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = destructive ? PilooColors.error : PilooColors.textSecondary;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
