@@ -1,0 +1,3 @@
+# APKs are uploaded directly to O2switch via rsync, not committed.
+# Only versions.json is in git.
+*.apk
