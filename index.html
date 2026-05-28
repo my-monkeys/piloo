@@ -521,7 +521,7 @@
   // Source unique de vérité : downloads/android/versions.json
   (async () => {
     try {
-      const res = await fetch('downloads/android/versions.json', { cache: 'no-cache' });
+      const res = await fetch('downloads/android/versions.php', { cache: 'no-cache' });
       if (!res.ok) throw new Error('manifest fetch failed: ' + res.status);
       const versions = await res.json();
       if (!Array.isArray(versions) || versions.length === 0) return;
