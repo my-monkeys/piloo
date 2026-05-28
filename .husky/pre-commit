@@ -1,1 +1,4 @@
+# Scan secrets first — fail fast if a credential is in the diff
+ggshield secret scan pre-commit "$@"
+
 pnpm exec lint-staged
