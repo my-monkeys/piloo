@@ -6,10 +6,15 @@
 // Pas de bouton "date début / fin" sur ce premier ship : on prend
 // today comme date_debut, date_fin null (rappel sans fin). UI plus
 // avancée = follow-up.
+//
+// B5 : mode édition (initial != null) — préremplit les champs depuis
+// un rappel existant et adapte les libellés. Le champ notes est ajouté
+// pour les deux modes (création + édition).
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:piloo_api_client/piloo_api_client.dart';
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
@@ -37,6 +42,7 @@ class RappelQuickResult {
     required this.coucher,
     required this.unite,
     required this.duree,
+    this.notes,
   });
 
   final int? matin;
@@ -45,17 +51,22 @@ class RappelQuickResult {
   final int? coucher;
   final String unite;
   final RappelDuree duree;
+  final String? notes;
 
   bool get hasAtLeastOneMoment =>
       matin != null || midi != null || soir != null || coucher != null;
 }
 
 /// Ouvre la modale. Retourne le résultat saisi (ou null si annulé).
+/// Passer [initial] pour ouvrir en mode édition (préremplit les champs
+/// depuis le rappel existant et adapte les libellés).
 Future<RappelQuickResult?> showRappelQuickSheet(
   BuildContext context, {
   required String medicamentName,
+
   /// Unité par défaut (BDPM doseUnit si dispo, sinon 'comprimé').
   String suggestedUnite = 'comprimé',
+  Rappel? initial,
 }) {
   return showModalBottomSheet<RappelQuickResult>(
     context: context,
@@ -68,6 +79,7 @@ Future<RappelQuickResult?> showRappelQuickSheet(
     builder: (_) => _RappelQuickSheet(
       medicamentName: medicamentName,
       suggestedUnite: suggestedUnite,
+      initial: initial,
     ),
   );
 }
@@ -76,10 +88,12 @@ class _RappelQuickSheet extends StatefulWidget {
   const _RappelQuickSheet({
     required this.medicamentName,
     required this.suggestedUnite,
+    this.initial,
   });
 
   final String medicamentName;
   final String suggestedUnite;
+  final Rappel? initial;
 
   @override
   State<_RappelQuickSheet> createState() => _RappelQuickSheetState();
@@ -94,6 +108,49 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
   // Défaut "à vie" : couvre le cas le plus fréquent (médoc chronique).
   // L'user peut ajuster pour les cures ponctuelles (antibio = 1 semaine).
   RappelDuree _duree = RappelDuree.aVie;
+
+  late final TextEditingController _notesCtrl;
+
+  bool get _isEditing => widget.initial != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial != null) {
+      // Préremplit les quantités depuis le rappel existant.
+      _matin = initial.quantiteMatin;
+      _midi = initial.quantiteMidi;
+      _soir = initial.quantiteSoir;
+      _coucher = initial.quantiteCoucher;
+      _notesCtrl = TextEditingController(text: initial.notes ?? '');
+      // Dérive la durée depuis les dates (LOSSLESS — les rappels sont
+      // toujours créés avec dateFin = dateDebut + duree.jours).
+      final fin = initial.dateFin;
+      if (fin == null) {
+        _duree = RappelDuree.aVie;
+      } else {
+        final debut = initial.dateDebut;
+        // UTC pour éviter les décalages DST lors du calcul en jours.
+        final debutDt = DateTime.utc(debut.year, debut.month, debut.day);
+        final finDt = DateTime.utc(fin.year, fin.month, fin.day);
+        final days = finDt.difference(debutDt).inDays;
+        _duree = RappelDuree.values.firstWhere(
+          (d) => d.jours == days,
+          // Durée non standard (ex: créée depuis le web) → À vie.
+          orElse: () => RappelDuree.aVie,
+        );
+      }
+    } else {
+      _notesCtrl = TextEditingController();
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesCtrl.dispose();
+    super.dispose();
+  }
 
   bool get _canSubmit =>
       _matin != null || _midi != null || _soir != null || _coucher != null;
@@ -154,7 +211,7 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
                 ),
               ),
             ),
-            _Header(name: widget.medicamentName),
+            _Header(name: widget.medicamentName, isEditing: _isEditing),
             const SizedBox(height: 16),
             _MomentRow(
               icon: PhosphorIconsRegular.sun,
@@ -196,25 +253,35 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
               value: _duree,
               onChange: (d) => setState(() => _duree = d),
             ),
+            const SizedBox(height: 16),
+            _NotesField(controller: _notesCtrl),
             const SizedBox(height: 20),
             Row(
               children: [
-                Expanded(child: _SecondaryButton(onTap: () => Navigator.of(context).pop())),
+                Expanded(
+                  child: _SecondaryButton(
+                    onTap: () => Navigator.of(context).pop(),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   flex: 2,
                   child: _PrimaryButton(
+                    label: _isEditing ? 'Enregistrer' : 'Créer le rappel',
                     onTap: _canSubmit
                         ? () => Navigator.of(context).pop(
-                              RappelQuickResult(
-                                matin: _matin,
-                                midi: _midi,
-                                soir: _soir,
-                                coucher: _coucher,
-                                unite: widget.suggestedUnite,
-                                duree: _duree,
-                              ),
-                            )
+                            RappelQuickResult(
+                              matin: _matin,
+                              midi: _midi,
+                              soir: _soir,
+                              coucher: _coucher,
+                              unite: widget.suggestedUnite,
+                              duree: _duree,
+                              notes: _notesCtrl.text.trim().isEmpty
+                                  ? null
+                                  : _notesCtrl.text.trim(),
+                            ),
+                          )
                         : null,
                   ),
                 ),
@@ -228,8 +295,9 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.name});
+  const _Header({required this.name, required this.isEditing});
   final String name;
+  final bool isEditing;
 
   @override
   Widget build(BuildContext context) {
@@ -261,7 +329,7 @@ class _Header extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'NOUVEAU RAPPEL',
+                  isEditing ? 'MODIFIER LE RAPPEL' : 'NOUVEAU RAPPEL',
                   style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -330,7 +398,9 @@ class _MomentRow extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: _on ? PilooColors.primarySoft : PilooColors.surfaceSubtle,
+                  color: _on
+                      ? PilooColors.primarySoft
+                      : PilooColors.surfaceSubtle,
                   shape: BoxShape.circle,
                 ),
                 alignment: Alignment.center,
@@ -347,16 +417,14 @@ class _MomentRow extends StatelessWidget {
                   style: GoogleFonts.manrope(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: _on ? PilooColors.textPrimary : PilooColors.textSecondary,
+                    color: _on
+                        ? PilooColors.textPrimary
+                        : PilooColors.textSecondary,
                   ),
                 ),
               ),
               if (_on)
-                _QtyStepper(
-                  value: qty!,
-                  unite: unite,
-                  onChange: onQtyChange,
-                )
+                _QtyStepper(value: qty!, unite: unite, onChange: onQtyChange)
               else
                 Text(
                   'Aucune',
@@ -466,7 +534,9 @@ class _StepBtn extends StatelessWidget {
           child: Icon(
             icon,
             size: 14,
-            color: disabled ? PilooColors.textTertiary : PilooColors.textPrimary,
+            color: disabled
+                ? PilooColors.textTertiary
+                : PilooColors.textPrimary,
           ),
         ),
       ),
@@ -475,7 +545,8 @@ class _StepBtn extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.onTap});
+  const _PrimaryButton({required this.label, required this.onTap});
+  final String label;
   final VoidCallback? onTap;
 
   @override
@@ -491,7 +562,7 @@ class _PrimaryButton extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 14),
           alignment: Alignment.center,
           child: Text(
-            'Créer le rappel',
+            label,
             style: GoogleFonts.manrope(
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -584,6 +655,69 @@ class _DureePill extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _NotesField extends StatelessWidget {
+  const _NotesField({required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'NOTES',
+          style: GoogleFonts.manrope(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.5,
+            color: PilooColors.textTertiary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          minLines: 2,
+          maxLines: 4,
+          keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            color: PilooColors.textPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: 'Notes (optionnel)',
+            hintStyle: GoogleFonts.manrope(
+              fontSize: 14,
+              color: PilooColors.textTertiary,
+            ),
+            filled: true,
+            fillColor: PilooColors.surface,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 12,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(PilooRadius.lg),
+              borderSide: const BorderSide(color: PilooColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(PilooRadius.lg),
+              borderSide: const BorderSide(color: PilooColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(PilooRadius.lg),
+              borderSide: const BorderSide(
+                color: PilooColors.primary,
+                width: 1.5,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

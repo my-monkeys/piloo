@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole, type Role } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
+import { cancelFutureRappelPrises, regenerateRappelPrises } from '@/lib/rappels/reconcile';
 import { findRappelById, softDeleteRappel, updateRappel } from '@/lib/rappels/repo';
 import { serializeRappel } from '@/lib/rappels/serialize';
 import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';
@@ -75,8 +76,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   const ctx = await resolveRappel(request, context, ['owner', 'editor']);
   if (ctx instanceof Response) return ctx;
 
-  const db = getDb();
-  const updated = await updateRappel(db, ctx.rappelId, {
+  const patch = {
     ...(parsed.data.nom_texte !== undefined && { nomTexte: parsed.data.nom_texte }),
     ...(parsed.data.unite !== undefined && { unite: parsed.data.unite }),
     ...(parsed.data.quantite_matin !== undefined && { quantiteMatin: parsed.data.quantite_matin }),
@@ -89,8 +89,39 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
     ...(parsed.data.date_fin !== undefined && { dateFin: parsed.data.date_fin }),
     ...(parsed.data.actif !== undefined && { actif: parsed.data.actif }),
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
+  };
+
+  // Champs touchant la planification → réconciliation des prises (spec §5).
+  const scheduleKeys = [
+    'actif',
+    'quantite_matin',
+    'quantite_midi',
+    'quantite_soir',
+    'quantite_coucher',
+    'date_debut',
+    'date_fin',
+  ] as const;
+  const scheduleChanged = scheduleKeys.some((k) => parsed.data[k] !== undefined);
+
+  // Atomicité : update + cancel + regenerate dans UNE transaction. Sinon un
+  // échec entre cancel et regenerate laisserait un rappel actif sans aucune
+  // prise future — et contrairement aux prescriptions, aucun cron de
+  // génération glissante ne rattrape les rappels (cf. cron-glissant.ts).
+  const db = getDb();
+  const updated = await db.transaction(async (tx) => {
+    const row = await updateRappel(tx, ctx.rappelId, patch);
+    if (!row) return undefined;
+    if (scheduleChanged) {
+      const now = new Date();
+      await cancelFutureRappelPrises(tx, ctx.rappelId, now);
+      if (row.actif) {
+        await regenerateRappelPrises(tx, ctx.rappelId, now);
+      }
+    }
+    return row;
   });
   if (!updated) return apiErrorResponse('not_found', 'Rappel introuvable.');
+
   return Response.json(serializeRappel(updated), { status: 200 });
 }
 
@@ -98,8 +129,16 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
   const ctx = await resolveRappel(request, context, ['owner', 'editor']);
   if (ctx instanceof Response) return ctx;
 
+  // Atomicité : soft-delete + retrait des prises futures dans une seule
+  // transaction (cohérent avec PATCH ; évite des prises orphelines si un
+  // crash survient entre les deux).
   const db = getDb();
-  const ok = await softDeleteRappel(db, ctx.rappelId);
+  const ok = await db.transaction(async (tx) => {
+    const deleted = await softDeleteRappel(tx, ctx.rappelId);
+    if (!deleted) return false;
+    await cancelFutureRappelPrises(tx, ctx.rappelId);
+    return true;
+  });
   if (!ok) return apiErrorResponse('not_found', 'Rappel introuvable.');
   return new Response(null, { status: 204 });
 }

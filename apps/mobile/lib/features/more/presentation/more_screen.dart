@@ -54,6 +54,7 @@ class _Row {
   final Color iconBg;
   final Color iconFg;
   final String? routeName;
+
   /// Surcharge la nav par defaut quand l'action n'est pas un push de
   /// route (ex: relancer un tour, toggle un flag local).
   final VoidCallback? onTap;
@@ -63,23 +64,28 @@ class MoreScreen extends ConsumerWidget {
   const MoreScreen({super.key});
 
   List<_Row> _monAppRows(int? officinesCount) => [
-        _Row(
-          icon: PhosphorIconsFill.house,
-          label: 'Mes officines',
-          value: officinesCount?.toString(),
-          routeName: RouteName.officinesList,
-        ),
-        const _Row(
-          icon: PhosphorIconsRegular.prescription,
-          label: 'Ordonnances',
-          routeName: RouteName.ordonnances,
-        ),
-        const _Row(
-          icon: PhosphorIconsRegular.bellRinging,
-          label: 'Notifications',
-          routeName: RouteName.settingsNotifications,
-        ),
-      ];
+    _Row(
+      icon: PhosphorIconsFill.house,
+      label: 'Mes officines',
+      value: officinesCount?.toString(),
+      routeName: RouteName.officinesList,
+    ),
+    const _Row(
+      icon: PhosphorIconsRegular.prescription,
+      label: 'Ordonnances',
+      routeName: RouteName.ordonnances,
+    ),
+    const _Row(
+      icon: PhosphorIconsRegular.bell,
+      label: 'Mes rappels',
+      routeName: RouteName.rappels,
+    ),
+    const _Row(
+      icon: PhosphorIconsRegular.bellRinging,
+      label: 'Notifications',
+      routeName: RouteName.settingsNotifications,
+    ),
+  ];
 
   static const _prefs = [
     _Row(
@@ -106,41 +112,39 @@ class MoreScreen extends ConsumerWidget {
   ];
 
   List<_Row> _helpRows(WidgetRef ref) => [
-        _Row(
-          icon: PhosphorIconsRegular.playCircle,
-          label: 'Revoir le tour guidé',
-          iconBg: PilooColors.primarySoft,
-          iconFg: PilooColors.primary,
-          onTap: () {
-            // ignore: discarded_futures
-            ref.read(tourStepProvider.notifier).start();
-          },
-        ),
-        const _Row(
-          icon: PhosphorIconsRegular.question,
-          label: 'Aide & FAQ',
-          iconBg: PilooColors.surfaceSubtle,
-          iconFg: PilooColors.textPrimary,
-        ),
-        const _Row(
-          icon: PhosphorIconsFill.info,
-          label: "Ce n'est pas un dispositif médical",
-          iconBg: PilooColors.accentSoft,
-          iconFg: PilooColors.accent,
-        ),
-      ];
+    _Row(
+      icon: PhosphorIconsRegular.playCircle,
+      label: 'Revoir le tour guidé',
+      iconBg: PilooColors.primarySoft,
+      iconFg: PilooColors.primary,
+      onTap: () {
+        // ignore: discarded_futures
+        ref.read(tourStepProvider.notifier).start();
+      },
+    ),
+    const _Row(
+      icon: PhosphorIconsRegular.question,
+      label: 'Aide & FAQ',
+      iconBg: PilooColors.surfaceSubtle,
+      iconFg: PilooColors.textPrimary,
+    ),
+    const _Row(
+      icon: PhosphorIconsFill.info,
+      label: "Ce n'est pas un dispositif médical",
+      iconBg: PilooColors.accentSoft,
+      iconFg: PilooColors.accent,
+    ),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final session = ref.watch(sessionProvider).value;
-    final officinesCount = ref.watch(officinesListProvider).maybeWhen(
-          data: (list) => list.length,
-          orElse: () => null,
-        );
-    final bdpmVersion = ref.watch(bdpmDbProvider).maybeWhen(
-          data: (db) => db?.version,
-          orElse: () => null,
-        );
+    final officinesCount = ref
+        .watch(officinesListProvider)
+        .maybeWhen(data: (list) => list.length, orElse: () => null);
+    final bdpmVersion = ref
+        .watch(bdpmDbProvider)
+        .maybeWhen(data: (db) => db?.version, orElse: () => null);
     final name = session?.name.trim().isNotEmpty == true
         ? session!.name
         : (session?.email.split('@').first ?? '');
@@ -171,19 +175,18 @@ class MoreScreen extends ConsumerWidget {
                     onTap: () => context.push(RoutePath.settingsProfile),
                   ),
                   const SizedBox(height: 18),
-                  _Section(
-                    label: 'MON APP',
-                    rows: _monAppRows(officinesCount),
-                  ),
+                  _Section(label: 'MON APP', rows: _monAppRows(officinesCount)),
                   const SizedBox(height: 18),
                   _Section(label: 'PRÉFÉRENCES', rows: _prefs),
                   const SizedBox(height: 18),
                   _Section(label: 'AIDE & LÉGAL', rows: _helpRows(ref)),
                   const SizedBox(height: 18),
-                  _LogoutButton(onTap: () async {
-                    await ref.read(sessionProvider.notifier).signOut();
-                    if (context.mounted) context.go(RoutePath.welcome);
-                  }),
+                  _LogoutButton(
+                    onTap: () async {
+                      await ref.read(sessionProvider.notifier).signOut();
+                      if (context.mounted) context.go(RoutePath.welcome);
+                    },
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     _formatFooter(bdpmVersion),
