@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole, type Role } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
+import { cancelFutureRappelPrises, regenerateRappelPrises } from '@/lib/rappels/reconcile';
 import { findRappelById, softDeleteRappel, updateRappel } from '@/lib/rappels/repo';
 import { serializeRappel } from '@/lib/rappels/serialize';
 import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';
@@ -91,6 +92,27 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
   });
   if (!updated) return apiErrorResponse('not_found', 'Rappel introuvable.');
+
+  // Réconciliation des prises futures (cf. spec gestion-rappels §5). Champs
+  // touchant la planification : actif, quantités (moments), dates.
+  const scheduleKeys = [
+    'actif',
+    'quantite_matin',
+    'quantite_midi',
+    'quantite_soir',
+    'quantite_coucher',
+    'date_debut',
+    'date_fin',
+  ] as const;
+  const scheduleChanged = scheduleKeys.some((k) => parsed.data[k] !== undefined);
+  if (scheduleChanged) {
+    const now = new Date();
+    await cancelFutureRappelPrises(db, ctx.rappelId, now);
+    if (updated.actif) {
+      await regenerateRappelPrises(db, ctx.rappelId, now);
+    }
+  }
+
   return Response.json(serializeRappel(updated), { status: 200 });
 }
 
@@ -101,5 +123,6 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
   const db = getDb();
   const ok = await softDeleteRappel(db, ctx.rappelId);
   if (!ok) return apiErrorResponse('not_found', 'Rappel introuvable.');
+  await cancelFutureRappelPrises(db, ctx.rappelId);
   return new Response(null, { status: 204 });
 }
