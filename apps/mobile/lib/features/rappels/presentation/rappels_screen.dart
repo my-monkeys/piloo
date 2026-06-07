@@ -1,6 +1,6 @@
 // Écran "Mes rappels" — liste des rappels de l'officine active (#355).
 // Tâches B2 + B3 : route + liste avec pause/suppression.
-// L'édition (B5) est hors scope ici — les cartes ne sont pas tappables.
+// Tâche B5 : tap sur la carte (owner/editor) → édition via showRappelQuickSheet.
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -11,6 +11,7 @@ import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/rappels/data/rappels_provider.dart';
+import 'package:piloo/features/rappels/presentation/rappel_quick_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
 
 class RappelsScreen extends ConsumerWidget {
@@ -193,6 +194,65 @@ class _RappelCard extends ConsumerWidget {
   final Officine officine;
   final bool canMutate;
 
+  Future<void> _openEdit(BuildContext context, WidgetRef ref) async {
+    final result = await showRappelQuickSheet(
+      context,
+      medicamentName: rappel.nomTexte,
+      suggestedUnite: rappel.unite,
+      initial: rappel,
+    );
+    if (result == null || !context.mounted) return;
+
+    final dureeJours = result.duree.jours;
+    Date? newDateFin;
+    if (dureeJours != null) {
+      // dateDebut est inchangée — on recalcule seulement la fin.
+      final debut = rappel.dateDebut;
+      final finDt = DateTime.utc(
+        debut.year,
+        debut.month,
+        debut.day,
+      ).add(Duration(days: dureeJours));
+      newDateFin = Date(finDt.year, finDt.month, finDt.day);
+    }
+
+    try {
+      await updateRappel(
+        ref,
+        id: rappel.id,
+        officineId: officine.id,
+        quantiteMatin: result.matin,
+        quantiteMidi: result.midi,
+        quantiteSoir: result.soir,
+        quantiteCoucher: result.coucher,
+        unite: result.unite,
+        dateFin: newDateFin,
+        notes: result.notes,
+      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Rappel modifié.',
+              style: GoogleFonts.manrope(fontSize: 13),
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Impossible de modifier le rappel.',
+              style: GoogleFonts.manrope(fontSize: 13),
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final horaires = _horairesSummary(rappel);
@@ -201,120 +261,128 @@ class _RappelCard extends ConsumerWidget {
         : rappel.unite;
     final periode = _formatPeriode(rappel.dateDebut, rappel.dateFin);
 
-    return Container(
-      decoration: BoxDecoration(
-        color: PilooColors.surface,
+    return Material(
+      color: PilooColors.surface,
+      borderRadius: BorderRadius.circular(PilooRadius.lg),
+      child: InkWell(
         borderRadius: BorderRadius.circular(PilooRadius.lg),
-        border: Border.all(color: PilooColors.border),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icône médicament
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: rappel.actif
-                    ? PilooColors.primarySoft
-                    : PilooColors.surfaceSubtle,
-                shape: BoxShape.circle,
-              ),
-              alignment: Alignment.center,
-              child: Icon(
-                PhosphorIconsRegular.pill,
-                size: 18,
-                color: rappel.actif
-                    ? PilooColors.primary
-                    : PilooColors.textTertiary,
-              ),
+        onTap: canMutate ? () => _openEdit(context, ref) : null,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(PilooRadius.lg),
+            border: Border.all(color: PilooColors.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Icône médicament
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: rappel.actif
+                        ? PilooColors.primarySoft
+                        : PilooColors.surfaceSubtle,
+                    shape: BoxShape.circle,
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    PhosphorIconsRegular.pill,
+                    size: 18,
+                    color: rappel.actif
+                        ? PilooColors.primary
+                        : PilooColors.textTertiary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // Contenu textuel
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        rappel.nomTexte,
+                        style: GoogleFonts.fraunces(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: PilooColors.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        schedule,
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: PilooColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        periode,
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          color: PilooColors.textTertiary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _StatusPill(actif: rappel.actif),
+                    ],
+                  ),
+                ),
+                // Actions (owner / editor seulement)
+                if (canMutate)
+                  Column(
+                    children: [
+                      Switch(
+                        value: rappel.actif,
+                        activeThumbColor: PilooColors.primary,
+                        activeTrackColor: PilooColors.primarySoft,
+                        onChanged: (newValue) async {
+                          try {
+                            await toggleRappelActif(
+                              ref,
+                              id: rappel.id,
+                              officineId: officine.id,
+                              actif: newValue,
+                            );
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    newValue
+                                        ? 'Impossible d\'activer le rappel.'
+                                        : 'Impossible de mettre en pause.',
+                                    style: GoogleFonts.manrope(fontSize: 13),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      ),
+                      IconButton(
+                        onPressed: () => _confirmDelete(context, ref),
+                        icon: const Icon(
+                          PhosphorIconsRegular.trash,
+                          size: 18,
+                          color: PilooColors.errorOn,
+                        ),
+                        tooltip: 'Supprimer',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(
+                          minWidth: 36,
+                          minHeight: 36,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
-            const SizedBox(width: 12),
-            // Contenu textuel
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    rappel.nomTexte,
-                    style: GoogleFonts.fraunces(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: PilooColors.textPrimary,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    schedule,
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      color: PilooColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    periode,
-                    style: GoogleFonts.manrope(
-                      fontSize: 12,
-                      color: PilooColors.textTertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  _StatusPill(actif: rappel.actif),
-                ],
-              ),
-            ),
-            // Actions (owner / editor seulement)
-            if (canMutate)
-              Column(
-                children: [
-                  Switch(
-                    value: rappel.actif,
-                    activeThumbColor: PilooColors.primary,
-                    activeTrackColor: PilooColors.primarySoft,
-                    onChanged: (newValue) async {
-                      try {
-                        await toggleRappelActif(
-                          ref,
-                          id: rappel.id,
-                          officineId: officine.id,
-                          actif: newValue,
-                        );
-                      } catch (_) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                newValue
-                                    ? 'Impossible d\'activer le rappel.'
-                                    : 'Impossible de mettre en pause.',
-                                style: GoogleFonts.manrope(fontSize: 13),
-                              ),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                  IconButton(
-                    onPressed: () => _confirmDelete(context, ref),
-                    icon: const Icon(
-                      PhosphorIconsRegular.trash,
-                      size: 18,
-                      color: PilooColors.errorOn,
-                    ),
-                    tooltip: 'Supprimer',
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 36,
-                      minHeight: 36,
-                    ),
-                  ),
-                ],
-              ),
-          ],
+          ),
         ),
       ),
     );

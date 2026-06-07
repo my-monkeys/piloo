@@ -76,13 +76,16 @@ class _Boite implements GroupableBoite {
   final String dci;
   final String meta;
   final IconData icon;
+
   /// Doses restantes (unitesRestantes côté DB).
   final int count;
+
   /// Doses totales de la boîte (unitesInitiales). null quand l'user
   /// n'a pas renseigné la taille.
   final int? total;
   final String? exp; // ex: "exp. 08/2026" ou null si périmé
   final _BoiteState state;
+
   /// Référence à la Boite API quand la card provient de l'API (sinon
   /// fallback mock). Sert au tap → quick actions sheet → PATCH.
   final api.Boite? apiBoite;
@@ -98,6 +101,7 @@ class OfficineScreen extends ConsumerStatefulWidget {
 class _OfficineScreenState extends ConsumerState<OfficineScreen> {
   _Filter _filter = _Filter.tout;
   BoiteGrouping _grouping = BoiteGrouping.medicament;
+
   /// Texte de recherche libre. Filtre name + dci + cip13 case-insensitive.
   /// Vide → toutes les boîtes affichées (modulo le filtre de statut).
   /// #100 : tap sur "Principe actif" depuis la fiche médicament viendra
@@ -138,10 +142,12 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     // l'user est seul (personne à notifier). On utilise le provider
     // partages déjà câblé pour les écrans Membres ; en cas d'erreur
     // (offline, endpoint indispo) on traite comme "seul" → action cachée.
-    final partages =
-        ref.read(partagesProvider(apiBoite.officineId)).valueOrNull;
+    final partages = ref
+        .read(partagesProvider(apiBoite.officineId))
+        .valueOrNull;
     final session = ref.read(sessionProvider).value;
-    final hasOtherMembers = partages != null &&
+    final hasOtherMembers =
+        partages != null &&
         partages.members.any((m) => m.userId != session?.userId);
     final action = await showQuickActionsSheet(
       context,
@@ -264,11 +270,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       );
       if (mounted) PilooToast.success(context, 'Une boîte retirée.');
     } else {
-      await deleteBoite(
-        ref,
-        boiteId: boite.id,
-        officineId: boite.officineId,
-      );
+      await deleteBoite(ref, boiteId: boite.id, officineId: boite.officineId);
       if (mounted) PilooToast.success(context, 'Boîte jetée.');
     }
   }
@@ -284,10 +286,11 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     if (newName == null || !mounted) return;
     final trimmed = newName.trim();
     final newNotes = trimmed.isEmpty
-        ? parts.rest // l'user efface le nom → on garde juste les notes libres
+        ? parts
+              .rest // l'user efface le nom → on garde juste les notes libres
         : (parts.rest == null || parts.rest!.isEmpty
-            ? trimmed
-            : '$trimmed // ${parts.rest}');
+              ? trimmed
+              : '$trimmed // ${parts.rest}');
     await updateBoite(
       ref,
       boiteId: boite.id,
@@ -333,6 +336,7 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
       quantiteCoucher: result.coucher,
       dateDebut: api.Date(today.year, today.month, today.day),
       dateFin: fin == null ? null : api.Date(fin.year, fin.month, fin.day),
+      notes: result.notes,
     );
     if (mounted) PilooToast.success(context, 'Rappel créé.');
   }
@@ -402,8 +406,9 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     // container), or ces champs drivent les labels du sheet ("Comprimés
     // restants" vs "8 doses"). Le provider fait fallback API si la
     // version SQLite locale est trop ancienne.
-    final presentation =
-        await ref.read(bdpmLookupProvider(cip13).future).catchError((_) => null);
+    final presentation = await ref
+        .read(bdpmLookupProvider(cip13).future)
+        .catchError((_) => null);
     if (!mounted) return null;
     return showModalBottomSheet<StockAdjustResult>(
       context: context,
@@ -420,18 +425,19 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
     );
   }
 
-
   List<_Boite> _filtered(List<_Boite> source) {
     final byStatut = switch (_filter) {
       _Filter.tout => source,
       _Filter.actif =>
         source.where((b) => b.state == _BoiteState.ok).toList(growable: false),
-      _Filter.perime => source
-          .where((b) => b.state == _BoiteState.perime)
-          .toList(growable: false),
-      _Filter.stockBas => source
-          .where((b) => b.state == _BoiteState.stockBas)
-          .toList(growable: false),
+      _Filter.perime =>
+        source
+            .where((b) => b.state == _BoiteState.perime)
+            .toList(growable: false),
+      _Filter.stockBas =>
+        source
+            .where((b) => b.state == _BoiteState.stockBas)
+            .toList(growable: false),
     };
     final q = _searchQuery.trim().toLowerCase();
     if (q.isEmpty) return byStatut;
@@ -445,10 +451,12 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           .toList(growable: false);
     }
     return byStatut
-        .where((b) =>
-            b.name.toLowerCase().contains(q) ||
-            b.dci.toLowerCase().contains(q) ||
-            b.meta.toLowerCase().contains(q))
+        .where(
+          (b) =>
+              b.name.toLowerCase().contains(q) ||
+              b.dci.toLowerCase().contains(q) ||
+              b.meta.toLowerCase().contains(q),
+        )
         .toList(growable: false);
   }
 
@@ -468,17 +476,23 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
           // Boîtes vidées : on les retire de l'affichage — l'utilisateur
           // a marqué la boîte épuisée, plus aucune action utile dessus.
           // Elles restent en DB (historique, agrégats stock_bas).
-          .where((b) => b.statut != api.BoiteStatutEnum.vide && (b.unitesRestantes ?? 1) > 0)
+          .where(
+            (b) =>
+                b.statut != api.BoiteStatutEnum.vide &&
+                (b.unitesRestantes ?? 1) > 0,
+          )
           .map((b) => _mapApiBoite(b, bdpmDb))
           .toList(growable: false),
       orElse: () => const <_Boite>[],
     );
     final isLoading = boitesAsync.isLoading && source.isEmpty;
     final filtered = _filtered(source);
-    final perimeCount =
-        source.where((b) => b.state == _BoiteState.perime).length;
-    final stockBasCount =
-        source.where((b) => b.state == _BoiteState.stockBas).length;
+    final perimeCount = source
+        .where((b) => b.state == _BoiteState.perime)
+        .length;
+    final stockBasCount = source
+        .where((b) => b.state == _BoiteState.stockBas)
+        .length;
 
     return Scaffold(
       backgroundColor: PilooColors.background,
@@ -598,28 +612,27 @@ class _OfficineScreenState extends ConsumerState<OfficineScreen> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : source.isEmpty
-                      ? _EmptyOfficine()
-                      : _grouping == BoiteGrouping.molecule
-                          // Vue inversée par molécule : 1 card par
-                          // substance active présente dans les boîtes.
-                          // Tap → drill-down sur les médocs qui la
-                          // contiennent.
-                          ? _MoleculeList(
-                              boites: filtered,
-                              bdpmDb: bdpmDb,
-                              onBoiteTap: _onBoiteTap,
-                            )
-                          : _GroupedList(
-                              sections: groupBoites(filtered, _grouping),
-                              onBoiteTap: _onBoiteTap,
-                              // Carousel par CIP seulement en mode
-                              // Médicament.
-                              stackByCip:
-                                  _grouping == BoiteGrouping.medicament,
-                              firstBoiteKey: ref
-                                  .read(onboardingTargetsProvider)
-                                  .firstBoiteCard,
-                            ),
+                  ? _EmptyOfficine()
+                  : _grouping == BoiteGrouping.molecule
+                  // Vue inversée par molécule : 1 card par
+                  // substance active présente dans les boîtes.
+                  // Tap → drill-down sur les médocs qui la
+                  // contiennent.
+                  ? _MoleculeList(
+                      boites: filtered,
+                      bdpmDb: bdpmDb,
+                      onBoiteTap: _onBoiteTap,
+                    )
+                  : _GroupedList(
+                      sections: groupBoites(filtered, _grouping),
+                      onBoiteTap: _onBoiteTap,
+                      // Carousel par CIP seulement en mode
+                      // Médicament.
+                      stackByCip: _grouping == BoiteGrouping.medicament,
+                      firstBoiteKey: ref
+                          .read(onboardingTargetsProvider)
+                          .firstBoiteCard,
+                    ),
             ),
           ],
         ),
@@ -702,19 +715,33 @@ IconData _iconForForme(String? forme) {
   final f = forme.toLowerCase();
   // Ordre : du plus spécifique au plus générique pour éviter qu'une
   // forme rare se fasse capter par un mot trop large.
-  if (f.contains('collyre') || f.contains('goutte')) return PhosphorIconsFill.eyedropper;
-  if (f.contains('inhalation') || f.contains('aérosol') || f.contains('aerosol')) return PhosphorIconsFill.wind;
-  if (f.contains('pulvérisation') || f.contains('pulverisation') || f.contains('spray')) {
+  if (f.contains('collyre') || f.contains('goutte'))
+    return PhosphorIconsFill.eyedropper;
+  if (f.contains('inhalation') ||
+      f.contains('aérosol') ||
+      f.contains('aerosol'))
+    return PhosphorIconsFill.wind;
+  if (f.contains('pulvérisation') ||
+      f.contains('pulverisation') ||
+      f.contains('spray')) {
     return PhosphorIconsFill.sprayBottle;
   }
-  if (f.contains('suppositoire') || f.contains('ovule')) return PhosphorIconsFill.rocketLaunch;
-  if (f.contains('transdermique') || f.contains('patch')) return PhosphorIconsFill.bandaids;
-  if (f.contains('injectable') || f.contains('perfusion')) return PhosphorIconsFill.syringe;
-  if (f.contains('crème') || f.contains('creme') || f.contains('gel') ||
-      f.contains('pommade') || f.contains('application')) {
+  if (f.contains('suppositoire') || f.contains('ovule'))
+    return PhosphorIconsFill.rocketLaunch;
+  if (f.contains('transdermique') || f.contains('patch'))
+    return PhosphorIconsFill.bandaids;
+  if (f.contains('injectable') || f.contains('perfusion'))
+    return PhosphorIconsFill.syringe;
+  if (f.contains('crème') ||
+      f.contains('creme') ||
+      f.contains('gel') ||
+      f.contains('pommade') ||
+      f.contains('application')) {
     return PhosphorIconsFill.handSoap;
   }
-  if (f.contains('buvable') || f.contains('sirop') || f.contains('suspension')) {
+  if (f.contains('buvable') ||
+      f.contains('sirop') ||
+      f.contains('suspension')) {
     return PhosphorIconsFill.flask;
   }
   // Comprimé, gélule, capsule, suppositoire, ovule, dispositif… → pill
@@ -732,7 +759,9 @@ String _stripFormeSuffix(String denomination, String? forme) {
   final suffix = ', $forme';
   final lower = denomination.toLowerCase();
   if (lower.endsWith(suffix.toLowerCase())) {
-    return denomination.substring(0, denomination.length - suffix.length).trim();
+    return denomination
+        .substring(0, denomination.length - suffix.length)
+        .trim();
   }
   return denomination;
 }
@@ -926,8 +955,9 @@ class _SearchBox extends StatefulWidget {
 }
 
 class _SearchBoxState extends State<_SearchBox> {
-  late final TextEditingController _ctrl =
-      TextEditingController(text: widget.value);
+  late final TextEditingController _ctrl = TextEditingController(
+    text: widget.value,
+  );
 
   @override
   void didUpdateWidget(_SearchBox old) {
@@ -1042,8 +1072,7 @@ class _FilterChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: selected ? PilooColors.primary : PilooColors.surface,
             borderRadius: BorderRadius.circular(999),
-            border:
-                selected ? null : Border.all(color: PilooColors.border),
+            border: selected ? null : Border.all(color: PilooColors.border),
           ),
           child: Text(
             label,
@@ -1137,10 +1166,12 @@ class _GroupedList extends StatelessWidget {
 
   final List<BoiteSection<_Boite>> sections;
   final void Function(_Boite boite) onBoiteTap;
+
   /// Quand `true`, regroupe les boîtes du même CIP en une card
   /// swipeable horizontale (1 page par lot). Désactivé pour les
   /// modes molécule/plat où l'user attend une liste à plat.
   final bool stackByCip;
+
   /// Clé attachée à la toute première carte rendue pour le tour
   /// onboarding (#351).
   final Key? firstBoiteKey;
@@ -1159,10 +1190,9 @@ class _GroupedList extends StatelessWidget {
           0,
           (acc, b) => acc + (b.apiBoite?.nombreBoites ?? 1),
         );
-        items.add(_SectionHeader(
-          label: section.header!,
-          boiteCount: totalBoites,
-        ));
+        items.add(
+          _SectionHeader(label: section.header!, boiteCount: totalBoites),
+        );
         items.add(const SizedBox(height: 8));
       } else if (s > 0) {
         items.add(const SizedBox(height: 10));
@@ -1185,17 +1215,21 @@ class _GroupedList extends StatelessWidget {
         firstBoiteRendered = true;
         if (physical <= 1) {
           final boite = group.first;
-          items.add(GestureDetector(
-            key: cardKey,
-            behavior: HitTestBehavior.opaque,
-            onTap: () => onBoiteTap(boite),
-            child: _BoiteCard(boite: boite),
-          ));
+          items.add(
+            GestureDetector(
+              key: cardKey,
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onBoiteTap(boite),
+              child: _BoiteCard(boite: boite),
+            ),
+          );
         } else {
-          items.add(KeyedSubtree(
-            key: cardKey,
-            child: _BoiteStackCard(boites: group, onTap: onBoiteTap),
-          ));
+          items.add(
+            KeyedSubtree(
+              key: cardKey,
+              child: _BoiteStackCard(boites: group, onTap: onBoiteTap),
+            ),
+          );
         }
       }
     }
@@ -1228,6 +1262,7 @@ class _SectionHeader extends StatelessWidget {
   const _SectionHeader({required this.label, this.boiteCount = 0});
 
   final String label;
+
   /// Nombre total de boîtes physiques du groupe. 0 ou 1 → pas de
   /// badge (pas d'info utile). 2+ → badge "× N" pour signaler que
   /// le groupe contient plusieurs boîtes (utile dans le mode
@@ -1572,13 +1607,13 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
     if (!_draggingH) return;
     final width = MediaQuery.of(context).size.width;
     final threshold = width * 0.2;
-    final elapsed =
-        DateTime.now().difference(_pointerStartTime).inMilliseconds;
+    final elapsed = DateTime.now().difference(_pointerStartTime).inMilliseconds;
     final velocityX = elapsed > 0
         ? (e.position.dx - _pointerStart.dx) * 1000 / elapsed
         : 0.0;
     _draggingH = false;
-    final goNext = (_dragX < -threshold || velocityX < -400) &&
+    final goNext =
+        (_dragX < -threshold || velocityX < -400) &&
         _topIndex < _pages.length - 1;
     final goPrev = (_dragX > threshold || velocityX > 400) && _topIndex > 0;
 
@@ -1606,9 +1641,10 @@ class _BoiteStackCardState extends State<_BoiteStackCard>
   Future<void> _animateTo(double target) async {
     final start = _dragX;
     _ac.reset();
-    final anim = Tween<double>(begin: start, end: target).animate(
-      CurvedAnimation(parent: _ac, curve: Curves.easeOut),
-    );
+    final anim = Tween<double>(
+      begin: start,
+      end: target,
+    ).animate(CurvedAnimation(parent: _ac, curve: Curves.easeOut));
     void listener() => setState(() => _dragX = anim.value);
     anim.addListener(listener);
     try {
@@ -1826,6 +1862,7 @@ class _BoiteCard extends StatelessWidget {
   const _BoiteCard({required this.boite, this.suppressMultiBadge = false});
 
   final _Boite boite;
+
   /// Quand la card est rendue à l'intérieur d'un `_BoiteStackCard`,
   /// chaque boîte physique est déjà matérialisée en une card distincte
   /// — le badge "× N" devient redondant.
@@ -1842,24 +1879,24 @@ class _BoiteCard extends StatelessWidget {
     final iconBg = isPerime
         ? PilooColors.errorOn
         : isStockBas
-            ? PilooColors.accentSoft
-            : PilooColors.primarySoft;
+        ? PilooColors.accentSoft
+        : PilooColors.primarySoft;
     final iconFg = isPerime
         ? Colors.white
         : isStockBas
-            ? PilooColors.accent
-            : PilooColors.primary;
+        ? PilooColors.accent
+        : PilooColors.primary;
 
     final countBg = isPerime
         ? PilooColors.errorOn
         : isStockBas
-            ? PilooColors.warning
-            : PilooColors.primarySoft;
+        ? PilooColors.warning
+        : PilooColors.primarySoft;
     final countFg = isPerime
         ? Colors.white
         : isStockBas
-            ? PilooColors.warningOn
-            : PilooColors.primary;
+        ? PilooColors.warningOn
+        : PilooColors.primary;
 
     final metaColor = isPerime
         ? PilooColors.errorOn
@@ -1920,8 +1957,7 @@ class _BoiteCard extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: countBg,
                   borderRadius: BorderRadius.circular(999),
@@ -1929,7 +1965,9 @@ class _BoiteCard extends StatelessWidget {
                 child: Text(
                   // Affiche "6/8" si la taille est connue, sinon juste "6".
                   // Plus parlant qu'un nombre seul (on voit où on en est).
-                  boite.total != null ? '${boite.count}/${boite.total}' : '${boite.count}',
+                  boite.total != null
+                      ? '${boite.count}/${boite.total}'
+                      : '${boite.count}',
                   style: GoogleFonts.manrope(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1943,8 +1981,9 @@ class _BoiteCard extends StatelessWidget {
                   boite.exp!,
                   style: GoogleFonts.manrope(
                     fontSize: 11,
-                    fontWeight:
-                        isStockBas ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isStockBas
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                     color: expColor,
                   ),
                 ),
@@ -2017,12 +2056,14 @@ class _StockAdjustSheet extends StatefulWidget {
 
   /// Stock actuel (= unitesRestantes courant).
   final int? initial;
+
   /// Taille totale connue (= unitesInitiales). Quand renseignée, les chips
   /// calculent des doses correctes (3/4 d'une boîte de 8 = 6). Quand
   /// inconnue, on prompte l'user pour la saisir avant d'afficher les chips
   /// — sinon les "Plein/3/4" affichent n'importe quoi (cf. bug remonté
   /// 2026-05-22 : Plein → 32 sur une boîte de Doliprane 8).
   final int? total;
+
   /// Médicament BDPM associé (résolu via bdpmLookupProvider). Quand
   /// fourni : on pré-remplit le champ "Taille de la boîte" avec
   /// `presentation.totalDoses`, et on adapte tous les labels du sheet
@@ -2034,13 +2075,13 @@ class _StockAdjustSheet extends StatefulWidget {
 }
 
 class _StockAdjustSheetState extends State<_StockAdjustSheet> {
-  late final TextEditingController _ctrl =
-      TextEditingController(text: widget.initial?.toString() ?? '');
-  late final TextEditingController _totalCtrl =
-      TextEditingController(
-        // Priorité : valeur déjà en DB > donnée BDPM > vide.
-        text: (widget.total ?? widget.presentation?.totalDoses)?.toString() ?? '',
-      );
+  late final TextEditingController _ctrl = TextEditingController(
+    text: widget.initial?.toString() ?? '',
+  );
+  late final TextEditingController _totalCtrl = TextEditingController(
+    // Priorité : valeur déjà en DB > donnée BDPM > vide.
+    text: (widget.total ?? widget.presentation?.totalDoses)?.toString() ?? '',
+  );
 
   /// Taille active = soit ce que l'user vient de saisir, soit ce que la
   /// boîte avait déjà en base.
@@ -2182,40 +2223,43 @@ class _StockAdjustSheetState extends State<_StockAdjustSheet> {
                 ),
               ],
               const SizedBox(height: 12),
-              if (_chips.isNotEmpty) Row(
-                children: [
-                  for (var i = 0; i < _chips.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 6),
-                    Expanded(
-                      child: GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          setState(() {
-                            _ctrl.text = _chips[i].units.toString();
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                          decoration: BoxDecoration(
-                            color: PilooColors.surface,
-                            borderRadius: BorderRadius.circular(PilooRadius.md),
-                            border: Border.all(color: PilooColors.border),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            _chips[i].label,
-                            style: GoogleFonts.manrope(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: PilooColors.textPrimary,
+              if (_chips.isNotEmpty)
+                Row(
+                  children: [
+                    for (var i = 0; i < _chips.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 6),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              _ctrl.text = _chips[i].units.toString();
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            decoration: BoxDecoration(
+                              color: PilooColors.surface,
+                              borderRadius: BorderRadius.circular(
+                                PilooRadius.md,
+                              ),
+                              border: Border.all(color: PilooColors.border),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              _chips[i].label,
+                              style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: PilooColors.textPrimary,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ],
-                ],
-              ),
+                ),
               const SizedBox(height: 14),
               TextField(
                 controller: _ctrl,
@@ -2291,8 +2335,8 @@ class _PresentationRowState extends State<_PresentationRow> {
     }
     if (t != null) {
       final unit = (t > 1
-              ? (med.doseUnitPlural ?? 'doses')
-              : (med.doseUnit ?? 'dose'));
+          ? (med.doseUnitPlural ?? 'doses')
+          : (med.doseUnit ?? 'dose'));
       parts.add('$t $unit');
     }
     return parts.join(' · ');
@@ -2330,15 +2374,16 @@ class _PresentationRowState extends State<_PresentationRow> {
               isDense: true,
             ),
           ),
-          if (_conflictsWithBdpm) BdpmConflictWarning(
-            officialTotal: widget.presentation!.totalDoses!,
-            unitPlural: widget.presentation?.doseUnitPlural ?? 'doses',
-            onReset: () {
-              widget.totalCtrl.text =
-                  widget.presentation!.totalDoses!.toString();
-              widget.onTotalChanged();
-            },
-          ),
+          if (_conflictsWithBdpm)
+            BdpmConflictWarning(
+              officialTotal: widget.presentation!.totalDoses!,
+              unitPlural: widget.presentation?.doseUnitPlural ?? 'doses',
+              onReset: () {
+                widget.totalCtrl.text = widget.presentation!.totalDoses!
+                    .toString();
+                widget.onTotalChanged();
+              },
+            ),
         ],
       );
     }
