@@ -33,6 +33,7 @@ import 'package:piloo/features/officines/presentation/officines_list_screen.dart
 import 'package:piloo/features/ordonnances/presentation/ordonnance_create_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnance_detail_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnances_list_screen.dart';
+import 'package:piloo/features/rappels/presentation/rappels_screen.dart';
 import 'package:piloo/features/partages/presentation/invitation_accept_screen.dart';
 import 'package:piloo/features/partages/presentation/invite_screen.dart';
 import 'package:piloo/features/partages/presentation/partages_screen.dart';
@@ -74,8 +75,9 @@ GoRouter buildRouter() {
   // on tombe sur le splash normal. Pratique pour la review design en
   // simulateur, vu la difficulté d'enchaîner des taps rapides via xcrun.
   const bootRouteOverride = String.fromEnvironment('PILOO_BOOT_ROUTE');
-  final initialLocation =
-      bootRouteOverride.isNotEmpty ? bootRouteOverride : RoutePath.splash;
+  final initialLocation = bootRouteOverride.isNotEmpty
+      ? bootRouteOverride
+      : RoutePath.splash;
 
   return GoRouter(
     initialLocation: initialLocation,
@@ -221,16 +223,14 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/boites/:boiteId',
         name: RouteName.boiteDetail,
-        builder: (_, state) => BoiteDetailScreen(
-          boiteId: state.pathParameters['boiteId'],
-        ),
+        builder: (_, state) =>
+            BoiteDetailScreen(boiteId: state.pathParameters['boiteId']),
       ),
       GoRoute(
         path: '/medicaments/:cip13',
         name: RouteName.medicamentInfo,
-        builder: (_, state) => MedicamentInfoScreen(
-          cip13: state.pathParameters['cip13'],
-        ),
+        builder: (_, state) =>
+            MedicamentInfoScreen(cip13: state.pathParameters['cip13']),
       ),
 
       // Ordonnances
@@ -258,6 +258,13 @@ GoRouter buildRouter() {
         ),
       ),
 
+      // Rappels
+      GoRoute(
+        path: RoutePath.rappels,
+        name: RouteName.rappels,
+        builder: (_, _) => const RappelsScreen(),
+      ),
+
       // Officines & partages
       GoRoute(
         path: RoutePath.officinesList,
@@ -275,23 +282,20 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/officines/:officineId/partages',
         name: RouteName.partages,
-        builder: (_, state) => PartagesScreen(
-          officineId: state.pathParameters['officineId'],
-        ),
+        builder: (_, state) =>
+            PartagesScreen(officineId: state.pathParameters['officineId']),
       ),
       GoRoute(
         path: '/officines/:officineId/invite',
         name: RouteName.invite,
-        builder: (_, state) => InviteScreen(
-          officineId: state.pathParameters['officineId'],
-        ),
+        builder: (_, state) =>
+            InviteScreen(officineId: state.pathParameters['officineId']),
       ),
       GoRoute(
         path: '/invitations/:token',
         name: RouteName.invitationAccept,
-        builder: (_, state) => InvitationAcceptScreen(
-          token: state.pathParameters['token'],
-        ),
+        builder: (_, state) =>
+            InvitationAcceptScreen(token: state.pathParameters['token']),
       ),
 
       // Settings
@@ -381,8 +385,10 @@ class _MainShellState extends ConsumerState<_MainShell> {
       bottomNavigationBar: PilooTabBar(
         items: _tabs,
         currentIndex: widget.shell.currentIndex,
-        onTap: (i) => widget.shell
-            .goBranch(i, initialLocation: i == widget.shell.currentIndex),
+        onTap: (i) => widget.shell.goBranch(
+          i,
+          initialLocation: i == widget.shell.currentIndex,
+        ),
       ),
       floatingActionButton: PilooScanFab(
         key: ref.read(onboardingTargetsProvider).scanFab,

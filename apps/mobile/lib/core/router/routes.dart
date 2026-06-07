@@ -43,6 +43,9 @@ class RouteName {
   static const ordonnanceDetail = 'ordonnance-detail';
   static const ordonnanceOcr = 'ordonnance-ocr';
 
+  // Rappels
+  static const rappels = 'rappels';
+
   // Officines & partages
   static const officinesList = 'officines-list';
   static const officineSettings = 'officine-settings';
@@ -105,14 +108,16 @@ class RoutePath {
   static String ordonnanceDetail(String ordonnanceId) =>
       '/ordonnances/$ordonnanceId';
 
+  // Rappels
+  static const rappels = '/rappels';
+
   // Officines & partages
   static const officinesList = '/officines';
   static String officineSettings(String officineId) =>
       '/officines/$officineId/settings';
   static String partages(String officineId) =>
       '/officines/$officineId/partages';
-  static String invite(String officineId) =>
-      '/officines/$officineId/invite';
+  static String invite(String officineId) => '/officines/$officineId/invite';
   static String invitationAccept(String token) => '/invitations/$token';
 
   // Settings
