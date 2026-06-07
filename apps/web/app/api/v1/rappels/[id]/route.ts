@@ -76,8 +76,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   const ctx = await resolveRappel(request, context, ['owner', 'editor']);
   if (ctx instanceof Response) return ctx;
 
-  const db = getDb();
-  const updated = await updateRappel(db, ctx.rappelId, {
+  const patch = {
     ...(parsed.data.nom_texte !== undefined && { nomTexte: parsed.data.nom_texte }),
     ...(parsed.data.unite !== undefined && { unite: parsed.data.unite }),
     ...(parsed.data.quantite_matin !== undefined && { quantiteMatin: parsed.data.quantite_matin }),
@@ -90,11 +89,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
     ...(parsed.data.date_fin !== undefined && { dateFin: parsed.data.date_fin }),
     ...(parsed.data.actif !== undefined && { actif: parsed.data.actif }),
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
-  });
-  if (!updated) return apiErrorResponse('not_found', 'Rappel introuvable.');
+  };
 
-  // Réconciliation des prises futures (cf. spec gestion-rappels §5). Champs
-  // touchant la planification : actif, quantités (moments), dates.
+  // Champs touchant la planification → réconciliation des prises (spec §5).
   const scheduleKeys = [
     'actif',
     'quantite_matin',
@@ -105,13 +102,25 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
     'date_fin',
   ] as const;
   const scheduleChanged = scheduleKeys.some((k) => parsed.data[k] !== undefined);
-  if (scheduleChanged) {
-    const now = new Date();
-    await cancelFutureRappelPrises(db, ctx.rappelId, now);
-    if (updated.actif) {
-      await regenerateRappelPrises(db, ctx.rappelId, now);
+
+  // Atomicité : update + cancel + regenerate dans UNE transaction. Sinon un
+  // échec entre cancel et regenerate laisserait un rappel actif sans aucune
+  // prise future — et contrairement aux prescriptions, aucun cron de
+  // génération glissante ne rattrape les rappels (cf. cron-glissant.ts).
+  const db = getDb();
+  const updated = await db.transaction(async (tx) => {
+    const row = await updateRappel(tx, ctx.rappelId, patch);
+    if (!row) return undefined;
+    if (scheduleChanged) {
+      const now = new Date();
+      await cancelFutureRappelPrises(tx, ctx.rappelId, now);
+      if (row.actif) {
+        await regenerateRappelPrises(tx, ctx.rappelId, now);
+      }
     }
-  }
+    return row;
+  });
+  if (!updated) return apiErrorResponse('not_found', 'Rappel introuvable.');
 
   return Response.json(serializeRappel(updated), { status: 200 });
 }
