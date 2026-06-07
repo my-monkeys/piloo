@@ -11,9 +11,10 @@
 // Usage côté apps/web (client component) :
 //   const { data, error } = $api.useQuery('get', '/v1/officines');
 //
-// Le baseUrl est relatif — Next.js sert l'API sur le même origin que
-// le front, donc les cookies Better Auth (HttpOnly) sont transmis
-// automatiquement.
+// L'instance par défaut utilise baseUrl `/api` — même origin que le front
+// (donc les cookies Better Auth HttpOnly sont transmis automatiquement),
+// avec le préfixe `/api` car les routes Next.js vivent sous `/api/v1/...`
+// alors que le contrat OpenAPI déclare les chemins en `/v1/...` (cf. #353).
 import createFetchClient from 'openapi-fetch';
 import createReactQueryClient from 'openapi-react-query';
 
@@ -40,7 +41,12 @@ export function createPilooApiClient(options: CreatePilooApiClientOptions = {}) 
   return { apiClient, $api };
 }
 
+// Préfixe des routes API Next.js. Le contrat OpenAPI déclare les chemins
+// en `/v1/...`, mais Next sert l'API sous `/api/v1/...`. Sans ce préfixe,
+// `$api.useQuery('get', '/v1/officines')` tape `/v1/officines` → 404 (#353).
+export const API_BASE_PATH = '/api';
+
 // Instance par défaut pour les usages standards (même-origin, cookie auth).
-const _defaultClient = createPilooApiClient();
+const _defaultClient = createPilooApiClient({ baseUrl: API_BASE_PATH });
 export const apiClient = _defaultClient.apiClient;
 export const $api = _defaultClient.$api;
