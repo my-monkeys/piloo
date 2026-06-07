@@ -1,7 +1,14 @@
 // apps/web/lib/rappels/reconcile.ts
 // Réconciliation des prises_planifiees lors de la gestion d'un rappel
-// (pause / édition / suppression). Mirror de cancelFuturePrises côté rappels.
-import { prisesPlanifiees, rappels, type Db, type Rappel } from '@piloo/db-schema';
+// (pause / édition / suppression). Mirror de `cancelFuturePrises` dans
+// lib/prises/cron-glissant.ts, côté rappels.
+import {
+  prisesPlanifiees,
+  rappels,
+  type Db,
+  type NewPrisePlanifiee,
+  type Rappel,
+} from '@piloo/db-schema';
 import { and, eq, gte, isNull } from 'drizzle-orm';
 
 import { generatePrisesForRappel } from '@/lib/prises/generate';
@@ -31,8 +38,12 @@ export async function cancelFutureRappelPrises(
   return result.length;
 }
 
-/** Calcule (pur) les prises de la fenêtre initiale — extrait du POST. */
-export function buildInitialRappelPrises(rappel: Rappel, now: Date = new Date()) {
+/** Calcule (pur) les prises de la fenêtre initiale — extrait du POST.
+ *  Retourne `[]` si la fenêtre est vide (ex. `dateFin` déjà passée). */
+export function buildInitialRappelPrises(
+  rappel: Rappel,
+  now: Date = new Date(),
+): NewPrisePlanifiee[] {
   const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   const debutUtc = new Date(`${rappel.dateDebut}T00:00:00.000Z`);
   const windowStart = debutUtc.getTime() > todayUtc.getTime() ? debutUtc : todayUtc;
@@ -51,8 +62,10 @@ export function buildInitialRappelPrises(rappel: Rappel, now: Date = new Date())
 }
 
 /** Régénère les prises de la fenêtre initiale pour un rappel actif.
- *  N'efface PAS l'existant — le caller appelle cancelFutureRappelPrises avant
- *  si nécessaire. Retourne le nombre de prises insérées. */
+ *  N'efface PAS l'existant et ne déduplique PAS : le caller DOIT appeler
+ *  `cancelFutureRappelPrises` avant pour éviter les doublons (pattern
+ *  cancel-then-regenerate). Retourne 0 si le rappel est introuvable,
+ *  soft-deleted, inactif, ou si la fenêtre est vide (`dateFin` passée). */
 export async function regenerateRappelPrises(
   db: Db,
   rappelId: string,
