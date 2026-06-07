@@ -34,7 +34,9 @@ function parseQty(raw: string): number | null {
   const t = raw.trim();
   if (t === '') return null;
   const n = parseFloat(t);
-  if (!Number.isFinite(n) || n < 0) return null;
+  // Contrat serveur : entier 1..99. Un 0 (ou une saisie invalide) = moment
+  // désactivé → null, plutôt qu'un 400 cryptique.
+  if (!Number.isInteger(n) || n < 1) return null;
   return n;
 }
 
@@ -137,8 +139,9 @@ export function RappelFormDialog({ rappel, open, onOpenChange }: Props) {
                 <Input
                   id="matin"
                   type="number"
-                  min={0}
-                  step="any"
+                  min={1}
+                  max={99}
+                  step={1}
                   inputMode="decimal"
                   value={matin}
                   onChange={(e) => {
@@ -152,8 +155,9 @@ export function RappelFormDialog({ rappel, open, onOpenChange }: Props) {
                 <Input
                   id="midi"
                   type="number"
-                  min={0}
-                  step="any"
+                  min={1}
+                  max={99}
+                  step={1}
                   inputMode="decimal"
                   value={midi}
                   onChange={(e) => {
@@ -167,8 +171,9 @@ export function RappelFormDialog({ rappel, open, onOpenChange }: Props) {
                 <Input
                   id="soir"
                   type="number"
-                  min={0}
-                  step="any"
+                  min={1}
+                  max={99}
+                  step={1}
                   inputMode="decimal"
                   value={soir}
                   onChange={(e) => {
@@ -182,8 +187,9 @@ export function RappelFormDialog({ rappel, open, onOpenChange }: Props) {
                 <Input
                   id="coucher"
                   type="number"
-                  min={0}
-                  step="any"
+                  min={1}
+                  max={99}
+                  step={1}
                   inputMode="decimal"
                   value={coucher}
                   onChange={(e) => {

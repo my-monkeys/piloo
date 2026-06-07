@@ -129,9 +129,16 @@ export async function DELETE(request: Request, context: RouteContext): Promise<R
   const ctx = await resolveRappel(request, context, ['owner', 'editor']);
   if (ctx instanceof Response) return ctx;
 
+  // Atomicité : soft-delete + retrait des prises futures dans une seule
+  // transaction (cohérent avec PATCH ; évite des prises orphelines si un
+  // crash survient entre les deux).
   const db = getDb();
-  const ok = await softDeleteRappel(db, ctx.rappelId);
+  const ok = await db.transaction(async (tx) => {
+    const deleted = await softDeleteRappel(tx, ctx.rappelId);
+    if (!deleted) return false;
+    await cancelFutureRappelPrises(tx, ctx.rappelId);
+    return true;
+  });
   if (!ok) return apiErrorResponse('not_found', 'Rappel introuvable.');
-  await cancelFutureRappelPrises(db, ctx.rappelId);
   return new Response(null, { status: 204 });
 }
