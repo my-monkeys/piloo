@@ -1,0 +1,40 @@
+# Contexte de build Docker pour l'app web (#357). On part de la racine du
+# monorepo mais on n'a besoin que de apps/web + packages/*.
+
+# Dépendances et caches : réinstallés proprement dans l'image
+**/node_modules
+.pnpm-store
+**/.turbo
+
+# Sorties de build : régénérées par next build
+**/.next
+**/dist
+**/build
+**/coverage
+**/*.tsbuildinfo
+
+# Mobile Flutter : hors du workspace pnpm, ~139 Mo inutiles ici
+apps/mobile
+
+# Git, docs, CI, éditeur
+.git
+.github
+.vscode
+.idea
+docs
+
+# Tests E2E / rapports
+**/playwright-report
+**/test-results
+e2e
+
+# Secrets : jamais dans l'image (injectés au runtime via env)
+**/.env
+**/.env.*
+!**/.env.example
+
+# Divers
+**/*.log
+**/.DS_Store
+Dockerfile
+.dockerignore

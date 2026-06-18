@@ -1,0 +1,81 @@
+name: piloo
+
+# Déploiement self-hosté de Piloo sur cookie-server (#357).
+# - `web`     : app Next.js 15 (standalone), exposée à Caddy par son nom de
+#               conteneur sur le réseau `caddy-net` ; aucun port publié.
+# - `db`      : Postgres 17 local, joignable uniquement par `web` (réseau
+#               `internal`), jamais exposé publiquement.
+# - `migrate` : one-shot pour appliquer les migrations Drizzle (profile tools).
+#
+# Lancer :   cd /home/maxim/piloo && docker compose -f deploy/docker-compose.yml up -d --build
+# Variables (interpolation + container) lues dans deploy/.env (cf. .env.example).
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: piloo-web:latest
+    container_name: piloo-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+      - caddy-net
+    expose:
+      - "3000"
+
+  db:
+    image: postgres:17
+    container_name: piloo-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-piloo}
+      # Requis : défini dans deploy/.env (le conteneur postgres échoue si vide).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-piloo}
+    volumes:
+      - piloo-db-data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-piloo} -d ${POSTGRES_DB:-piloo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # One-shot. Réutilise l'étage `build` (pnpm + drizzle-kit + source présents).
+  #   docker compose -f deploy/docker-compose.yml run --rm migrate
+  migrate:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      target: build
+    image: piloo-build:latest
+    profiles: ["tools"]
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - internal
+    command: ["pnpm", "--filter", "@piloo/db-schema", "migrate"]
+
+volumes:
+  piloo-db-data:
+
+networks:
+  internal:
+  # Réseau partagé de Caddy (créé par la stack caddy). Vérifier le nom exact
+  # avec `docker network ls` et ajuster si besoin.
+  caddy-net:
+    external: true
