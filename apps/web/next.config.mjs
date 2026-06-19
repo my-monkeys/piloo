@@ -1,5 +1,16 @@
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '../../');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Build autonome pour le déploiement conteneurisé (cookie-server, #357).
+  // `outputFileTracingRoot` pointe sur la racine du monorepo, sinon le tracing
+  // ne suit pas les deps workspace (@piloo/*) et le bundle standalone est
+  // incomplet au runtime.
+  output: 'standalone',
+  outputFileTracingRoot: repoRoot,
   reactStrictMode: true,
   transpilePackages: ['@piloo/api-contract', '@piloo/api-client'],
   typedRoutes: true,

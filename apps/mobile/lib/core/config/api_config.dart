@@ -1,7 +1,8 @@
 // Configuration de l'URL de base de l'API Piloo (#60).
 //
-// Par défaut on pointe sur la prod (https://piloo.vercel.app). Override
-// en dev via dart-define :
+// Par défaut on pointe sur la prod self-hostée (https://piloo.my-monkey.fr,
+// cookie-server — migration Neon→self-host #357). Override en dev via
+// dart-define :
 //   flutter run --dart-define=PILOO_API_BASE_URL=http://localhost:3000
 //
 // Variantes utiles en dev :
@@ -12,9 +13,9 @@ abstract class ApiConfig {
   static const String _envBaseUrl = String.fromEnvironment('PILOO_API_BASE_URL');
 
   /// URL prod par défaut. Sans dart-define, builds release et debug
-  /// s'attaquent à l'instance Vercel hébergée — c'est ce qu'on veut pour
+  /// s'attaquent à l'instance self-hostée — c'est ce qu'on veut pour
   /// "je télécharge le build sur mon tel, ça marche".
-  static const String _defaultBaseUrl = 'https://piloo.vercel.app';
+  static const String _defaultBaseUrl = 'https://piloo.my-monkey.fr';
 
   static String get baseUrl {
     if (_envBaseUrl.isNotEmpty) return _envBaseUrl;

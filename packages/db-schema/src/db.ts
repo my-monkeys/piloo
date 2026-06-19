@@ -21,7 +21,10 @@ export interface DbHandle {
 }
 
 export function createDb(url: string): DbHandle {
-  const client = postgres(url, { max: 5, prepare: false });
+  // idle_timeout ferme les connexions inactives au bout de 20 s : indispensable
+  // sur un compute Neon-like (l'autosuspend exige 0 connexion ouverte, sinon le
+  // compute tourne 24/7 — cf. #357) et sain partout ailleurs.
+  const client = postgres(url, { max: 5, idle_timeout: 20, prepare: false });
   // drizzle() overwrites timestamp parsers (OIDs 1114, 1184) with identity
   // functions so it can handle deserialization itself in its session layer.
   // We restore them after construction so raw client queries (used in tests
