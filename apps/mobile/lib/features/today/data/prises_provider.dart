@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
 import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
@@ -39,6 +40,13 @@ final prisesDayProvider =
     if (isDemoMode(ref)) {
       final today = isoDate(DateTime.now());
       yield key.date == today ? demoPrisesToday() : const [];
+      return;
+    }
+
+    // #359 — re-fetch au login.
+    final session = await ref.watch(sessionProvider.future);
+    if (session == null) {
+      yield const <api.PriseTimelineItem>[];
       return;
     }
 

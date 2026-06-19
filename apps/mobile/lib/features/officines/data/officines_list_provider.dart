@@ -6,9 +6,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 final officinesListProvider = FutureProvider<List<Officine>>((ref) async {
+  // #359 — re-fetch au login (sinon la liste reste vide jusqu'au redémarrage).
+  final session = await ref.watch(sessionProvider.future);
+  if (session == null) return const <Officine>[];
   final api = ref.read(pilooApiClientProvider).getOfficinesApi();
   final res = await api.v1OfficinesGet();
   if (res.statusCode != 200 || res.data == null) {

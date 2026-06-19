@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 const _prefsKey = 'piloo.active_officine';
@@ -29,6 +30,12 @@ final activeOfficineProvider =
 class ActiveOfficineNotifier extends AsyncNotifier<Officine?> {
   @override
   Future<Officine?> build() async {
+    // #359 — dépend de la session : se re-résout au login. Sans ça, ce
+    // provider se résout une fois (parfois avant que le bearer token soit
+    // prêt), met en cache un résultat vide, et l'app reste vide jusqu'au
+    // redémarrage.
+    final session = await ref.watch(sessionProvider.future);
+    if (session == null) return null;
     return _resolve();
   }
 
