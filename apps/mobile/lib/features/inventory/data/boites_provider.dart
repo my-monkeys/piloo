@@ -11,6 +11,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 
+import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
 import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
@@ -34,6 +35,11 @@ final boitesProvider =
   if (isDemoMode(ref)) {
     return demoBoites();
   }
+  // #359 — re-fetch quand la session change (login), même si l'officine
+  // active garde le même id (sinon on reste sur le résultat vide mis en
+  // cache avant que le bearer token soit prêt).
+  final session = await ref.watch(sessionProvider.future);
+  if (session == null) return const <Boite>[];
   final api = ref.read(pilooApiClientProvider).getBoitesApi();
   final res = await api.v1OfficinesOfficineIdBoitesGet(officineId: officineId);
   if (res.statusCode != 200 || res.data == null) {
