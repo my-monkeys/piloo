@@ -10,6 +10,7 @@ import {
   buildHorairesForDay,
   DEFAULT_HORAIRES_BY_MOMENT,
   generatePrisesForPrescription,
+  generatePrisesForRappel,
 } from '@/lib/prises/generate';
 
 const OFFICINE_ID = '11111111-1111-1111-1111-111111111111';
@@ -88,7 +89,11 @@ describe('generatePrisesForPrescription', () => {
       { unitesParPrise: 1, unite: 'cp', frequence: 'quotidien', moments: ['matin'] },
       3,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises).toHaveLength(3);
     expect(prises[0]?.datetimePrevue).toEqual(new Date('2026-06-01T08:00:00.000Z'));
     expect(prises[1]?.datetimePrevue).toEqual(new Date('2026-06-02T08:00:00.000Z'));
@@ -108,7 +113,11 @@ describe('generatePrisesForPrescription', () => {
       },
       2,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises.map((p) => p.datetimePrevue.toISOString())).toEqual([
       '2026-06-01T08:00:00.000Z',
       '2026-06-01T12:00:00.000Z',
@@ -127,7 +136,11 @@ describe('generatePrisesForPrescription', () => {
       },
       1,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises.map((p) => p.datetimePrevue.toISOString())).toEqual([
       '2026-06-01T08:30:00.000Z',
       '2026-06-01T14:00:00.000Z',
@@ -145,7 +158,11 @@ describe('generatePrisesForPrescription', () => {
       },
       21,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises).toHaveLength(3);
     expect(prises.map((p) => p.datetimePrevue.toISOString())).toEqual([
       '2026-06-01T08:00:00.000Z',
@@ -159,7 +176,11 @@ describe('generatePrisesForPrescription', () => {
       { unitesParPrise: 1, unite: 'cp', frequence: 'a_la_demande' },
       30,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises).toEqual([]);
   });
 
@@ -168,7 +189,11 @@ describe('generatePrisesForPrescription', () => {
       { unitesParPrise: 1, unite: 'cp', frequence: 'quotidien', moments: ['matin'] },
       null,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises).toEqual([]);
   });
 
@@ -177,7 +202,11 @@ describe('generatePrisesForPrescription', () => {
       { unitesParPrise: 1, unite: 'cp', frequence: 'quotidien', moments: ['matin'] },
       0,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     expect(prises).toEqual([]);
   });
 
@@ -189,6 +218,7 @@ describe('generatePrisesForPrescription', () => {
     const prises = generatePrisesForPrescription(presc, {
       officineId: OFFICINE_ID,
       dateDebut,
+      timeZone: 'UTC',
       horairesUtilisateur: { matin: '07:00' },
     });
     expect(prises.map((p) => p.datetimePrevue.toISOString())).toEqual([
@@ -202,7 +232,11 @@ describe('generatePrisesForPrescription', () => {
       { unitesParPrise: 1, unite: 'cp', frequence: 'hebdomadaire', moments: ['matin'] },
       10,
     );
-    const prises = generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut });
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut,
+      timeZone: 'UTC',
+    });
     // j0 et j7 dans la fenêtre [0, 10), j14 hors fenêtre.
     expect(prises).toHaveLength(2);
   });
@@ -218,7 +252,45 @@ describe('generatePrisesForPrescription', () => {
       1,
     );
     expect(() =>
-      generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut }),
+      generatePrisesForPrescription(presc, { officineId: OFFICINE_ID, dateDebut, timeZone: 'UTC' }),
     ).toThrow(/horaire invalide/);
+  });
+
+  it('fuseau officine appliqué : coucher 22:00 en Europe/Paris été → 20:00Z', () => {
+    const presc = makePrescription(
+      { unitesParPrise: 1, unite: 'cp', frequence: 'quotidien', moments: ['coucher'] },
+      1,
+    );
+    const prises = generatePrisesForPrescription(presc, {
+      officineId: OFFICINE_ID,
+      dateDebut: new Date('2026-07-03T00:00:00.000Z'),
+      timeZone: 'Europe/Paris',
+    });
+    expect(prises).toHaveLength(1);
+    expect(prises[0]?.datetimePrevue.toISOString()).toBe('2026-07-03T20:00:00.000Z');
+  });
+});
+
+describe('generatePrisesForRappel', () => {
+  const RAPPEL_ID = '33333333-3333-3333-3333-333333333333';
+
+  it('rappel coucher en Europe/Paris (été) → instant 20:00Z', () => {
+    const prises = generatePrisesForRappel(
+      {
+        id: RAPPEL_ID,
+        quantiteMatin: null,
+        quantiteMidi: null,
+        quantiteSoir: null,
+        quantiteCoucher: 1,
+      },
+      {
+        officineId: OFFICINE_ID,
+        windowStart: new Date('2026-07-03T00:00:00.000Z'),
+        windowDays: 1,
+        timeZone: 'Europe/Paris',
+      },
+    );
+    expect(prises).toHaveLength(1);
+    expect(prises[0]?.datetimePrevue.toISOString()).toBe('2026-07-03T20:00:00.000Z');
   });
 });

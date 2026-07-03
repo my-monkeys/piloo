@@ -22,6 +22,8 @@
 // du patient — l'appelant fournit déjà une Date qui représente minuit local.
 import type { NewPrisePlanifiee, Posologie, Prescription, Rappel } from '@piloo/db-schema';
 
+import { zonedWallClockToUtc } from './timezone';
+
 export type Moment = 'matin' | 'midi' | 'soir' | 'coucher';
 
 /** Heures par défaut si la prescription ne précise rien. */
@@ -37,6 +39,8 @@ export interface GenerateOptions {
   officineId: string;
   /** Minuit local du premier jour de prise. */
   dateDebut: Date;
+  /** Fuseau IANA de l'officine (#363) — interprète les heures murales. */
+  timeZone: string;
   /**
    * Override des horaires user (par moment). Les moments absents
    * retombent sur `DEFAULT_HORAIRES_BY_MOMENT`. Permet de brancher les
@@ -92,16 +96,28 @@ function buildDayOffsets(posologie: Posologie, dureeJours: number): number[] {
 }
 
 /**
- * Compose une Date UTC à partir d'une date "minuit local du patient"
- * et d'un horaire `HH:MM`. On reconstruit avec `setUTCHours` pour rester
- * stable : le caller a déjà choisi la TZ en composant `dateDebut`.
+ * Compose l'instant UTC d'une heure murale `HH:MM` dans `timeZone`, pour le
+ * jour `dateDebut + dayOffset` (le jour est lu en UTC — `dateDebut` = minuit
+ * de la fenêtre). Le mural est interprété dans le fuseau de l'officine (#363),
+ * ce qui donne un vrai instant UTC (DST-aware via `zonedWallClockToUtc`).
  */
-function composeDatetime(dateDebut: Date, dayOffset: number, horaire: string): Date {
-  const d = new Date(dateDebut);
-  d.setUTCDate(d.getUTCDate() + dayOffset);
+function composeDatetime(
+  dateDebut: Date,
+  dayOffset: number,
+  horaire: string,
+  timeZone: string,
+): Date {
+  const day = new Date(dateDebut);
+  day.setUTCDate(day.getUTCDate() + dayOffset);
   const { hours, minutes } = parseHoraire(horaire);
-  d.setUTCHours(hours, minutes, 0, 0);
-  return d;
+  return zonedWallClockToUtc(
+    day.getUTCFullYear(),
+    day.getUTCMonth() + 1,
+    day.getUTCDate(),
+    hours,
+    minutes,
+    timeZone,
+  );
 }
 
 /**
@@ -128,7 +144,7 @@ export function generatePrisesForPrescription(
       result.push({
         prescriptionId: prescription.id,
         officineId: options.officineId,
-        datetimePrevue: composeDatetime(options.dateDebut, offset, horaire),
+        datetimePrevue: composeDatetime(options.dateDebut, offset, horaire, options.timeZone),
         statut: 'prevue',
       });
     }
@@ -142,6 +158,8 @@ export interface WindowGenerateOptions {
   windowStart: Date;
   /** Nombre de jours dans la fenêtre. */
   windowDays: number;
+  /** Fuseau IANA de l'officine (#363). */
+  timeZone: string;
   horairesUtilisateur?: Partial<Record<Moment, string>>;
 }
 
@@ -170,7 +188,7 @@ export function generatePrisesForWindow(
       result.push({
         prescriptionId: prescription.id,
         officineId: options.officineId,
-        datetimePrevue: composeDatetime(options.windowStart, offset, horaire),
+        datetimePrevue: composeDatetime(options.windowStart, offset, horaire, options.timeZone),
         statut: 'prevue',
       });
     }
@@ -187,6 +205,8 @@ export interface RappelGenerateOptions {
   /// Nombre de jours à générer à partir de windowStart. Le caller borne
   /// au min entre la fenêtre voulue et la durée restante du rappel.
   windowDays: number;
+  /// Fuseau IANA de l'officine (#363).
+  timeZone: string;
   horairesUtilisateur?: Partial<Record<Moment, string>>;
 }
 
@@ -245,7 +265,7 @@ export function generatePrisesForRappel(
       result.push({
         rappelId: rappel.id,
         officineId: options.officineId,
-        datetimePrevue: composeDatetime(options.windowStart, dayOffset, horaire),
+        datetimePrevue: composeDatetime(options.windowStart, dayOffset, horaire, options.timeZone),
         statut: 'prevue',
       });
     }
