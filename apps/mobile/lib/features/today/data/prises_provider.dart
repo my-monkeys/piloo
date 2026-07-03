@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
 
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/onboarding/data/demo_fixtures.dart';
 import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
@@ -93,8 +94,11 @@ Future<List<api.PriseTimelineItem>> _fetchFromApi(
   }
   final items = res.data!.items.toList();
   if (key.date == isoDate(DateTime.now())) {
+    // Fuseau de l'officine pour le libellé d'heure des notifs (#363).
+    final timeZone =
+        ref.read(activeOfficineProvider).valueOrNull?.timezone ?? 'Europe/Paris';
     // ignore: unawaited_futures
-    ref.read(notificationsServiceProvider).scheduleForPrises(items);
+    ref.read(notificationsServiceProvider).scheduleForPrises(items, timeZone);
   }
   return items;
 }

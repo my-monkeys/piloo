@@ -125,21 +125,31 @@ class NotificationsService {
   /// d'abord toutes les notifs Piloo en cours pour éviter les doublons
   /// (les IDs sont dérivés du Prise.id donc même prise = même ID, mais
   /// si une prise disparaît du backend on doit nettoyer aussi).
-  Future<void> scheduleForPrises(List<api.PriseTimelineItem> prises) async {
+  Future<void> scheduleForPrises(
+    List<api.PriseTimelineItem> prises,
+    String timeZone,
+  ) async {
     await _plugin.cancelAll();
     final now = DateTime.now();
     for (final p in prises) {
       if (p.statut != api.PriseTimelineItemStatutEnum.prevue) continue;
       final scheduled = p.datetimePrevue.toLocal();
       if (scheduled.isBefore(now)) continue;
-      await _scheduleOne(p, scheduled);
+      await _scheduleOne(p, scheduled, timeZone);
     }
   }
 
-  Future<void> _scheduleOne(api.PriseTimelineItem p, DateTime scheduled) async {
+  Future<void> _scheduleOne(
+    api.PriseTimelineItem p,
+    DateTime scheduled,
+    String timeZone,
+  ) async {
+    // Planification à l'instant absolu (le token est un vrai instant UTC).
     final tzScheduled = tz.TZDateTime.from(scheduled, tz.local);
-    final hh = scheduled.hour.toString().padLeft(2, '0');
-    final mm = scheduled.minute.toString().padLeft(2, '0');
+    // Libellé affiché dans le fuseau de l'officine, pas du téléphone (#363).
+    final wall = tz.TZDateTime.from(p.datetimePrevue, tz.getLocation(timeZone));
+    final hh = wall.hour.toString().padLeft(2, '0');
+    final mm = wall.minute.toString().padLeft(2, '0');
     final title = p.prescription.nomTexte;
     final body = "Prise prévue à $hh:$mm — pense à valider dans l'app.";
     // Payload JSON pour transporter priseId + datetime original (utile
