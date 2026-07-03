@@ -14,6 +14,7 @@
 // - Si l'utilisateur a déjà cliqué `prise`/`sautee` sur une occurrence,
 //   le statut est préservé : on ne réécrit jamais une prise existante.
 import {
+  officines,
   ordonnances,
   prescriptions,
   prisesPlanifiees,
@@ -57,19 +58,21 @@ export async function runGenerationGlissanteCron(
       id: prescriptions.id,
       posologie: prescriptions.posologie,
       officineId: ordonnances.officineId,
+      timeZone: officines.timezone,
     })
     .from(prescriptions)
     .innerJoin(
       ordonnances,
       and(eq(ordonnances.id, prescriptions.ordonnanceId), isNull(ordonnances.deletedAt)),
     )
+    .innerJoin(officines, eq(officines.id, ordonnances.officineId))
     .where(and(isNull(prescriptions.deletedAt), isNull(prescriptions.dureeJours)));
 
   let prisesCreated = 0;
   for (const row of rows) {
     const generated = generatePrisesForWindow(
       { id: row.id, posologie: row.posologie },
-      { officineId: row.officineId, windowStart, windowDays: WINDOW_DAYS },
+      { officineId: row.officineId, windowStart, windowDays: WINDOW_DAYS, timeZone: row.timeZone },
     );
     if (generated.length === 0) continue;
 

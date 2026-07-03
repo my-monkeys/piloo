@@ -3,6 +3,7 @@
 // (pause / édition / suppression). Mirror de `cancelFuturePrises` dans
 // lib/prises/cron-glissant.ts, côté rappels.
 import {
+  officines,
   prisesPlanifiees,
   rappels,
   type Db,
@@ -12,6 +13,19 @@ import {
 import { and, eq, gte, isNull } from 'drizzle-orm';
 
 import { generatePrisesForRappel } from '@/lib/prises/generate';
+
+/** Fuseau appliqué si l'officine est introuvable (cohérent avec le défaut DB). */
+const DEFAULT_TIMEZONE = 'Europe/Paris';
+
+/** Lit le fuseau IANA d'une officine (défaut Europe/Paris si absente). */
+export async function getOfficineTimezone(db: Db, officineId: string): Promise<string> {
+  const [officine] = await db
+    .select({ timezone: officines.timezone })
+    .from(officines)
+    .where(eq(officines.id, officineId))
+    .limit(1);
+  return officine?.timezone ?? DEFAULT_TIMEZONE;
+}
 
 /** Fenêtre initiale de génération inline (jours). Identique au POST. */
 export const INITIAL_WINDOW_DAYS = 30;
@@ -39,9 +53,11 @@ export async function cancelFutureRappelPrises(
 }
 
 /** Calcule (pur) les prises de la fenêtre initiale — extrait du POST.
+ *  `timeZone` = fuseau IANA de l'officine (interprète les heures murales).
  *  Retourne `[]` si la fenêtre est vide (ex. `dateFin` déjà passée). */
 export function buildInitialRappelPrises(
   rappel: Rappel,
+  timeZone: string,
   now: Date = new Date(),
 ): NewPrisePlanifiee[] {
   const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
@@ -58,6 +74,7 @@ export function buildInitialRappelPrises(
     officineId: rappel.officineId,
     windowStart,
     windowDays,
+    timeZone,
   });
 }
 
@@ -73,7 +90,8 @@ export async function regenerateRappelPrises(
 ): Promise<number> {
   const [rappel] = await db.select().from(rappels).where(eq(rappels.id, rappelId)).limit(1);
   if (!rappel || rappel.deletedAt || !rappel.actif) return 0;
-  const prises = buildInitialRappelPrises(rappel, now);
+  const timeZone = await getOfficineTimezone(db, rappel.officineId);
+  const prises = buildInitialRappelPrises(rappel, timeZone, now);
   if (prises.length === 0) return 0;
   await db.insert(prisesPlanifiees).values(prises);
   return prises.length;
