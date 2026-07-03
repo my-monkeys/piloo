@@ -3321,6 +3321,7 @@ export interface components {
             /** Format: date */
             date_naissance: string | null;
             notes: string | null;
+            timezone: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -3346,12 +3347,14 @@ export interface components {
             /** Format: date */
             date_naissance?: string | null;
             notes?: string | null;
+            timezone?: string;
         };
         UpdateOfficineInput: {
             nom?: string;
             /** Format: date */
             date_naissance?: string | null;
             notes?: string | null;
+            timezone?: string;
         };
         ListBoitesResponse: {
             items: components["schemas"]["Boite"][];
