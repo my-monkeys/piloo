@@ -16,16 +16,17 @@ export function utcToZonedParts(
     minute: '2-digit',
     hour12: false,
   });
-  const parts = Object.fromEntries(fmt.formatToParts(instant).map((p) => [p.type, p.value]));
-  let hour = Number(parts.hour);
+  const parts: Record<string, string> = {};
+  for (const p of fmt.formatToParts(instant)) parts[p.type] = p.value;
+  let hour = Number(parts['hour']);
   // Intl peut rendre "24" à minuit selon la locale/env — normaliser.
   if (hour === 24) hour = 0;
   return {
-    year: Number(parts.year),
-    month: Number(parts.month),
-    day: Number(parts.day),
+    year: Number(parts['year']),
+    month: Number(parts['month']),
+    day: Number(parts['day']),
     hour,
-    minute: Number(parts.minute),
+    minute: Number(parts['minute']),
   };
 }
 
