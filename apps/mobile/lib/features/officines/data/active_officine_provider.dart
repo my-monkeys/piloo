@@ -14,6 +14,7 @@
 // L'écran "Mes officines" peut switcher via `select(id)` ; ça met à jour
 // l'état + persiste dans les prefs.
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -63,9 +64,18 @@ class ActiveOfficineNotifier extends AsyncNotifier<Officine?> {
 
     // Aucune officine : crée "Maison" perso pour démarrer. On instancie
     // le builder directement (cf. boites_provider.dart pour la raison).
+    // Fuseau déduit du device (#363) : le carnet naît dans le fuseau de
+    // l'utilisateur. Échec → on omet, le serveur applique Europe/Paris.
+    String? deviceTz;
+    try {
+      deviceTz = await FlutterTimezone.getLocalTimezone();
+    } catch (_) {
+      deviceTz = null;
+    }
     final builder = CreateOfficineInputBuilder()
       ..nom = 'Maison'
       ..type = CreateOfficineInputTypeEnum.perso;
+    if (deviceTz != null && deviceTz.isNotEmpty) builder.timezone = deviceTz;
     final created = await api.v1OfficinesPost(
       createOfficineInput: builder.build(),
     );
