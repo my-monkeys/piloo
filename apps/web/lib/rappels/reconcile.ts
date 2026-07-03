@@ -3,7 +3,6 @@
 // (pause / édition / suppression). Mirror de `cancelFuturePrises` dans
 // lib/prises/cron-glissant.ts, côté rappels.
 import {
-  officines,
   prisesPlanifiees,
   rappels,
   type Db,
@@ -13,19 +12,7 @@ import {
 import { and, eq, gte, isNull } from 'drizzle-orm';
 
 import { generatePrisesForRappel } from '@/lib/prises/generate';
-
-/** Fuseau appliqué si l'officine est introuvable (cohérent avec le défaut DB). */
-const DEFAULT_TIMEZONE = 'Europe/Paris';
-
-/** Lit le fuseau IANA d'une officine (défaut Europe/Paris si absente). */
-export async function getOfficineTimezone(db: Db, officineId: string): Promise<string> {
-  const [officine] = await db
-    .select({ timezone: officines.timezone })
-    .from(officines)
-    .where(eq(officines.id, officineId))
-    .limit(1);
-  return officine?.timezone ?? DEFAULT_TIMEZONE;
-}
+import { getOfficineTimezone } from '@/lib/officines/repo';
 
 /** Fenêtre initiale de génération inline (jours). Identique au POST. */
 export const INITIAL_WINDOW_DAYS = 30;

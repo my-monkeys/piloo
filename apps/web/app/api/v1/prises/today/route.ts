@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
+import { getOfficineTimezone } from '@/lib/officines/repo';
 import { listPrisesForDay } from '@/lib/prises/repo';
 import { dayBoundsUtc, serializePriseTimelineItem, todayIso } from '@/lib/prises/serialize';
 import { zodErrorResponse } from '@/lib/server/errors';
@@ -43,11 +44,14 @@ export async function GET(request: Request): Promise<Response> {
     dayStart,
     dayEnd,
   });
+  const timeZone = await getOfficineTimezone(db, parsed.data.officine_id);
 
   return Response.json(
     {
       date,
-      items: rows.map((r) => serializePriseTimelineItem(r.prise, r.prescription, r.rappel)),
+      items: rows.map((r) =>
+        serializePriseTimelineItem(r.prise, r.prescription, r.rappel, timeZone),
+      ),
     },
     { status: 200 },
   );

@@ -8,7 +8,8 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
-import { buildInitialRappelPrises, getOfficineTimezone } from '@/lib/rappels/reconcile';
+import { getOfficineTimezone } from '@/lib/officines/repo';
+import { buildInitialRappelPrises } from '@/lib/rappels/reconcile';
 import { createRappel, listRappelsByOfficine } from '@/lib/rappels/repo';
 import { serializeRappel } from '@/lib/rappels/serialize';
 import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';

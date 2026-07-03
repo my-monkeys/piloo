@@ -24,6 +24,19 @@ export async function listAccessibleOfficines(db: Db, userId: string): Promise<O
   return rows.map((r) => ({ ...r.officine, role: r.role }));
 }
 
+/** Fuseau appliqué si l'officine est introuvable (cohérent avec le défaut DB). */
+export const DEFAULT_TIMEZONE = 'Europe/Paris';
+
+/** Lit le fuseau IANA d'une officine (défaut Europe/Paris si absente). #363 */
+export async function getOfficineTimezone(db: Db, officineId: string): Promise<string> {
+  const [row] = await db
+    .select({ timezone: officines.timezone })
+    .from(officines)
+    .where(eq(officines.id, officineId))
+    .limit(1);
+  return row?.timezone ?? DEFAULT_TIMEZONE;
+}
+
 export async function findOfficineById(db: Db, officineId: string): Promise<Officine | undefined> {
   const [row] = await db
     .select()
