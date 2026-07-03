@@ -58,16 +58,10 @@ import 'dev_home_screen.dart';
 import 'placeholder_screen.dart';
 import 'routes.dart';
 
-/// Provider du router courant — override dans `app.dart` après
-/// l'instanciation `buildRouter()`. Permet à n'importe quel widget
-/// (y compris hors du Navigator, type overlays au niveau Material
-/// App.builder) de pousser une route via `ref.read(routerProvider)
-/// .goNamed(...)`.
-final routerProvider = Provider<GoRouter>((ref) {
-  throw UnimplementedError(
-    'routerProvider must be overridden in app.dart after buildRouter().',
-  );
-});
+// `routerProvider` vit dans router_provider.dart (fichier léger) pour que
+// les couches non-UI puissent l'utiliser sans tirer tout le graphe des
+// écrans. Ré-exporté ici pour que les imports existants restent valides.
+export 'router_provider.dart';
 
 GoRouter buildRouter() {
   // Override dev-only : permet de booter directement sur n'importe quelle
