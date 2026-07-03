@@ -54,6 +54,8 @@ export async function createOfficineWithOwner(
     dateNaissance: string | null;
     notes: string | null;
     proprietaireUserId: string;
+    /** Fuseau IANA (#363). Omis → défaut DB Europe/Paris. */
+    timezone?: string;
   },
 ): Promise<Officine> {
   return db.transaction(async (tx) => {
@@ -65,6 +67,8 @@ export async function createOfficineWithOwner(
         dateNaissance: input.dateNaissance,
         notes: input.notes,
         proprietaireUserId: input.proprietaireUserId,
+        // undefined → drizzle omet la colonne → DEFAULT 'Europe/Paris'.
+        ...(input.timezone !== undefined && { timezone: input.timezone }),
       })
       .returning();
     if (!officine) {
@@ -84,7 +88,7 @@ export async function createOfficineWithOwner(
 export async function updateOfficine(
   db: Db,
   officineId: string,
-  patch: { nom?: string; dateNaissance?: string | null; notes?: string | null },
+  patch: { nom?: string; dateNaissance?: string | null; notes?: string | null; timezone?: string },
 ): Promise<Officine | undefined> {
   if (Object.keys(patch).length === 0) {
     return findOfficineById(db, officineId);
