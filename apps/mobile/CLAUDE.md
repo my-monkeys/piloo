@@ -4,6 +4,21 @@ Ce dossier contient l'application mobile **Flutter** (iOS + Android).
 
 > Lire `/CLAUDE.md` (racine) et `/docs/architecture.md` avant toute tâche complexe ici.
 
+## ⚠️ Version Flutter — pin 3.38.7 (fvm) (#366)
+
+Le projet est **épinglé sur Flutter 3.38.7** via `.fvmrc`. Raison : `phosphor_flutter`
+2.1.0 fait `class PhosphorIconData extends IconData`, or `IconData` est devenue une
+classe `final` dans les Flutter plus récents → l'app **ne compile pas** (kernel) sur
+un Flutter trop neuf (ex. 3.44+), même si `flutter analyze` passe. 2.1.0 est la
+dernière version publiée de phosphor → pas de bump possible.
+
+**Toujours** lancer via fvm : `fvm flutter run`, `fvm flutter pub get`, `fvm dart run
+build_runner build`. Les CI (`codemagic.yaml`, `.github/workflows/*mobile*`,
+`*android*`) épinglent déjà 3.38.7. Setup : `fvm install` (lit `.fvmrc`).
+
+Fix définitif à terme : migrer vers un set d'icônes compatible Flutter récent (ou
+attendre une release phosphor corrigée), puis relever le pin.
+
 ## Stack spécifique
 
 - **Flutter 3.x** + Dart
@@ -68,11 +83,13 @@ apps/mobile/
 ## Offline-first (critique)
 
 **Toute modification utilisateur doit :**
+
 1. Être appliquée immédiatement à la DB locale (Drift).
 2. Être ajoutée à la table `pending_operations` avec `statut = 'pending'`.
 3. Être propagée par le worker de sync quand réseau disponible.
 
 **Le code ne doit jamais** :
+
 - Bloquer l'UI en attendant une réponse réseau pour une action locale.
 - Assumer que le réseau est disponible.
 - Utiliser le résultat d'un appel API pour afficher un succès (l'optimistic update se base sur la DB locale).
