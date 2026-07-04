@@ -42,9 +42,13 @@ beforeEach(async () => {
     RESTART IDENTITY CASCADE
   `;
   userOwner = await createUser('owner@piloo.fr');
+  // Fuseau UTC explicite (#372) : depuis le support fuseau par officine
+  // (#363), « matin » = 08:00 HEURE DE L'OFFICINE. En UTC, cela reste
+  // 08:00 UTC — ce qui garde les fixtures ci-dessous (heures en dur en
+  // UTC) alignées sur les créneaux générés, indépendamment du DST.
   const [off] = await env.handle.db
     .insert(officines)
-    .values({ nom: 'M', type: 'perso', proprietaireUserId: userOwner })
+    .values({ nom: 'M', type: 'perso', proprietaireUserId: userOwner, timezone: 'UTC' })
     .returning({ id: officines.id });
   if (!off) throw new Error('officine');
   officineId = off.id;
