@@ -189,105 +189,110 @@ class _RappelQuickSheetState extends State<_RappelQuickSheet> {
 
   @override
   Widget build(BuildContext context) {
-    // Padding bottom adaptatif au clavier — la sheet contient des
-    // TextField qui ne doivent pas être masqués quand le keyboard monte.
+    // Le clavier réduit la hauteur dispo ; le contenu scrolle pour que le
+    // bouton "Créer" reste atteignable et le champ Notes visible (#364).
+    // Drag = ferme le clavier (le champ multiligne n'a pas de touche "OK").
     final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.fromLTRB(20, 12, 20, 24 + keyboardInset),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: PilooColors.border,
-                  borderRadius: BorderRadius.circular(2),
+        padding: EdgeInsets.only(bottom: keyboardInset),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: PilooColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            _Header(name: widget.medicamentName, isEditing: _isEditing),
-            const SizedBox(height: 16),
-            _MomentRow(
-              icon: PhosphorIconsRegular.sun,
-              label: 'Matin',
-              qty: _matin,
-              unite: widget.suggestedUnite,
-              onToggle: (v) => _toggle('matin', v),
-              onQtyChange: (n) => _setQty('matin', n),
-            ),
-            const SizedBox(height: 8),
-            _MomentRow(
-              icon: PhosphorIconsRegular.sunHorizon,
-              label: 'Midi',
-              qty: _midi,
-              unite: widget.suggestedUnite,
-              onToggle: (v) => _toggle('midi', v),
-              onQtyChange: (n) => _setQty('midi', n),
-            ),
-            const SizedBox(height: 8),
-            _MomentRow(
-              icon: PhosphorIconsRegular.cloudSun,
-              label: 'Soir',
-              qty: _soir,
-              unite: widget.suggestedUnite,
-              onToggle: (v) => _toggle('soir', v),
-              onQtyChange: (n) => _setQty('soir', n),
-            ),
-            const SizedBox(height: 8),
-            _MomentRow(
-              icon: PhosphorIconsRegular.moon,
-              label: 'Coucher',
-              qty: _coucher,
-              unite: widget.suggestedUnite,
-              onToggle: (v) => _toggle('coucher', v),
-              onQtyChange: (n) => _setQty('coucher', n),
-            ),
-            const SizedBox(height: 16),
-            _DureeSelector(
-              value: _duree,
-              onChange: (d) => setState(() => _duree = d),
-            ),
-            const SizedBox(height: 16),
-            _NotesField(controller: _notesCtrl),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: _SecondaryButton(
-                    onTap: () => Navigator.of(context).pop(),
+              _Header(name: widget.medicamentName, isEditing: _isEditing),
+              const SizedBox(height: 16),
+              _MomentRow(
+                icon: PhosphorIconsRegular.sun,
+                label: 'Matin',
+                qty: _matin,
+                unite: widget.suggestedUnite,
+                onToggle: (v) => _toggle('matin', v),
+                onQtyChange: (n) => _setQty('matin', n),
+              ),
+              const SizedBox(height: 8),
+              _MomentRow(
+                icon: PhosphorIconsRegular.sunHorizon,
+                label: 'Midi',
+                qty: _midi,
+                unite: widget.suggestedUnite,
+                onToggle: (v) => _toggle('midi', v),
+                onQtyChange: (n) => _setQty('midi', n),
+              ),
+              const SizedBox(height: 8),
+              _MomentRow(
+                icon: PhosphorIconsRegular.cloudSun,
+                label: 'Soir',
+                qty: _soir,
+                unite: widget.suggestedUnite,
+                onToggle: (v) => _toggle('soir', v),
+                onQtyChange: (n) => _setQty('soir', n),
+              ),
+              const SizedBox(height: 8),
+              _MomentRow(
+                icon: PhosphorIconsRegular.moon,
+                label: 'Coucher',
+                qty: _coucher,
+                unite: widget.suggestedUnite,
+                onToggle: (v) => _toggle('coucher', v),
+                onQtyChange: (n) => _setQty('coucher', n),
+              ),
+              const SizedBox(height: 16),
+              _DureeSelector(
+                value: _duree,
+                onChange: (d) => setState(() => _duree = d),
+              ),
+              const SizedBox(height: 16),
+              _NotesField(controller: _notesCtrl),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _SecondaryButton(
+                      onTap: () => Navigator.of(context).pop(),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  flex: 2,
-                  child: _PrimaryButton(
-                    label: _isEditing ? 'Enregistrer' : 'Créer le rappel',
-                    onTap: _canSubmit
-                        ? () => Navigator.of(context).pop(
-                            RappelQuickResult(
-                              matin: _matin,
-                              midi: _midi,
-                              soir: _soir,
-                              coucher: _coucher,
-                              unite: widget.suggestedUnite,
-                              duree: _duree,
-                              notes: _notesCtrl.text.trim().isEmpty
-                                  ? null
-                                  : _notesCtrl.text.trim(),
-                            ),
-                          )
-                        : null,
+                  const SizedBox(width: 8),
+                  Expanded(
+                    flex: 2,
+                    child: _PrimaryButton(
+                      label: _isEditing ? 'Enregistrer' : 'Créer le rappel',
+                      onTap: _canSubmit
+                          ? () => Navigator.of(context).pop(
+                              RappelQuickResult(
+                                matin: _matin,
+                                midi: _midi,
+                                soir: _soir,
+                                coucher: _coucher,
+                                unite: widget.suggestedUnite,
+                                duree: _duree,
+                                notes: _notesCtrl.text.trim().isEmpty
+                                    ? null
+                                    : _notesCtrl.text.trim(),
+                              ),
+                            )
+                          : null,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
