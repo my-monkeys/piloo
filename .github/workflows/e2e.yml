@@ -64,7 +64,11 @@ jobs:
         run: pnpm db:migrate
 
       - name: Install Playwright browser (Chromium)
-        run: pnpm --filter web exec playwright install --with-deps chromium
+        # Pas de `--with-deps` : il tenterait un `sudo apt-get` (le user
+        # gh-runner n'a pas de sudo sans mot de passe). Les libs système
+        # Chromium sont déjà présentes sur le runner cookie → on télécharge
+        # seulement le binaire du navigateur.
+        run: pnpm --filter web exec playwright install chromium
 
       - name: Run E2E
         run: pnpm --filter web e2e
