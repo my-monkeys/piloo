@@ -83,11 +83,28 @@ export const BdpmSearchResponseSchema = z
   })
   .openapi('BdpmSearchResponse');
 
+// /resolve : résolution batch CIP13 → médicament, pour afficher les NOMS sur
+// une liste d'inventaire côté web (le type Boite ne stocke que le cip13).
+// `cips` = liste de CIP séparés par des virgules (ex. "3400939038537,3400936073005").
+export const BdpmResolveQuerySchema = z
+  .object({
+    cips: z.string().trim().min(1).max(8000),
+  })
+  .openapi('BdpmResolveQuery');
+
+export const BdpmResolveResponseSchema = z
+  .object({
+    items: z.array(BdpmMedicamentSchema),
+  })
+  .openapi('BdpmResolveResponse');
+
 export type BdpmMedicament = z.infer<typeof BdpmMedicamentSchema>;
 export type BdpmVersionResponse = z.infer<typeof BdpmVersionResponseSchema>;
 export type BdpmDiffResponse = z.infer<typeof BdpmDiffResponseSchema>;
 export type BdpmSearchQuery = z.infer<typeof BdpmSearchQuerySchema>;
 export type BdpmSearchResponse = z.infer<typeof BdpmSearchResponseSchema>;
+export type BdpmResolveQuery = z.infer<typeof BdpmResolveQuerySchema>;
+export type BdpmResolveResponse = z.infer<typeof BdpmResolveResponseSchema>;
 
 /// Sections de la notice RCP scrapées sur la base ANSM publique.
 /// L'app les affiche tels quels (relais d'information publique, sans
@@ -211,5 +228,22 @@ registry.registerPath({
       content: { 'application/json': { schema: BdpmSearchResponseSchema } },
     },
     400: errorResponse('Paramètre `q` invalide'),
+  },
+});
+
+registry.registerPath({
+  method: 'get',
+  path: '/v1/bdpm/resolve',
+  summary: 'Résout un lot de CIP13 en médicaments (nom, forme, dosage…)',
+  description:
+    "Prend `cips` (CIP13 séparés par des virgules) et retourne les médicaments BDPM correspondants. Sert au front web à afficher les NOMS des médicaments sur une liste d'inventaire (le type Boite ne stocke que le cip13). Read-only, dédup + cap serveur. Un CIP inconnu est simplement absent du résultat.",
+  tags: ['bdpm'],
+  request: { query: BdpmResolveQuerySchema },
+  responses: {
+    200: {
+      description: 'Médicaments résolus',
+      content: { 'application/json': { schema: BdpmResolveResponseSchema } },
+    },
+    400: errorResponse('Paramètre `cips` invalide'),
   },
 });
