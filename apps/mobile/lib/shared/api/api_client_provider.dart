@@ -13,7 +13,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:piloo_api_client/piloo_api_client.dart';
 
 import 'package:piloo/core/config/api_config.dart';
+import 'package:piloo/core/router/router_provider.dart';
+import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/onboarding/data/demo_mode_provider.dart';
+import 'package:piloo/shared/api/session_expiry.dart';
 
 final pilooApiClientProvider = Provider<PilooApiClient>((ref) {
   // Le client OpenAPI généré déclare ses chemins en `/v1/...` ; on doit
@@ -36,6 +40,26 @@ final pilooApiClientProvider = Provider<PilooApiClient>((ref) {
   // de coupler les providers et permettre des appels même avant que le
   // provider soit "ready" (au boot).
   dio.interceptors.add(_BearerFromSessionInterceptor(ref));
+
+  // Session expirée/rejetée (#361) : un 401 sur un appel /v1/* signifie
+  // que le bearer token n'est plus valide. On vide la session invalide et
+  // on renvoie vers l'écran d'accueil (mirror du bouton "Se déconnecter"),
+  // au lieu de laisser les providers afficher une officine vide en silence.
+  final expiry = SessionExpiryHandler(
+    isAuthenticated: () => ref.read(sessionProvider).valueOrNull != null,
+    isDemo: () => ref.read(demoModeProvider).valueOrNull ?? false,
+    onExpired: () {
+      ref.read(sessionProvider.notifier).signOut();
+      ref.read(routerProvider).go(RoutePath.welcome);
+    },
+  );
+  // Ré-arme le handler à chaque nouvelle connexion (sinon un 2ᵉ token
+  // expiré plus tard ne redéclencherait jamais la redirection).
+  ref.listen(sessionProvider, (_, next) {
+    if (next.valueOrNull != null) expiry.reset();
+  });
+  dio.interceptors.add(UnauthorizedInterceptor(expiry.handleUnauthorized));
+
   return PilooApiClient(dio: dio, basePathOverride: apiBase);
 });
 
