@@ -18,11 +18,13 @@
 //     compléments, etc.).
 'use client';
 
+import { PlusIcon as Plus } from '@phosphor-icons/react';
 import { $api, type components } from '@piloo/api-client';
 import type { Posologie } from '@piloo/api-contract';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { MedIcon } from '@/components/app/med-icon';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -141,7 +143,10 @@ export function AddOrdonnanceDialog({ officineId }: Props) {
       }}
     >
       <DialogTrigger asChild>
-        <Button>+ Nouvelle ordonnance</Button>
+        <Button>
+          <Plus size={17} />
+          Nouvelle ordonnance
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -203,7 +208,8 @@ export function AddOrdonnanceDialog({ officineId }: Props) {
                   setPrescriptions((prev) => [...prev, makeDraft()]);
                 }}
               >
-                + Ajouter
+                <Plus size={16} />
+                Ajouter
               </Button>
             </div>
             {prescriptions.map((draft, idx) => (
@@ -572,12 +578,17 @@ function MedicamentPicker({
                   onPick(m.denomination, m);
                   setFocused(false);
                 }}
-                className="w-full text-left p-3 hover:bg-accent border-b last:border-b-0 transition-colors"
+                className="flex w-full items-center gap-3 border-b border-[var(--piloo-color-border-soft,var(--piloo-color-border))] p-3 text-left transition-colors last:border-b-0 hover:bg-piloo-surfaceSubtle"
               >
-                <p className="text-sm font-medium leading-tight">{m.denomination}</p>
-                <p className="text-xs text-muted-foreground">
-                  {[m.forme, m.dosage].filter(Boolean).join(' — ') || '—'} · CIP13 {m.cip13 ?? '—'}
-                </p>
+                <MedIcon forme={m.forme} size={36} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold leading-tight">
+                    {m.denomination}
+                  </span>
+                  <span className="block text-xs text-[var(--piloo-color-text-tertiary)]">
+                    {[m.forme, m.dosage].filter(Boolean).join(' · ') || '—'} · CIP {m.cip13 ?? '—'}
+                  </span>
+                </span>
               </button>
             </li>
           ))}

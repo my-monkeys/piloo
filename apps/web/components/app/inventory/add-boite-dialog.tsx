@@ -16,10 +16,12 @@
 //   - l'édition d'une boîte existante (action séparée dans le panneau détail).
 'use client';
 
+import { PlusIcon as Plus } from '@phosphor-icons/react';
 import { $api, type components } from '@piloo/api-client';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { MedIcon } from '@/components/app/med-icon';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -32,7 +34,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 
 type BdpmMedicament = components['schemas']['BdpmMedicament'];
 
@@ -105,7 +106,10 @@ export function AddBoiteDialog({ officineId }: Props) {
       }}
     >
       <DialogTrigger asChild>
-        <Button>+ Ajouter une boîte</Button>
+        <Button>
+          <Plus size={17} />
+          Ajouter une boîte
+        </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
@@ -256,28 +260,27 @@ function BdpmPicker({
 
   if (selected) {
     return (
-      <div className="rounded-lg border bg-card p-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-0.5">
-            <p className="font-medium leading-tight">{selected.denomination}</p>
-            <p className="text-xs text-muted-foreground">
-              {[selected.forme, selected.dosage].filter(Boolean).join(' — ') || 'Forme inconnue'}
-            </p>
-            <p className="font-mono text-xs text-muted-foreground">
-              CIP13 : {selected.cip13 ?? '—'} · CIS {selected.cis}
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              onSelect(null);
-            }}
-          >
-            Changer
-          </Button>
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-piloo-surface p-3">
+        <MedIcon forme={selected.forme} size={42} />
+        <div className="min-w-0 flex-1">
+          <p className="text-[15px] font-semibold leading-tight">{selected.denomination}</p>
+          <p className="text-[12.5px] text-[var(--piloo-color-text-tertiary)]">
+            {[selected.forme, selected.dosage].filter(Boolean).join(' · ') || 'Forme inconnue'}
+          </p>
+          <p className="mt-1 font-mono text-[10.5px] text-[var(--piloo-color-text-tertiary)]">
+            CIP {selected.cip13 ?? '—'} · CIS {selected.cis}
+          </p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            onSelect(null);
+          }}
+        >
+          Changer
+        </Button>
       </div>
     );
   }
@@ -308,7 +311,7 @@ function BdpmPicker({
       )}
 
       {items.length > 0 && (
-        <ul className="max-h-64 overflow-y-auto rounded-lg border bg-card">
+        <ul className="max-h-64 overflow-y-auto rounded-xl border border-border bg-piloo-surface">
           {items.map((m) => (
             <li key={m.cis}>
               <button
@@ -316,15 +319,20 @@ function BdpmPicker({
                 onClick={() => {
                   onSelect(m);
                 }}
-                className={cn(
-                  'w-full text-left p-3 hover:bg-accent transition-colors border-b last:border-b-0',
-                )}
+                className="flex w-full items-center gap-3 border-b border-[var(--piloo-color-border-soft,var(--piloo-color-border))] p-3 text-left transition-colors last:border-b-0 hover:bg-piloo-surfaceSubtle"
               >
-                <p className="font-medium leading-tight">{m.denomination}</p>
-                <p className="text-xs text-muted-foreground">
-                  {[m.forme, m.dosage].filter(Boolean).join(' — ') || '—'}
-                </p>
-                <p className="font-mono text-xs text-muted-foreground">CIP13 : {m.cip13 ?? '—'}</p>
+                <MedIcon forme={m.forme} size={38} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold leading-tight">
+                    {m.denomination}
+                  </span>
+                  <span className="block text-xs text-[var(--piloo-color-text-tertiary)]">
+                    {[m.forme, m.dosage].filter(Boolean).join(' · ') || '—'}
+                  </span>
+                  <span className="block font-mono text-[10.5px] text-[var(--piloo-color-text-tertiary)]">
+                    CIP {m.cip13 ?? '—'}
+                  </span>
+                </span>
               </button>
             </li>
           ))}
