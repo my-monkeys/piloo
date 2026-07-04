@@ -15,8 +15,14 @@ analyzer:
   # et régénéré à la demande via `pnpm openapi:generate`. L'analyzer du
   # projet parent ne doit pas tenter de le lire — ses imports pointent vers
   # son propre arbre de dépendances.
+  #
+  # `build/**` : sortie générée (dont les SourcePackages SPM iOS, ex. le
+  # code d'exemple/test de firebase_messaging) que `flutter build`/Xcode
+  # recréent. L'analyser polluait `flutter analyze` d'erreurs hors de notre
+  # code et cassait le hook pre-commit dès qu'un build iOS existait.
   exclude:
     - lib/gen/**
+    - build/**
 
 linter:
   # The lint rules applied to this project can be customized in the
