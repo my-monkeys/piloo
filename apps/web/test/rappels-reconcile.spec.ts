@@ -95,7 +95,9 @@ describe('regenerateRappelPrises', () => {
     const rows = await db.select().from(prisesPlanifiees);
     expect(rows).toHaveLength(30);
     const first = rows.map((r) => r.datetimePrevue.getTime()).sort((a, b) => a - b)[0];
-    expect(new Date(first!).toISOString()).toBe('2026-06-10T08:00:00.000Z');
+    // Officine sans fuseau → défaut Europe/Paris. Matin 08:00 mural en juin
+    // (été, +2) → 06:00Z (#363).
+    expect(new Date(first!).toISOString()).toBe('2026-06-10T06:00:00.000Z');
   });
 
   it('borne la fenêtre à dateFin (incluse)', async () => {

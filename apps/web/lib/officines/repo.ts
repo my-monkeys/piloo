@@ -24,6 +24,19 @@ export async function listAccessibleOfficines(db: Db, userId: string): Promise<O
   return rows.map((r) => ({ ...r.officine, role: r.role }));
 }
 
+/** Fuseau appliqué si l'officine est introuvable (cohérent avec le défaut DB). */
+export const DEFAULT_TIMEZONE = 'Europe/Paris';
+
+/** Lit le fuseau IANA d'une officine (défaut Europe/Paris si absente). #363 */
+export async function getOfficineTimezone(db: Db, officineId: string): Promise<string> {
+  const [row] = await db
+    .select({ timezone: officines.timezone })
+    .from(officines)
+    .where(eq(officines.id, officineId))
+    .limit(1);
+  return row?.timezone ?? DEFAULT_TIMEZONE;
+}
+
 export async function findOfficineById(db: Db, officineId: string): Promise<Officine | undefined> {
   const [row] = await db
     .select()
@@ -41,6 +54,8 @@ export async function createOfficineWithOwner(
     dateNaissance: string | null;
     notes: string | null;
     proprietaireUserId: string;
+    /** Fuseau IANA (#363). Omis → défaut DB Europe/Paris. */
+    timezone?: string;
   },
 ): Promise<Officine> {
   return db.transaction(async (tx) => {
@@ -52,6 +67,8 @@ export async function createOfficineWithOwner(
         dateNaissance: input.dateNaissance,
         notes: input.notes,
         proprietaireUserId: input.proprietaireUserId,
+        // undefined → drizzle omet la colonne → DEFAULT 'Europe/Paris'.
+        ...(input.timezone !== undefined && { timezone: input.timezone }),
       })
       .returning();
     if (!officine) {
@@ -71,7 +88,7 @@ export async function createOfficineWithOwner(
 export async function updateOfficine(
   db: Db,
   officineId: string,
-  patch: { nom?: string; dateNaissance?: string | null; notes?: string | null },
+  patch: { nom?: string; dateNaissance?: string | null; notes?: string | null; timezone?: string },
 ): Promise<Officine | undefined> {
   if (Object.keys(patch).length === 0) {
     return findOfficineById(db, officineId);

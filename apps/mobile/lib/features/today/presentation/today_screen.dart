@@ -17,11 +17,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 import 'package:piloo_api_client/piloo_api_client.dart' as api;
+import 'package:timezone/timezone.dart' as tz;
 
 import 'package:piloo/core/theme/colors.dart';
 import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/officines/data/active_officine_provider.dart';
 import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
+import 'package:piloo/features/today/data/moment_bucket.dart';
 import 'package:piloo/features/today/data/prises_provider.dart';
 import 'package:piloo/features/today/presentation/prise_actions_sheet.dart';
 import 'package:piloo/shared/widgets/piloo_day_picker.dart';
@@ -88,7 +90,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     List<_Prise> midi,
     List<_Prise> soir,
     List<_Prise> coucher,
-  }) _groupByMoment(List<api.PriseTimelineItem> items) {
+  }) _groupByMoment(List<api.PriseTimelineItem> items, String timeZone) {
     final matin = <_Prise>[];
     final midi = <_Prise>[];
     final soir = <_Prise>[];
@@ -96,29 +98,28 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
     final sorted = [...items]
       ..sort((a, b) => a.datetimePrevue.compareTo(b.datetimePrevue));
     for (final p in sorted) {
-      final local = p.datetimePrevue.toLocal();
-      final m = _mapApiPrise(p, local);
-      final bucket = switch (local.hour) {
-        < 12 => matin,
-        < 16 => midi,
-        < 21 => soir,
-        _ => coucher,
+      final m = _mapApiPrise(p, timeZone);
+      // Créneau calculé dans le fuseau de l'officine, pas du téléphone (#363).
+      final bucket = switch (momentBucketFor(p.datetimePrevue, timeZone)) {
+        Moment.matin => matin,
+        Moment.midi => midi,
+        Moment.soir => soir,
+        Moment.coucher => coucher,
       };
       bucket.add(m);
     }
     return (matin: matin, midi: midi, soir: soir, coucher: coucher);
   }
 
-  _Prise _mapApiPrise(api.PriseTimelineItem p, DateTime local) {
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
+  _Prise _mapApiPrise(api.PriseTimelineItem p, String timeZone) {
     final status = switch (p.statut) {
       api.PriseTimelineItemStatutEnum.prise => PriseStatus.taken,
       api.PriseTimelineItemStatutEnum.sautee => PriseStatus.skipped,
       api.PriseTimelineItemStatutEnum.oubliee => PriseStatus.missed,
       _ => PriseStatus.upcoming,
     };
-    final timeLabel = status == PriseStatus.missed ? 'Oubliée' : '$hh:$mm';
+    final timeLabel =
+        status == PriseStatus.missed ? 'Oubliée' : wallClockLabel(p.datetimePrevue, timeZone);
     return _Prise(
       name: p.prescription.nomTexte,
       meta: _posologyLine(p.prescription),
@@ -153,7 +154,12 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   Future<void> _onPriseLongPress(_Prise prise) async {
     final apiPrise = prise.apiPrise;
     if (apiPrise == null) return;
-    final initial = apiPrise.datetimePrevue.toLocal();
+    // L'horaire est présenté et interprété dans le fuseau de l'officine
+    // (#363) : l'utilisateur voit/choisit l'heure murale du patient.
+    final timeZone =
+        ref.read(activeOfficineProvider).valueOrNull?.timezone ?? 'Europe/Paris';
+    final loc = tz.getLocation(timeZone);
+    final initial = tz.TZDateTime.from(apiPrise.datetimePrevue, loc);
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: initial,
@@ -168,13 +174,15 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
       helpText: 'Nouvel horaire',
     );
     if (pickedTime == null || !mounted) return;
-    final next = DateTime(
+    // Heure murale officine → instant UTC.
+    final next = tz.TZDateTime(
+      loc,
       pickedDate.year,
       pickedDate.month,
       pickedDate.day,
       pickedTime.hour,
       pickedTime.minute,
-    );
+    ).toUtc();
     try {
       await updatePriseDatetime(
         ref,
@@ -192,15 +200,15 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   Future<void> _onPriseTap(_Prise prise) async {
     final apiPrise = prise.apiPrise;
     if (apiPrise == null) return;
-    final local = apiPrise.datetimePrevue.toLocal();
-    final hh = local.hour.toString().padLeft(2, '0');
-    final mm = local.minute.toString().padLeft(2, '0');
+    final timeZone =
+        ref.read(activeOfficineProvider).valueOrNull?.timezone ?? 'Europe/Paris';
+    final scheduled = wallClockLabel(apiPrise.datetimePrevue, timeZone);
     final action = await showPriseActionsSheet(
       context,
       info: PriseActionsContext(
         medicamentName: prise.name,
         dose: prise.meta ?? '',
-        scheduledLabel: 'Prévue à $hh:$mm',
+        scheduledLabel: 'Prévue à $scheduled',
       ),
     );
     if (action == null || !mounted) return;
@@ -237,6 +245,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
   @override
   Widget build(BuildContext context) {
     final activeOfficine = ref.watch(activeOfficineProvider).valueOrNull;
+    final timeZone = activeOfficine?.timezone ?? 'Europe/Paris';
     final prisesAsync = activeOfficine == null
         ? const AsyncValue<List<api.PriseTimelineItem>>.data([])
         : ref.watch(prisesDayProvider(
@@ -244,7 +253,7 @@ class _TodayScreenState extends ConsumerState<TodayScreen> {
           ));
 
     final apiBuckets = prisesAsync.maybeWhen(
-      data: _groupByMoment,
+      data: (items) => _groupByMoment(items, timeZone),
       orElse: () => (
         matin: <_Prise>[],
         midi: <_Prise>[],

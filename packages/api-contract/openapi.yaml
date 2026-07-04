@@ -67,6 +67,10 @@ components:
             - string
             - "null"
           maxLength: 2000
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
         created_at:
           type: string
           format: date-time
@@ -91,6 +95,7 @@ components:
         - proprietaire_user_id
         - date_naissance
         - notes
+        - timezone
         - created_at
         - updated_at
         - deleted_at
@@ -135,6 +140,10 @@ components:
             - string
             - "null"
           maxLength: 2000
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
       required:
         - nom
         - type
@@ -155,6 +164,10 @@ components:
             - string
             - "null"
           maxLength: 2000
+        timezone:
+          type: string
+          minLength: 1
+          maxLength: 64
     ListBoitesResponse:
       type: object
       properties:

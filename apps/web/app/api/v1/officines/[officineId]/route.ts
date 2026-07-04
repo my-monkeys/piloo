@@ -80,6 +80,7 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
       dateNaissance: parsed.data.date_naissance,
     }),
     ...(parsed.data.notes !== undefined && { notes: parsed.data.notes }),
+    ...(parsed.data.timezone !== undefined && { timezone: parsed.data.timezone }),
   });
 
   if (!updated) {

@@ -9,12 +9,18 @@
 import type { PriseTimelineItem } from '@piloo/api-contract';
 import type { PrisePlanifiee, Prescription, Rappel } from '@piloo/db-schema';
 
-/// Mappe l'heure d'une prise (UTC, HH) sur le moment du rappel pour
-/// remonter la quantité correspondante. Le rappel a 4 colonnes
-/// quantite_matin/midi/soir/coucher ; on choisit selon la fourchette
-/// horaire UTC qui correspond aux defaults (08/12/19/22).
-function rappelQuantityForDatetime(prise: PrisePlanifiee, rappel: Rappel): number | null {
-  const hour = prise.datetimePrevue.getUTCHours();
+import { utcToZonedParts } from './timezone';
+
+/// Mappe l'heure d'une prise sur le moment du rappel pour remonter la
+/// quantité correspondante. `datetimePrevue` est un vrai instant UTC (#363) ;
+/// on le convertit en heure murale du fuseau de l'officine avant de choisir
+/// le créneau (matin/midi/soir/coucher, defaults 08/12/19/22).
+function rappelQuantityForDatetime(
+  prise: PrisePlanifiee,
+  rappel: Rappel,
+  timeZone: string,
+): number | null {
+  const { hour } = utcToZonedParts(prise.datetimePrevue, timeZone);
   if (hour < 10) return rappel.quantiteMatin;
   if (hour < 16) return rappel.quantiteMidi;
   if (hour < 21) return rappel.quantiteSoir;
@@ -24,8 +30,9 @@ function rappelQuantityForDatetime(prise: PrisePlanifiee, rappel: Rappel): numbe
 function buildSyntheticPrescriptionFromRappel(
   prise: PrisePlanifiee,
   rappel: Rappel,
+  timeZone: string,
 ): PriseTimelineItem['prescription'] {
-  const qty = rappelQuantityForDatetime(prise, rappel);
+  const qty = rappelQuantityForDatetime(prise, rappel, timeZone);
   return {
     id: rappel.id,
     // ordonnance_id requiert un UUID valide. On réutilise rappel.id —
@@ -48,7 +55,8 @@ function buildSyntheticPrescriptionFromRappel(
 export function serializePriseTimelineItem(
   prise: PrisePlanifiee,
   prescription: Prescription | null,
-  rappel: Rappel | null = null,
+  rappel: Rappel | null,
+  timeZone: string,
 ): PriseTimelineItem {
   const presPayload: PriseTimelineItem['prescription'] = prescription
     ? {
@@ -62,7 +70,7 @@ export function serializePriseTimelineItem(
         posologie: prescription.posologie as unknown as Record<string, unknown>,
       }
     : rappel
-      ? buildSyntheticPrescriptionFromRappel(prise, rappel)
+      ? buildSyntheticPrescriptionFromRappel(prise, rappel, timeZone)
       : (() => {
           throw new Error(
             `Prise ${prise.id} sans source (ni prescription ni rappel) — bug d'invariant.`,

@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
+import { getOfficineTimezone } from '@/lib/officines/repo';
 import { buildInitialRappelPrises } from '@/lib/rappels/reconcile';
 import { createRappel, listRappelsByOfficine } from '@/lib/rappels/repo';
 import { serializeRappel } from '@/lib/rappels/serialize';
@@ -87,7 +88,8 @@ export async function POST(request: Request, context: RouteContext): Promise<Res
   // immédiatement dans la timeline Aujourd'hui (#343). La logique de
   // fenêtrage (max(date_debut, today), borne dateFin) est centralisée
   // dans buildInitialRappelPrises pour rester DRY avec la réconciliation.
-  const prises = buildInitialRappelPrises(rappel);
+  const timeZone = await getOfficineTimezone(db, params.officineId);
+  const prises = buildInitialRappelPrises(rappel, timeZone);
   if (prises.length > 0) {
     await db.insert(prisesPlanifiees).values(prises);
   }

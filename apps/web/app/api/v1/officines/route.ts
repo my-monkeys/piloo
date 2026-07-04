@@ -42,6 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     dateNaissance: parsed.data.date_naissance ?? null,
     notes: parsed.data.notes ?? null,
     proprietaireUserId: auth.user.id,
+    timezone: parsed.data.timezone,
   });
 
   return Response.json(serializeOfficine(officine, 'owner'), { status: 201 });

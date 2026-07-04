@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 import { requireAuth, requireRole } from '@/lib/auth/guards';
 import { getDb } from '@/lib/db';
+import { getOfficineTimezone } from '@/lib/officines/repo';
 import { findPriseById, updatePrise } from '@/lib/prises/repo';
 import { serializePriseTimelineItem } from '@/lib/prises/serialize';
 import { apiErrorResponse, zodErrorResponse } from '@/lib/server/errors';
@@ -56,8 +57,9 @@ export async function PATCH(request: Request, context: RouteContext): Promise<Re
   });
   if (!updated) return apiErrorResponse('not_found', 'Prise introuvable.');
 
+  const timeZone = await getOfficineTimezone(db, updated.prise.officineId);
   return Response.json(
-    serializePriseTimelineItem(updated.prise, updated.prescription, updated.rappel),
+    serializePriseTimelineItem(updated.prise, updated.prescription, updated.rappel, timeZone),
     {
       status: 200,
     },

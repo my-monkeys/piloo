@@ -112,6 +112,15 @@ class _OfficinesListScreenState extends ConsumerState<OfficinesListScreen> {
               ),
               const SizedBox(height: 8),
               _SheetAction(
+                icon: PhosphorIconsRegular.globeHemisphereWest,
+                label: 'Fuseau horaire',
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  context.push(RoutePath.officineSettings(officine.id));
+                },
+              ),
+              const SizedBox(height: 8),
+              _SheetAction(
                 icon: PhosphorIconsRegular.archive,
                 label: 'Archiver',
                 destructive: true,

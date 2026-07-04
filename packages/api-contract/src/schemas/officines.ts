@@ -16,6 +16,9 @@ export const OfficineSchema = z
     proprietaire_user_id: z.uuid(),
     date_naissance: z.iso.date().nullable(),
     notes: z.string().max(2000).nullable(),
+    // Fuseau IANA du carnet (#363) — planifie/affiche les prises. Défaut
+    // Europe/Paris côté serveur.
+    timezone: z.string().min(1).max(64),
     created_at: z.iso.datetime(),
     updated_at: z.iso.datetime(),
     deleted_at: z.iso.datetime().nullable(),
@@ -31,6 +34,9 @@ export const CreateOfficineInputSchema = z
     type: TypeOfficineEnum,
     date_naissance: z.iso.date().nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
+    // Fuseau IANA déduit du device à la création (#363). Omis → défaut
+    // serveur Europe/Paris.
+    timezone: z.string().min(1).max(64).optional(),
   })
   .openapi('CreateOfficineInput');
 
@@ -39,6 +45,8 @@ export const UpdateOfficineInputSchema = z
     nom: z.string().min(1).max(120).optional(),
     date_naissance: z.iso.date().nullable().optional(),
     notes: z.string().max(2000).nullable().optional(),
+    // Changement de fuseau via les réglages officine (#363).
+    timezone: z.string().min(1).max(64).optional(),
   })
   .openapi('UpdateOfficineInput');
 

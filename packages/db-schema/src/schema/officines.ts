@@ -23,6 +23,9 @@ export const officines = pgTable(
       .references(() => users.id, { onDelete: 'restrict' }),
     dateNaissance: date(),
     notes: text(),
+    // Fuseau IANA du carnet (source de vérité pour planifier/afficher les
+    // prises). Défaut Europe/Paris pour les officines existantes (#363).
+    timezone: text().notNull().default('Europe/Paris'),
     createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     deletedAt: timestamp({ withTimezone: true }),

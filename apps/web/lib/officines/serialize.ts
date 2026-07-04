@@ -15,6 +15,7 @@ export function serializeOfficine(
     proprietaire_user_id: row.proprietaireUserId,
     date_naissance: row.dateNaissance,
     notes: row.notes,
+    timezone: row.timezone,
     created_at: row.createdAt.toISOString(),
     updated_at: row.updatedAt.toISOString(),
     deleted_at: row.deletedAt?.toISOString() ?? null,
