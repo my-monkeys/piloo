@@ -1031,6 +1031,15 @@ components:
             $ref: "#/components/schemas/BdpmMedicament"
       required:
         - items
+    BdpmResolveResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/BdpmMedicament"
+      required:
+        - items
     ListDevicesResponse:
       type: object
       properties:
@@ -3018,6 +3027,33 @@ paths:
                 $ref: "#/components/schemas/BdpmSearchResponse"
         "400":
           description: Paramètre `q` invalide
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmApiError"
+  /v1/bdpm/resolve:
+    get:
+      summary: Résout un lot de CIP13 en médicaments (nom, forme, dosage…)
+      description: Prend `cips` (CIP13 séparés par des virgules) et retourne les médicaments BDPM correspondants. Sert au front web à afficher les NOMS des médicaments sur une liste d'inventaire (le type Boite ne stocke que le cip13). Read-only, dédup + cap serveur. Un CIP inconnu est simplement absent du résultat.
+      tags:
+        - bdpm
+      parameters:
+        - schema:
+            type: string
+            minLength: 1
+            maxLength: 8000
+          required: true
+          name: cips
+          in: query
+      responses:
+        "200":
+          description: Médicaments résolus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BdpmResolveResponse"
+        "400":
+          description: Paramètre `cips` invalide
           content:
             application/json:
               schema:

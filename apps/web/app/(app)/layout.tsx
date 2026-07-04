@@ -7,6 +7,7 @@
 // protection sans avoir à dupliquer la check.
 import type { ReactNode } from 'react';
 
+import { MobileTabBar, MobileTopBar } from '@/components/app/mobile-nav';
 import { Sidebar } from '@/components/app/sidebar';
 import { requireUser } from '@/lib/auth/session';
 import { ActiveOfficineProvider } from '@/lib/officines/active-officine';
@@ -18,9 +19,19 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   const session = await requireUser();
   return (
     <ActiveOfficineProvider>
-      <div className="flex min-h-screen">
+      <div className="flex min-h-screen bg-piloo-background">
         <Sidebar userName={session.user.name} userEmail={session.user.email} />
-        <main className="flex-1 p-8 max-w-5xl">{children}</main>
+        <div className="flex min-w-0 flex-1 flex-col">
+          <MobileTopBar />
+          <main className="flex-1">
+            {/* `.wrap` du redesign : colonne centrée, respirante, avec du
+                padding bas pour ne pas passer sous la tab bar mobile. */}
+            <div className="mx-auto max-w-[1080px] px-[18px] pb-28 pt-6 md:px-10 md:pb-[90px] md:pt-[34px]">
+              {children}
+            </div>
+          </main>
+          <MobileTabBar />
+        </div>
       </div>
     </ActiveOfficineProvider>
   );

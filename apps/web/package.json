@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
+    "@phosphor-icons/react": "^2.1.10",
     "@piloo/api-client": "workspace:*",
     "@piloo/api-contract": "workspace:*",
     "@piloo/db-schema": "workspace:*",

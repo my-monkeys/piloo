@@ -82,11 +82,18 @@ const config: Config = {
         full: '9999px',
       },
       fontFamily: {
-        // Fraunces pour les titres (cohérent avec mobile), Manrope pour
-        // l'UI. Les fonts sont chargées via next/font dans le layout
-        // (à câbler dans un follow-up — pour l'instant fallback système).
-        display: ['"Fraunces"', 'Georgia', 'serif'],
-        sans: ['"Manrope"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        // Fraunces (titres, cohérent avec le mobile), Manrope (UI), Spline
+        // Sans Mono (codes techniques : CIP13, lot, n° série). Chargées via
+        // next/font dans le root layout, exposées en CSS vars.
+        display: ['var(--font-display)', '"Fraunces"', 'Georgia', 'serif'],
+        sans: [
+          'var(--font-sans)',
+          '"Manrope"',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'sans-serif',
+        ],
+        mono: ['var(--font-mono)', '"Spline Sans Mono"', 'ui-monospace', 'monospace'],
       },
       keyframes: {
         'accordion-down': {
