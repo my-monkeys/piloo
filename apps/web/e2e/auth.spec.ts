@@ -19,7 +19,7 @@ test('sign-up → dashboard puis sign-out → sign-in', async ({ page }) => {
   await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: /créer mon compte/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-  await expect(page.getByRole('heading', { name: /tableau de bord/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /bonjour/i })).toBeVisible();
 
   // 2. Sign-out via API puis navigate /sign-in directement (le middleware
   //    de redirect "auth-only" est sur les routes app — on ne le teste pas
@@ -32,5 +32,5 @@ test('sign-up → dashboard puis sign-out → sign-in', async ({ page }) => {
   await page.getByLabel('Mot de passe', { exact: true }).fill(user.password);
   await page.getByRole('button', { name: /se connecter/i }).click();
   await page.waitForURL(/\/dashboard/, { timeout: 15_000 });
-  await expect(page.getByRole('heading', { name: /tableau de bord/i })).toBeVisible();
+  await expect(page.getByRole('heading', { name: /bonjour/i })).toBeVisible();
 });
