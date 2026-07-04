@@ -47,6 +47,11 @@ post_install do |installer|
     # ajouter d'autres macros (notifications, etc.) au besoin.
     # cf. https://pub.dev/packages/permission_handler#setup-ios
     target.build_configurations.each do |config|
+      # Certains pods déclarent une cible iOS < 15 (10/12/13), refusée par
+      # les Xcode récents (min 15). On force tous les pods sur le minimum
+      # du projet pour que le build simulateur passe.
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.0'
+
       config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
         '$(inherited)',
         'PERMISSION_CAMERA=1',
