@@ -1,6 +1,6 @@
 // Accès DB pour les endpoints BDPM (#76).
 import { medicamentsBdpm, type Db, type MedicamentBdpm } from '@piloo/db-schema';
-import { count, desc, eq, gt, ilike, or, sql } from 'drizzle-orm';
+import { count, desc, eq, gt, ilike, inArray, or, sql } from 'drizzle-orm';
 
 export interface BdpmStats {
   /** Date du dump le plus récent en base, ou null si table vide. */
@@ -34,6 +34,20 @@ export async function getBdpmDiffSince(db: Db, from: string): Promise<Medicament
     .from(medicamentsBdpm)
     .where(gt(medicamentsBdpm.versionBdpm, from))
     .orderBy(medicamentsBdpm.cip13);
+}
+
+/// Nombre max de CIP résolus en un appel (garde-fou anti-abus ; un
+/// inventaire réaliste dépasse rarement quelques dizaines de boîtes).
+const RESOLVE_MAX = 500;
+
+/// Résolution batch CIP13 → médicament BDPM (#370, redesign web name-first).
+/// Sert à afficher les NOMS sur une liste d'inventaire (le type Boite ne
+/// stocke que le cip13). Dédup + cap côté serveur. Un CIP inconnu est
+/// simplement absent du résultat (l'UI retombe alors sur le CIP).
+export async function resolveBdpmByCips(db: Db, cips: string[]): Promise<MedicamentBdpm[]> {
+  const unique = [...new Set(cips.filter((c) => c.length > 0))].slice(0, RESOLVE_MAX);
+  if (unique.length === 0) return [];
+  return db.select().from(medicamentsBdpm).where(inArray(medicamentsBdpm.cip13, unique));
 }
 
 const SEARCH_LIMIT = 20;

@@ -1,337 +1,317 @@
-// Page inventaire desktop (#171). Vue table des boîtes de l'officine
-// active avec tri colonne + recherche fuzzy + panneau slide pour le
-// détail.
+// Page inventaire — redesign name-first (#370).
 //
-// Choix UX :
-// - Tri par défaut : peremption ascendant (les bientôt-périmées
-//   remontent → action prioritaire).
-// - Recherche : match insensible à la casse sur cip13 ET notes. La
-//   recherche par nom de médicament viendra quand on enrichira la
-//   liste avec la BDPM côté client (suit #167).
-// - Panneau slide : shadcn Sheet à droite, ouvert au click ligne.
-//   `null` = fermé, `Boite` = boîte ouverte.
+// Le NOM du médicament est l'élément principal de chaque ligne (résolu via
+// la BDPM depuis le cip13, cf. useBoiteNames) ; le CIP/lot/n° série sont
+// relégués au drawer de détail. Recherche sur nom + CIP + notes, filtres
+// segmentés par statut, drawer slide à droite au clic d'une ligne.
 'use client';
 
+import {
+  MagnifyingGlassIcon as MagnifyingGlass,
+  CaretRightIcon as CaretRight,
+} from '@phosphor-icons/react';
 import { $api, type components } from '@piloo/api-client';
 import { useMemo, useState } from 'react';
 
+import { Badge } from '@/components/app/badge';
 import { AddBoiteDialog } from '@/components/app/inventory/add-boite-dialog';
 import { BoiteDetailPanel } from '@/components/app/inventory/boite-detail-panel';
-import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { MedIcon } from '@/components/app/med-icon';
+import { PageHeader } from '@/components/app/page-header';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  boiteDisplayName,
+  formatPeremption,
+  peremptionSeverity,
+  statutBadge,
+} from '@/lib/medoc/boite-display';
+import { formeVisual } from '@/lib/medoc/forme';
+import { useBoiteNames, type BdpmMedicament } from '@/lib/medoc/use-boite-names';
 import { useActiveOfficine } from '@/lib/officines/active-officine';
+import { useActiveOfficineName } from '@/lib/officines/use-active-officine-name';
 import { cn } from '@/lib/utils';
 
 type Boite = components['schemas']['Boite'];
 
-type SortColumn = 'peremption' | 'cip13' | 'stock' | 'statut';
-type SortDirection = 'asc' | 'desc';
+type Filter = 'all' | 'active' | 'perime' | 'vide';
+const FILTER_STATUT: Record<Exclude<Filter, 'all'>, Boite['statut']> = {
+  active: 'active',
+  perime: 'perimee',
+  vide: 'vide',
+};
+
+interface Row {
+  boite: Boite;
+  med: BdpmMedicament | undefined;
+  name: string;
+  sev: ReturnType<typeof peremptionSeverity>;
+}
 
 export default function InventoryPage() {
   const { activeOfficineId } = useActiveOfficine();
-  const [query, setQuery] = useState('');
-  const [sortBy, setSortBy] = useState<SortColumn>('peremption');
-  const [sortDir, setSortDir] = useState<SortDirection>('asc');
-  const [opened, setOpened] = useState<Boite | null>(null);
+  const officineName = useActiveOfficineName();
 
   return (
-    <div className="space-y-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="font-display text-3xl">Inventaire</h1>
-          <p className="text-muted-foreground">
-            Toutes les boîtes de l&apos;officine active. Tri colonne, recherche, détail à droite.
-          </p>
-        </div>
-        {activeOfficineId && <AddBoiteDialog officineId={activeOfficineId} />}
-      </header>
+    <>
+      <PageHeader
+        eyebrow={officineName}
+        title="Inventaire"
+        action={activeOfficineId ? <AddBoiteDialog officineId={activeOfficineId} /> : undefined}
+      />
 
       {!activeOfficineId ? (
-        <NoActiveOfficineEmpty />
+        <Empty>Sélectionne une officine pour voir son inventaire.</Empty>
       ) : (
-        <InventoryTable
-          officineId={activeOfficineId}
-          query={query}
-          sortBy={sortBy}
-          sortDir={sortDir}
-          onQueryChange={setQuery}
-          onSortChange={(col) => {
-            if (col === sortBy) {
-              setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
-            } else {
-              setSortBy(col);
-              setSortDir('asc');
-            }
-          }}
-          onOpen={setOpened}
-        />
+        <InventoryContent officineId={activeOfficineId} />
       )}
+    </>
+  );
+}
 
+function InventoryContent({ officineId }: { officineId: string }) {
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [opened, setOpened] = useState<Row | null>(null);
+  const { data, isLoading, error } = $api.useQuery('get', '/v1/officines/{officineId}/boites', {
+    params: { path: { officineId } },
+  });
+
+  const boites = useMemo(() => data?.items ?? [], [data]);
+  const cips = useMemo(() => boites.map((b) => b.cip13), [boites]);
+  const { byCip } = useBoiteNames(cips);
+
+  const rows = useMemo<Row[]>(() => {
+    const all = boites.map((boite) => {
+      const med = byCip.get(boite.cip13);
+      return {
+        boite,
+        med,
+        name: boiteDisplayName(boite, med),
+        sev: peremptionSeverity(boite.peremption),
+      };
+    });
+    const byStatut =
+      filter === 'all' ? all : all.filter((r) => r.boite.statut === FILTER_STATUT[filter]);
+    const q = query.trim().toLowerCase();
+    const searched = q
+      ? byStatut.filter(
+          (r) =>
+            r.name.toLowerCase().includes(q) ||
+            r.boite.cip13.includes(q) ||
+            (r.boite.notes?.toLowerCase().includes(q) ?? false),
+        )
+      : byStatut;
+    // Tri : les plus urgentes (péremption proche) d'abord.
+    return [...searched].sort((a, b) => a.boite.peremption.localeCompare(b.boite.peremption));
+  }, [boites, byCip, filter, query]);
+
+  const counts = useMemo(
+    () => ({
+      all: boites.length,
+      active: boites.filter((b) => b.statut === 'active').length,
+      perime: boites.filter((b) => b.statut === 'perimee').length,
+      vide: boites.filter((b) => b.statut === 'vide').length,
+    }),
+    [boites],
+  );
+
+  if (isLoading) return <Empty>Chargement…</Empty>;
+  if (error) return <Empty>Impossible de charger l&apos;inventaire (non connecté ?).</Empty>;
+  if (boites.length === 0) return <Empty>Aucune boîte enregistrée pour cette officine.</Empty>;
+
+  return (
+    <div className="flex flex-col gap-4">
       <Sheet
         open={opened !== null}
         onOpenChange={(o) => {
           if (!o) setOpened(null);
         }}
       >
-        <SheetContent className="overflow-y-auto">
+        <SheetContent className="w-full overflow-y-auto p-0 sm:max-w-[460px]">
           {opened && (
-            <>
-              <SheetHeader>
-                <SheetTitle>{opened.cip13}</SheetTitle>
-                <SheetDescription>
-                  Boîte ajoutée le {formatDate(opened.created_at)}
-                </SheetDescription>
-              </SheetHeader>
-              <BoiteDetailPanel
-                boite={opened}
-                onClose={() => {
-                  setOpened(null);
-                }}
-              />
-            </>
+            <BoiteDetailPanel
+              boite={opened.boite}
+              med={opened.med}
+              onClose={() => {
+                setOpened(null);
+              }}
+            />
           )}
         </SheetContent>
       </Sheet>
-    </div>
-  );
-}
 
-function InventoryTable({
-  officineId,
-  query,
-  sortBy,
-  sortDir,
-  onQueryChange,
-  onSortChange,
-  onOpen,
-}: {
-  officineId: string;
-  query: string;
-  sortBy: SortColumn;
-  sortDir: SortDirection;
-  onQueryChange: (q: string) => void;
-  onSortChange: (col: SortColumn) => void;
-  onOpen: (b: Boite) => void;
-}) {
-  const { data, isLoading, error } = $api.useQuery('get', '/v1/officines/{officineId}/boites', {
-    params: { path: { officineId } },
-  });
-
-  const rows = useMemo(() => {
-    if (!data) return [];
-    // Boîtes vidées : on les retire de l'affichage — l'utilisateur les a
-    // marquées épuisées, plus aucune action utile. Elles restent en DB
-    // (historique, agrégat alerte stock_bas).
-    const visible = data.items.filter((b) => b.statut !== 'vide' && (b.unites_restantes ?? 1) > 0);
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? visible.filter(
-          (b) => b.cip13.toLowerCase().includes(q) || (b.notes?.toLowerCase().includes(q) ?? false),
-        )
-      : visible;
-    const sorted = [...filtered].sort((a, b) => cmp(a, b, sortBy));
-    return sortDir === 'asc' ? sorted : sorted.reverse();
-  }, [data, query, sortBy, sortDir]);
-
-  return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-3">
-        <Input
-          placeholder="Rechercher (CIP13, notes)…"
-          value={query}
-          onChange={(e) => {
-            onQueryChange(e.target.value);
-          }}
-          className="max-w-sm"
-        />
-        <p className="text-sm text-muted-foreground">
-          {data ? `${String(rows.length)} / ${String(data.items.length)}` : ''}
-        </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex min-w-[200px] flex-1 items-center gap-[9px] rounded-[11px] border border-border bg-piloo-surface px-[13px] py-[9px] transition-shadow focus-within:border-piloo-primary focus-within:shadow-[0_0_0_3px_var(--piloo-color-primary-soft)]">
+          <MagnifyingGlass size={17} className="text-[var(--piloo-color-text-tertiary)]" />
+          <input
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
+            placeholder="Rechercher un médicament…"
+            className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--piloo-color-text-tertiary)]"
+          />
+        </label>
+        <div className="inline-flex rounded-[11px] bg-piloo-surfaceSubtle p-[3px]">
+          <FilterBtn
+            label="Toutes"
+            n={counts.all}
+            on={filter === 'all'}
+            onClick={() => {
+              setFilter('all');
+            }}
+          />
+          <FilterBtn
+            label="Actives"
+            n={counts.active}
+            on={filter === 'active'}
+            onClick={() => {
+              setFilter('active');
+            }}
+          />
+          <FilterBtn
+            label="Périmées"
+            n={counts.perime}
+            on={filter === 'perime'}
+            onClick={() => {
+              setFilter('perime');
+            }}
+          />
+          <FilterBtn
+            label="Vides"
+            n={counts.vide}
+            on={filter === 'vide'}
+            onClick={() => {
+              setFilter('vide');
+            }}
+          />
+        </div>
       </div>
 
-      {isLoading && <p className="text-sm text-muted-foreground">Chargement…</p>}
-      {error && (
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            Impossible de charger (non connecté ?).
-          </CardContent>
-        </Card>
-      )}
-
-      {data?.items.length === 0 && (
-        <Card>
-          <CardContent className="pt-6 text-sm text-muted-foreground">
-            Aucune boîte enregistrée pour cette officine.
-          </CardContent>
-        </Card>
-      )}
-
-      {data?.items.length ? (
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <SortableHeader
-                    col="cip13"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onClick={onSortChange}
-                  >
-                    CIP13
-                  </SortableHeader>
-                  <SortableHeader
-                    col="peremption"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onClick={onSortChange}
-                  >
-                    Péremption
-                  </SortableHeader>
-                  <SortableHeader
-                    col="stock"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onClick={onSortChange}
-                  >
-                    Stock
-                  </SortableHeader>
-                  <SortableHeader
-                    col="statut"
-                    sortBy={sortBy}
-                    sortDir={sortDir}
-                    onClick={onSortChange}
-                  >
-                    Statut
-                  </SortableHeader>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rows.map((b) => (
-                  <TableRow
-                    key={b.id}
-                    onClick={() => {
-                      onOpen(b);
-                    }}
-                  >
-                    <TableCell className="font-mono text-xs">{b.cip13}</TableCell>
-                    <TableCell>{formatDate(b.peremption)}</TableCell>
-                    <TableCell className="tabular-nums">{b.unites_restantes ?? '—'}</TableCell>
-                    <TableCell>
-                      <StatutBadge statut={b.statut} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      ) : null}
+      <div className="overflow-hidden rounded-2xl border border-[var(--piloo-color-border-soft,var(--piloo-color-border))] bg-piloo-surface shadow-[0_1px_2px_rgba(37,42,48,.03),0_10px_26px_-18px_rgba(37,42,48,.14)]">
+        <div className="hidden items-center gap-[18px] border-b border-[var(--piloo-color-border-soft,var(--piloo-color-border))] bg-piloo-background px-5 py-[11px] text-[11px] font-bold uppercase tracking-[.06em] text-[var(--piloo-color-text-tertiary)] sm:flex">
+          <span className="flex-[4_1_220px]">Médicament</span>
+          <span className="flex-[1_1_96px]">Péremption</span>
+          <span className="flex-[1_1_118px]">Stock</span>
+          <span className="flex-[0_0_116px] text-right">Statut</span>
+        </div>
+        {rows.length === 0 ? (
+          <p className="px-5 py-8 text-center text-sm text-[var(--piloo-color-text-tertiary)]">
+            Aucune boîte ne correspond.
+          </p>
+        ) : (
+          rows.map((r) => (
+            <InvRow
+              key={r.boite.id}
+              row={r}
+              onOpen={() => {
+                setOpened(r);
+              }}
+            />
+          ))
+        )}
+      </div>
     </div>
   );
 }
 
-function SortableHeader({
-  col,
-  sortBy,
-  sortDir,
-  onClick,
-  children,
-}: {
-  col: SortColumn;
-  sortBy: SortColumn;
-  sortDir: SortDirection;
-  onClick: (c: SortColumn) => void;
-  children: React.ReactNode;
-}) {
-  const active = sortBy === col;
-  return (
-    <TableHead>
-      <button
-        type="button"
-        className={cn(
-          'inline-flex items-center gap-1 hover:text-foreground transition-colors',
-          active && 'text-foreground font-medium',
-        )}
-        onClick={() => {
-          onClick(col);
-        }}
-      >
-        {children}
-        {active && <span className="text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span>}
-      </button>
-    </TableHead>
-  );
-}
+function InvRow({ row, onOpen }: { row: Row; onOpen: () => void }) {
+  const { boite, med, name, sev } = row;
+  const forme = formeVisual(med?.forme);
+  const badge = statutBadge(boite.statut);
+  const rest = boite.unites_restantes ?? 0;
+  const init = boite.unites_initiales ?? 0;
+  const pct = init > 0 ? Math.round((rest / init) * 100) : 0;
+  const low = rest <= 2;
+  const secondary = [forme.label, med?.dosage].filter(Boolean).join(' · ');
+  const peremColor =
+    sev === 'err'
+      ? 'text-piloo-error-on'
+      : sev === 'warn'
+        ? 'text-piloo-warning-on'
+        : 'text-[var(--piloo-color-text-secondary)]';
 
-function StatutBadge({ statut }: { statut: Boite['statut'] }) {
-  const map: Record<Boite['statut'], { label: string; cls: string }> = {
-    active: {
-      label: 'Active',
-      cls: 'bg-piloo-success text-piloo-success-on',
-    },
-    perimee: {
-      label: 'Périmée',
-      cls: 'bg-piloo-error text-piloo-error-on',
-    },
-    vide: { label: 'Vide', cls: 'bg-muted text-muted-foreground' },
-  };
-  const { label, cls } = map[statut];
   return (
-    <span
-      className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', cls)}
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex w-full flex-wrap items-center gap-x-[18px] gap-y-3 border-t border-[var(--piloo-color-border-soft,var(--piloo-color-border))] px-5 py-3.5 text-left transition-colors first:border-t-0 hover:bg-piloo-surfaceSubtle sm:flex-nowrap"
     >
-      {label}
-    </span>
+      <span className="flex min-w-0 flex-[4_1_220px] items-center gap-[13px]">
+        <MedIcon forme={med?.forme} size={42} />
+        <span className="min-w-0">
+          <span className="block truncate text-[15px] font-semibold text-foreground">{name}</span>
+          {secondary && (
+            <span className="mt-px block truncate text-[12.5px] text-[var(--piloo-color-text-tertiary)]">
+              {secondary}
+            </span>
+          )}
+        </span>
+      </span>
+      <span className={cn('flex-[1_1_96px] text-[13px] font-semibold', peremColor)}>
+        {formatPeremption(boite.peremption)}
+      </span>
+      <span className="flex flex-[1_1_118px] flex-col gap-[5px]">
+        <span className="text-[13px] text-[var(--piloo-color-text-secondary)]">
+          <b className="text-[14px] font-bold text-foreground">{rest}</b> / {init || '—'}
+        </span>
+        <span className="h-[5px] overflow-hidden rounded-[3px] bg-piloo-surfaceSubtle">
+          <span
+            className={cn(
+              'block h-full rounded-[3px]',
+              low ? 'bg-piloo-warning-on' : 'bg-piloo-primary',
+            )}
+            style={{ width: `${String(Math.max(pct, init > 0 ? 4 : 0))}%` }}
+          />
+        </span>
+      </span>
+      <span className="flex flex-[0_0_116px] items-center justify-end gap-3">
+        <Badge tone={badge.tone}>{badge.label}</Badge>
+        <CaretRight size={16} className="hidden text-[var(--piloo-color-text-tertiary)] sm:block" />
+      </span>
+    </button>
   );
 }
 
-function NoActiveOfficineEmpty() {
+function FilterBtn({
+  label,
+  n,
+  on,
+  onClick,
+}: {
+  label: string;
+  n: number;
+  on: boolean;
+  onClick: () => void;
+}) {
   return (
-    <Card>
-      <CardContent className="pt-6 text-sm text-muted-foreground">
-        Sélectionne une officine dans la sidebar pour voir son inventaire.
-      </CardContent>
-    </Card>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-lg px-[13px] py-[7px] text-[13px] font-semibold transition-colors',
+        on
+          ? 'bg-piloo-surface text-foreground shadow-[0_1px_2px_rgba(37,42,48,.08)]'
+          : 'text-[var(--piloo-color-text-secondary)] hover:text-foreground',
+      )}
+    >
+      <span>{label}</span>
+      <span
+        className={cn(
+          'text-[11px] font-bold',
+          on ? 'text-piloo-primary' : 'text-[var(--piloo-color-text-tertiary)]',
+        )}
+      >
+        {n}
+      </span>
+    </button>
   );
 }
 
-function cmp(a: Boite, b: Boite, by: SortColumn): number {
-  switch (by) {
-    case 'peremption':
-      return a.peremption.localeCompare(b.peremption);
-    case 'cip13':
-      return a.cip13.localeCompare(b.cip13);
-    case 'stock': {
-      const av = a.unites_restantes ?? -1;
-      const bv = b.unites_restantes ?? -1;
-      return av - bv;
-    }
-    case 'statut':
-      return a.statut.localeCompare(b.statut);
-  }
-}
-
-function formatDate(iso: string): string {
-  // YYYY-MM-DD pour les dates plein-jour, YYYY-MM-DD HH:mm pour
-  // datetime — on garde l'affichage simple.
-  const trimmed = iso.length >= 10 ? iso.slice(0, 10) : iso;
-  const d = new Date(trimmed);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-2xl border border-[var(--piloo-color-border-soft,var(--piloo-color-border))] bg-piloo-surface px-5 py-8 text-sm text-[var(--piloo-color-text-tertiary)]">
+      {children}
+    </div>
+  );
 }

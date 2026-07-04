@@ -1496,6 +1496,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/bdpm/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Résout un lot de CIP13 en médicaments (nom, forme, dosage…)
+         * @description Prend `cips` (CIP13 séparés par des virgules) et retourne les médicaments BDPM correspondants. Sert au front web à afficher les NOMS des médicaments sur une liste d'inventaire (le type Boite ne stocke que le cip13). Read-only, dédup + cap serveur. Un CIP inconnu est simplement absent du résultat.
+         */
+        get: {
+            parameters: {
+                query: {
+                    cips: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Médicaments résolus */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BdpmResolveResponse"];
+                    };
+                };
+                /** @description Paramètre `cips` invalide */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BdpmApiError"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/devices": {
         parameters: {
             query?: never;
@@ -3674,6 +3724,9 @@ export interface components {
             text: string;
         };
         BdpmSearchResponse: {
+            items: components["schemas"]["BdpmMedicament"][];
+        };
+        BdpmResolveResponse: {
             items: components["schemas"]["BdpmMedicament"][];
         };
         ListDevicesResponse: {

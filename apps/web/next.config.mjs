@@ -14,6 +14,11 @@ const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@piloo/api-contract', '@piloo/api-client'],
   typedRoutes: true,
+  // Le barrel @phosphor-icons/react ré-exporte ~9000 icônes — sans cette
+  // optimisation, un import nommé tire tout le barrel (bundle + dev lents).
+  experimental: {
+    optimizePackageImports: ['@phosphor-icons/react'],
+  },
   async headers() {
     return [
       {
