@@ -22,6 +22,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # openapi:generate-dart-client s'appuie sur openapi-generator (Java).
+      # Le runner cookie n'a pas de Java système → on l'installe ici (aligné
+      # sur android-release.yml).
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
