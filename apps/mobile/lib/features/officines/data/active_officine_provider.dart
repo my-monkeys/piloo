@@ -19,6 +19,7 @@ import 'package:piloo_api_client/piloo_api_client.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:piloo/features/auth/presentation/session_provider.dart';
+import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/shared/api/api_client_provider.dart';
 
 const _prefsKey = 'piloo.active_officine';
@@ -101,4 +102,21 @@ class ActiveOfficineNotifier extends AsyncNotifier<Officine?> {
 
 extension _IterableFirstOrNull<T> on Iterable<T> {
   T? get firstOrNull => isEmpty ? null : first;
+}
+
+/// PATCH le fuseau IANA d'une officine (#363). Invalide l'officine active +
+/// la liste pour que l'affichage des prises se recale immédiatement.
+Future<void> updateOfficineTimezone(
+  WidgetRef ref, {
+  required String officineId,
+  required String timezone,
+}) async {
+  final api = ref.read(pilooApiClientProvider).getOfficinesApi();
+  final input = (UpdateOfficineInputBuilder()..timezone = timezone).build();
+  final res = await api.v1OfficinesIdPatch(id: officineId, updateOfficineInput: input);
+  if (res.statusCode != 200) {
+    throw Exception('MAJ fuseau : statut ${res.statusCode}');
+  }
+  ref.invalidate(activeOfficineProvider);
+  ref.invalidate(officinesListProvider);
 }

@@ -29,6 +29,7 @@ import 'package:piloo/features/inventory/presentation/medicament_info_screen.dar
 import 'package:piloo/features/inventory/presentation/quick_actions_demo_screen.dart';
 import 'package:piloo/features/more/presentation/more_screen.dart';
 import 'package:piloo/features/officine/presentation/officine_screen.dart';
+import 'package:piloo/features/officines/presentation/officine_settings_screen.dart';
 import 'package:piloo/features/officines/presentation/officines_list_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnance_create_screen.dart';
 import 'package:piloo/features/ordonnances/presentation/ordonnance_detail_screen.dart';
@@ -274,9 +275,8 @@ GoRouter buildRouter() {
       GoRoute(
         path: '/officines/:officineId/settings',
         name: RouteName.officineSettings,
-        builder: (_, state) => PlaceholderScreen(
-          title: 'Réglages officine',
-          params: {'officineId': state.pathParameters['officineId'] ?? ''},
+        builder: (_, state) => OfficineSettingsScreen(
+          officineId: state.pathParameters['officineId'] ?? '',
         ),
       ),
       GoRoute(
