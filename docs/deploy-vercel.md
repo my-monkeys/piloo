@@ -1,6 +1,12 @@
 # Déploiement Vercel — Piloo Web
 
+> **⚠️ OBSOLÈTE (2026-06-18, #357/#368)** — Piloo n'est **plus déployé sur
+> Vercel**. La prod tourne en **self-hosté sur cookie-server (Docker)**. Pour
+> le déploiement actuel (build image + migrations + restart), voir
+> **`deploy/README.md`**. Ce document est conservé à titre historique.
+
 Ce document décrit la configuration Vercel pour `apps/web` (Next.js 15). Il couvre :
+
 1. Le lien GitHub (preview par PR, prod sur `main`)
 2. La configuration projet (Root Directory, build, install)
 3. La liste des variables d'environnement à configurer **par environnement**
@@ -27,16 +33,18 @@ Ce document décrit la configuration Vercel pour `apps/web` (Next.js 15). Il cou
 
 Vercel mappe automatiquement :
 
-| Branche / event | Environnement Vercel | URL |
-|---|---|---|
-| `main` (push) | **Production** | `piloo.vercel.app` (ou domaine custom) |
-| Toute PR ouverte | **Preview** | `piloo-<hash>-<team>.vercel.app` (URL unique par commit) |
-| Toute autre branche poussée | **Preview** | idem |
+| Branche / event             | Environnement Vercel | URL                                                      |
+| --------------------------- | -------------------- | -------------------------------------------------------- |
+| `main` (push)               | **Production**       | `piloo.vercel.app` (ou domaine custom)                   |
+| Toute PR ouverte            | **Preview**          | `piloo-<hash>-<team>.vercel.app` (URL unique par commit) |
+| Toute autre branche poussée | **Preview**          | idem                                                     |
 
 Côté `vercel.json` :
+
 ```json
 "git": { "deploymentEnabled": { "main": true } }
 ```
+
 → seul `main` déclenche un build de prod. Les autres branches → preview uniquement (pas de déploiement prod accidentel depuis une feature branch).
 
 ### Protections recommandées (dashboard)
@@ -63,21 +71,22 @@ Pour chaque variable, cocher les environnements concernés : `Production`, `Prev
 
 ### Liste des clés attendues
 
-| Clé | Description | Production | Preview | Dev | Sensible |
-|---|---|:-:|:-:|:-:|:-:|
-| `DATABASE_URL` | URL Postgres complète (Drizzle). Inclut user/pwd/host/db. | ✅ | ✅ (DB staging) | ✅ (DB locale ou neon branch) | 🔐 |
-| `JWT_SECRET` | Secret signature JWT (auth maison ou complément Better Auth). 32+ bytes random. | ✅ | ✅ | ✅ | 🔐 |
-| `BREVO_API_KEY` | Clé API Brevo (transactional email + SMS). | ✅ | ✅ (compte sandbox) | ✅ | 🔐 |
-| `FCM_SERVER_KEY` | Server key Firebase Cloud Messaging (push notifications mobile). | ✅ | ✅ (projet FCM staging) | ⚪ | 🔐 |
-| `S3_ENDPOINT` | Endpoint S3 (ex: `https://s3.eu-west-3.amazonaws.com` ou endpoint compatible R2/Scaleway). | ✅ | ✅ | ✅ | ⚪ |
-| `S3_REGION` | Région S3 (ex: `eu-west-3`). | ✅ | ✅ | ✅ | ⚪ |
-| `S3_BUCKET` | Nom du bucket (photos boîtes, ordonnances). | ✅ | ✅ (bucket distinct) | ✅ | ⚪ |
-| `S3_ACCESS_KEY_ID` | Access key IAM/compatible. | ✅ | ✅ | ✅ | 🔐 |
-| `S3_SECRET_ACCESS_KEY` | Secret key IAM/compatible. | ✅ | ✅ | ✅ | 🔐 |
-| `NEXT_PUBLIC_APP_URL` | URL publique de l'app (ex: `https://piloo.fr` en prod, vide en preview pour laisser Vercel injecter). | ✅ | ⚪ | ✅ | ⚪ |
-| `CRON_SECRET` | Secret partagé Vercel Cron ↔ endpoint `/api/cron/*` (header `Authorization: Bearer …`). 32+ bytes random. **Production uniquement** — le cron ne tourne pas en preview. | ✅ | ⚪ | ⚪ | 🔐 |
+| Clé                    | Description                                                                                                                                                             | Production |         Preview         |              Dev              | Sensible |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------: | :---------------------: | :---------------------------: | :------: |
+| `DATABASE_URL`         | URL Postgres complète (Drizzle). Inclut user/pwd/host/db.                                                                                                               |     ✅     |     ✅ (DB staging)     | ✅ (DB locale ou neon branch) |    🔐    |
+| `JWT_SECRET`           | Secret signature JWT (auth maison ou complément Better Auth). 32+ bytes random.                                                                                         |     ✅     |           ✅            |              ✅               |    🔐    |
+| `BREVO_API_KEY`        | Clé API Brevo (transactional email + SMS).                                                                                                                              |     ✅     |   ✅ (compte sandbox)   |              ✅               |    🔐    |
+| `FCM_SERVER_KEY`       | Server key Firebase Cloud Messaging (push notifications mobile).                                                                                                        |     ✅     | ✅ (projet FCM staging) |              ⚪               |    🔐    |
+| `S3_ENDPOINT`          | Endpoint S3 (ex: `https://s3.eu-west-3.amazonaws.com` ou endpoint compatible R2/Scaleway).                                                                              |     ✅     |           ✅            |              ✅               |    ⚪    |
+| `S3_REGION`            | Région S3 (ex: `eu-west-3`).                                                                                                                                            |     ✅     |           ✅            |              ✅               |    ⚪    |
+| `S3_BUCKET`            | Nom du bucket (photos boîtes, ordonnances).                                                                                                                             |     ✅     |  ✅ (bucket distinct)   |              ✅               |    ⚪    |
+| `S3_ACCESS_KEY_ID`     | Access key IAM/compatible.                                                                                                                                              |     ✅     |           ✅            |              ✅               |    🔐    |
+| `S3_SECRET_ACCESS_KEY` | Secret key IAM/compatible.                                                                                                                                              |     ✅     |           ✅            |              ✅               |    🔐    |
+| `NEXT_PUBLIC_APP_URL`  | URL publique de l'app (ex: `https://piloo.fr` en prod, vide en preview pour laisser Vercel injecter).                                                                   |     ✅     |           ⚪            |              ✅               |    ⚪    |
+| `CRON_SECRET`          | Secret partagé Vercel Cron ↔ endpoint `/api/cron/*` (header `Authorization: Bearer …`). 32+ bytes random. **Production uniquement** — le cron ne tourne pas en preview. |     ✅     |           ⚪            |              ⚪               |    🔐    |
 
 Légende :
+
 - ✅ requis dans cet env
 - ⚪ optionnel / dérivable
 - 🔐 secret (ne jamais logger, jamais commit)
@@ -85,6 +94,7 @@ Légende :
 ### Variables auto-injectées par Vercel (ne pas configurer)
 
 Vercel pose ces variables tout seul, on peut les utiliser dans le code :
+
 - `VERCEL_URL` — URL du deployment courant (utile en preview pour callbacks).
 - `VERCEL_ENV` — `production` | `preview` | `development`.
 - `VERCEL_GIT_COMMIT_SHA`, `VERCEL_GIT_COMMIT_REF` — métadonnées git.
@@ -92,11 +102,13 @@ Vercel pose ces variables tout seul, on peut les utiliser dans le code :
 ### Pull local
 
 Pour récupérer un `.env.local` synchronisé avec l'env `Development` :
+
 ```bash
 cd apps/web
 vercel link              # une seule fois, lie le dossier au projet Vercel
 vercel env pull .env.local
 ```
+
 → génère `apps/web/.env.local`. Déjà ignoré par `.gitignore` racine (vérifier avant le premier commit).
 
 ---
@@ -116,8 +128,8 @@ Le projet déclare des cron jobs dans `apps/web/vercel.json` (clé `crons`).
 Vercel Cron ne tourne que sur l'environnement **Production** — les previews
 n'invoquent jamais ces endpoints.
 
-| Path | Schedule | Description | ADR |
-|---|---|---|---|
+| Path                    | Schedule                              | Description                                                 | ADR                                   |
+| ----------------------- | ------------------------------------- | ----------------------------------------------------------- | ------------------------------------- |
 | `/api/cron/import-bdpm` | `0 3 5 * *` (le 5 du mois, 03:00 UTC) | Import mensuel BDPM (TSV data.gouv → Postgres → SQLite/S3). | [0003](adr/0003-bdpm-monthly-cron.md) |
 
 **Sécurité** : chaque endpoint `/api/cron/*` doit valider le header
@@ -126,6 +138,7 @@ requête sans ce header → `401`. Le secret est une env var prod (cf.
 tableau §2).
 
 **Vérification post-deploy** :
+
 1. Dashboard Vercel → Project → **Cron Jobs** : vérifier que les entrées
    du `vercel.json` sont listées avec le bon schedule.
 2. **Run Cron** manuellement depuis le dashboard (bouton ▶️) pour valider
