@@ -30,7 +30,7 @@ export const NAV_MAIN: NavItem[] = [
 
 /** Nav secondaire (bas de sidebar). */
 export const NAV_SECONDARY: NavItem[] = [
-  { href: '/pro/patients', label: 'Espace pro', Icon: UsersThree },
+  { href: '/pro/patients', label: 'Officines', Icon: UsersThree },
   { href: '/settings/officines', label: 'Réglages', Icon: Gear },
 ];
 

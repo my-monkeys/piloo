@@ -23,7 +23,7 @@ export default function ProPatientsPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Suivi patientèle" title="Espace pro" />
+      <PageHeader eyebrow="Changer d'officine" title="Officines" />
 
       {isLoading && <Muted>Chargement…</Muted>}
       {error && (
