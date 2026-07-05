@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#faf8f3; --surface:#fff; --sage:#4a6b64; --sage-h:#3d5a54; --sage-soft:#dbe3e0;
+    --terra:#a8472e; --terra-soft:#f3d9cd; --ink:#252a30; --ink2:#5a626b; --ink3:#8b929b;
+    --ok:#355b3e; --ok-bg:#d8e3d5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#e9e5db;display:flex;flex-direction:column;align-items:center;gap:40px;padding:40px}
+  .serif{font-family:'Fraunces',Georgia,serif;font-optical-sizing:auto}
+  .screen{position:relative;width:1290px;height:2796px;overflow:hidden;background:var(--cream);font-family:'Manrope',system-ui,sans-serif}
+  .blob{position:absolute;border-radius:50%;filter:blur(8px);opacity:.55}
+  .head{position:absolute;left:96px;right:96px;top:150px}
+  .eyebrow{display:inline-flex;align-items:center;gap:12px;font-size:26px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--terra);margin-bottom:26px}
+  .eyebrow .dot{width:14px;height:14px;border-radius:50%;background:var(--terra)}
+  h1{font-size:104px;line-height:1.02;font-weight:500;letter-spacing:-.02em;color:var(--ink)}
+  h1 em{font-style:normal;color:var(--sage)}
+  .sub{margin-top:30px;font-size:37px;line-height:1.4;font-weight:500;color:var(--ink2);max-width:1000px}
+  .phone{position:absolute;border-radius:78px;background:#1b1f22;padding:16px;box-shadow:0 60px 120px -30px rgba(37,42,48,.45),0 12px 30px -10px rgba(37,42,48,.3)}
+  .phone img{display:block;width:100%;height:auto;border-radius:62px}
+  .lines{position:absolute;inset:0;pointer-events:none}
+  .callout{position:absolute;display:inline-flex;align-items:center;gap:16px;background:#fff;border-radius:999px;padding:20px 30px;box-shadow:0 18px 40px -14px rgba(37,42,48,.35);font-size:31px;font-weight:700;color:var(--ink);white-space:nowrap;transform:translate(-50%,-50%)}
+  .callout .cdot{width:20px;height:20px;border-radius:50%;flex:none}
+  .callout.sage .cdot{background:var(--sage)}
+  .callout.terra .cdot{background:var(--terra)}
+  .callout.ok .cdot{background:var(--ok)}
+</style>
+</head>
+<body>
+
+<!-- ═══ s1 ═══ -->
+<div class="screen" id="s1">
+  <div class="blob" style="width:900px;height:900px;top:-260px;right:-220px;background:var(--sage-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:120px;left:-180px;background:var(--terra-soft);opacity:.4"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>Ton carnet de prises</span>
+    <h1 class="serif">Chaque prise,<br><em>au bon moment.</em></h1>
+    <p class="sub">Tes médicaments du jour regroupés par matin, midi, soir et coucher. Un seul tap pour valider une prise.</p>
+  </div>
+  <div class="phone" style="left:198px;top:1454px;width:920px"><img src="__TODAY__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="316" y1="2196" x2="278" y2="2106" stroke="#355b3e" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout ok" style="left:162px;top:2103px"><span class="cdot"></span>Valide d'un tap</div>
+</div>
+
+<!-- ═══ s2 ═══ -->
+<div class="screen" id="s2">
+  <div class="blob" style="width:900px;height:900px;top:-280px;left:-240px;background:var(--terra-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:80px;right:-170px;background:var(--sage-soft);opacity:.5"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>Ton armoire à pharmacie</span>
+    <h1 class="serif">Ton armoire,<br><em>sous contrôle.</em></h1>
+    <p class="sub">Ce qu'il te reste, les dates de péremption et les alertes automatiques — tout au même endroit.</p>
+  </div>
+  <div class="phone" style="left:112px;top:1040px;width:1022px"><img src="__OFFICINE__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="1049" y1="1908" x2="1023" y2="1980" stroke="#4a6b64" stroke-width="4" stroke-linecap="round"/>
+    <line x1="377" y1="1579" x2="545" y2="1718" stroke="#a8472e" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout sage" style="left:1142px;top:1909px"><span class="cdot"></span>Stock à jour</div>
+  <div class="callout terra" style="left:221px;top:1574px"><span class="cdot"></span>Périmés repérés auto</div>
+</div>
+
+<!-- ═══ s3 ═══ -->
+<div class="screen" id="s3">
+  <div class="blob" style="width:900px;height:900px;top:-260px;right:-220px;background:var(--sage-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:120px;left:-180px;background:var(--terra-soft);opacity:.4"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>Ajouter une boîte</span>
+    <h1 class="serif">Une boîte ?<br><em>Un scan.</em></h1>
+    <p class="sub">Vise le code au dos : le médicament est reconnu dans la base officielle, la péremption enregistrée toute seule.</p>
+  </div>
+  <div class="phone" style="left:315px;top:900px;width:660px"><img src="__SCAN__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="1096" y1="931" x2="920" y2="928" stroke="#4a6b64" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout sage" style="left:1035px;top:925px"><span class="cdot"></span>Reconnu direct</div>
+</div>
+
+<!-- ═══ s4 ═══ -->
+<div class="screen" id="s4">
+  <div class="blob" style="width:900px;height:900px;top:-280px;left:-240px;background:var(--terra-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:80px;right:-170px;background:var(--sage-soft);opacity:.5"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>Alertes</span>
+    <h1 class="serif">On te prévient,<br><em>à temps.</em></h1>
+    <p class="sub">Prise oubliée, péremption qui approche, stock qui baisse — Piloo veille et te prévient avant.</p>
+  </div>
+  <div class="phone" style="left:79px;top:1012px;width:1132px"><img src="__ALERTES__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="776" y1="1875" x2="955" y2="1975" stroke="#a8472e" stroke-width="4" stroke-linecap="round"/>
+    <line x1="315" y1="2218" x2="392" y2="2152" stroke="#4a6b64" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout terra" style="left:1091px;top:1971px"><span class="cdot"></span>Avant péremption</div>
+  <div class="callout sage" style="left:184px;top:2217px"><span class="cdot"></span>Pense à racheter</div>
+</div>
+
+<!-- ═══ s5 ═══ -->
+<div class="screen" id="s5">
+  <div class="blob" style="width:900px;height:900px;top:-260px;right:-220px;background:var(--sage-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:120px;left:-180px;background:var(--terra-soft);opacity:.4"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>À plusieurs</span>
+    <h1 class="serif">Le carnet<br><em>de la famille.</em></h1>
+    <p class="sub">Partage une officine avec un proche ou un aidant, chacun avec le bon rôle : propriétaire, éditeur, lecteur.</p>
+  </div>
+  <div class="phone" style="left:126px;top:569px;width:1029px"><img src="__PARTAGE__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="967" y1="1529" x2="893" y2="1479" stroke="#4a6b64" stroke-width="4" stroke-linecap="round"/>
+    <line x1="316" y1="2473" x2="441" y2="2569" stroke="#a8472e" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout sage" style="left:1094px;top:1535px"><span class="cdot"></span>Chacun son rôle</div>
+  <div class="callout terra" style="left:218px;top:2464px"><span class="cdot"></span>Invite en 1 tap</div>
+</div>
+
+<!-- ═══ s6 ═══ -->
+<div class="screen" id="s6">
+  <div class="blob" style="width:900px;height:900px;top:-280px;left:-240px;background:var(--terra-soft)"></div>
+  <div class="blob" style="width:520px;height:520px;bottom:80px;right:-170px;background:var(--sage-soft);opacity:.5"></div>
+  <div class="head">
+    <span class="eyebrow"><span class="dot"></span>La fiche médicament</span>
+    <h1 class="serif">Chaque médoc,<br><em>expliqué.</em></h1>
+    <p class="sub">Un résumé clair de ce à quoi il sert, plus la notice officielle — à portée de main.</p>
+  </div>
+  <div class="phone" style="left:139px;top:573px;width:1022px"><img src="__FICHE__" alt=""></div>
+  <svg class="lines" viewBox="0 0 1290 2796">
+    <line x1="299" y1="1201" x2="335" y2="1264" stroke="#4a6b64" stroke-width="4" stroke-linecap="round"/>
+    <line x1="519" y1="1794" x2="576" y2="1747" stroke="#a8472e" stroke-width="4" stroke-linecap="round"/>
+  </svg>
+  <div class="callout sage" style="left:186px;top:1200px"><span class="cdot"></span>Résumé en clair</div>
+  <div class="callout terra" style="left:705px;top:1741px"><span class="cdot"></span>La notice ANSM</div>
+</div>
+
+</body>
+</html>

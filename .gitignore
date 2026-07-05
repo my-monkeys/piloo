@@ -70,3 +70,9 @@ apps/mobile/lib/gen/openapi/
 # Temp browser auto files
 .tmp-*
 .playwright-mcp/
+
+# Added by ggshield
+.cache_ggshield
+
+# Artefacts HTML générés (régénérables depuis les .html sources)
+*.built.html
