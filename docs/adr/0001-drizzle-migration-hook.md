@@ -1,8 +1,19 @@
 # ADR 0001 — Hook de migration Drizzle au déploiement
 
 - **Date** : 2026-05-02
-- **Statut** : Accepté
+- **Statut** : ~~Accepté~~ → **Supersédé** (2026-06-18, #368)
 - **Décideurs** : équipe infra Piloo
+
+> **⚠️ Supersédé** — La prod a migré de **Vercel + Neon** vers **cookie-server
+> (Docker)** le 2026-06-18 (#357). Le workflow `deploy-prod.yml` décrit ici
+> (migrate GHA + deploy Vercel) ciblait une infra désormais morte et **échouait
+> à chaque merge** (secrets Vercel/Neon vides) → il a été **retiré** (#368).
+>
+> **Aujourd'hui** : le déploiement est **manuel** sur cookie-server et les
+> migrations Drizzle s'appliquent via le service `migrate` du compose
+> (`docker compose -f deploy/docker-compose.yml run --rm migrate`). Voir
+> **`deploy/README.md`**. L'ADR ci-dessous est conservé pour l'historique de
+> la décision d'origine.
 
 ## Contexte
 
@@ -24,6 +35,7 @@ Deux options principales :
 On part sur l'**option 2 : workflow GHA `deploy-prod.yml`**.
 
 Étapes :
+
 1. `actions/checkout` + setup pnpm + `pnpm install --frozen-lockfile`
 2. `pnpm db:migrate` (avec `DATABASE_URL = secrets.DATABASE_URL_MIGRATIONS`)
 3. Job `deploy` (dépend de `migrate`) qui appelle la CLI Vercel pour build +
@@ -37,6 +49,7 @@ placeholder qui définit le contrat.
 ## Conséquences
 
 **Positives**
+
 - Les **previews Vercel ne touchent pas la base de prod** : le build Vercel
   reste pur (pas d'effet de bord DB), seul le workflow `deploy-prod`
   applique le DDL.
@@ -48,6 +61,7 @@ placeholder qui définit le contrat.
 - Concurrency `deploy-prod` empêche deux migrations de tourner en parallèle.
 
 **Négatives**
+
 - Deux endroits à maintenir : GHA + projet Vercel. Le déploiement n'est
   plus 100 % « git push → Vercel », il passe par GHA.
 - Légère latence supplémentaire (le workflow doit installer + builder).
@@ -55,6 +69,7 @@ placeholder qui définit le contrat.
   `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`.
 
 **Pourquoi pas l'option 1 (`buildCommand`)**
+
 - Chaque preview lancerait un `db:migrate`. Soit on partage la base prod
   (très mauvais : DDL appliqué depuis chaque PR), soit on provisionne une
   branche/DB par preview (complexe, hors scope MVP).
