@@ -23,6 +23,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:piloo/core/router/routes.dart';
 import 'package:piloo/core/theme/colors.dart';
@@ -111,7 +112,7 @@ class MoreScreen extends ConsumerWidget {
     ),
   ];
 
-  List<_Row> _helpRows(WidgetRef ref) => [
+  List<_Row> _helpRows(BuildContext context, WidgetRef ref) => [
     _Row(
       icon: PhosphorIconsRegular.playCircle,
       label: 'Revoir le tour guidé',
@@ -122,17 +123,19 @@ class MoreScreen extends ConsumerWidget {
         ref.read(tourStepProvider.notifier).start();
       },
     ),
-    const _Row(
+    _Row(
       icon: PhosphorIconsRegular.question,
       label: 'Aide & FAQ',
       iconBg: PilooColors.surfaceSubtle,
       iconFg: PilooColors.textPrimary,
+      onTap: () => _showHelpSheet(context),
     ),
-    const _Row(
+    _Row(
       icon: PhosphorIconsFill.info,
       label: "Ce n'est pas un dispositif médical",
       iconBg: PilooColors.accentSoft,
       iconFg: PilooColors.accent,
+      onTap: () => _showMedicalDisclaimerSheet(context),
     ),
   ];
 
@@ -179,7 +182,7 @@ class MoreScreen extends ConsumerWidget {
                   const SizedBox(height: 18),
                   _Section(label: 'PRÉFÉRENCES', rows: _prefs),
                   const SizedBox(height: 18),
-                  _Section(label: 'AIDE & LÉGAL', rows: _helpRows(ref)),
+                  _Section(label: 'AIDE & LÉGAL', rows: _helpRows(context, ref)),
                   const SizedBox(height: 18),
                   _LogoutButton(
                     onTap: () async {
@@ -408,6 +411,215 @@ class _RowItem extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Bottom sheet « Aide & FAQ » : quelques réponses + contact email.
+/// Auto-suffisant (aucune dépendance réseau pour s'ouvrir).
+void _showHelpSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: PilooColors.background,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => _InfoSheet(
+      title: 'Aide & FAQ',
+      children: [
+        _FaqItem(
+          q: 'Comment ajouter une boîte ?',
+          a: 'Touche le bouton scan au centre de la barre et vise le code '
+              'DataMatrix au dos de la boîte. Piloo reconnaît le médicament '
+              'et pré-remplit tout.',
+        ),
+        _FaqItem(
+          q: 'Comment partager une officine ?',
+          a: 'Ouvre une officine, touche l\'icône membres, puis « Inviter '
+              'quelqu\'un ». Choisis le rôle : propriétaire, éditeur ou lecteur.',
+        ),
+        _FaqItem(
+          q: 'Mes données sont-elles privées ?',
+          a: 'Oui. Aucun tracking publicitaire. Tes données restent les tiennes '
+              'et tu peux supprimer ton compte à tout moment depuis ton profil.',
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Besoin d\'aide ? Écris-nous.',
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            color: PilooColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () {
+            // ignore: discarded_futures
+            launchUrl(
+              Uri.parse('mailto:contact@piloo.fr?subject=Aide%20Piloo'),
+              mode: LaunchMode.externalApplication,
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: PilooColors.primary,
+              borderRadius: BorderRadius.circular(PilooRadius.md),
+            ),
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(PhosphorIconsRegular.envelope,
+                    size: 16, color: Colors.white),
+                const SizedBox(width: 10),
+                Text(
+                  'contact@piloo.fr',
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+/// Bottom sheet « Ce n'est pas un dispositif médical » : rappel du
+/// positionnement (cf. CLAUDE.md — non-classification MDR).
+void _showMedicalDisclaimerSheet(BuildContext context) {
+  showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: PilooColors.background,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (ctx) => _InfoSheet(
+      title: "Ce n'est pas un dispositif médical",
+      children: [
+        Text(
+          'Piloo est un carnet numérique, un aide-mémoire personnel pour la '
+          'maison. Ce n\'est pas un dispositif médical.',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            height: 1.55,
+            color: PilooColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Il ne remplace ni ton ordonnance, ni l\'avis de ton médecin ou '
+          'pharmacien, et ne fait aucune recommandation clinique automatique '
+          '(pas d\'alerte d\'interaction, pas de validation de posologie).',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            height: 1.55,
+            color: PilooColors.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Text(
+          'Pour toute question de santé, consulte un professionnel.',
+          style: GoogleFonts.manrope(
+            fontSize: 15,
+            height: 1.55,
+            fontWeight: FontWeight.w600,
+            color: PilooColors.textPrimary,
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+class _InfoSheet extends StatelessWidget {
+  const _InfoSheet({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          22,
+          20,
+          22,
+          20 + MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: PilooColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              style: GoogleFonts.fraunces(
+                fontSize: 22,
+                fontWeight: FontWeight.w500,
+                color: PilooColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FaqItem extends StatelessWidget {
+  const _FaqItem({required this.q, required this.a});
+
+  final String q;
+  final String a;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            q,
+            style: GoogleFonts.manrope(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: PilooColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            a,
+            style: GoogleFonts.manrope(
+              fontSize: 13.5,
+              height: 1.5,
+              color: PilooColors.textSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }
