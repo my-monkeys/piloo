@@ -44,6 +44,7 @@ import 'package:piloo/features/settings/presentation/notifications_screen.dart';
 import 'package:piloo/features/onboarding/data/onboarding_targets.dart';
 import 'package:piloo/features/settings/presentation/profile_screen.dart';
 import 'package:piloo/features/settings/presentation/bdpm_status_screen.dart';
+import 'package:piloo/features/settings/presentation/delete_account_screen.dart';
 import 'package:piloo/features/settings/presentation/security_screen.dart';
 import 'package:piloo/features/today/presentation/today_screen.dart';
 import 'package:piloo/shared/widgets/piloo_scan_fab.dart';
@@ -323,6 +324,11 @@ GoRouter buildRouter() {
         path: RoutePath.settingsBdpm,
         name: RouteName.settingsBdpm,
         builder: (_, _) => const BdpmStatusScreen(),
+      ),
+      GoRoute(
+        path: RoutePath.settingsDeleteAccount,
+        name: RouteName.settingsDeleteAccount,
+        builder: (_, _) => const DeleteAccountScreen(),
       ),
 
       // Vue pro

@@ -169,10 +169,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _AvatarSection(
-                      initials: _initials,
-                      onChangePhoto: () {/* TODO image_picker */},
-                    ),
+                    _AvatarSection(initials: _initials),
                     const SizedBox(height: 24),
                     _LabeledField(
                       label: 'PRÉNOM',
@@ -256,6 +253,32 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                           'hypertension…',
                       controller: _conditionsCtrl,
                     ),
+                    const SizedBox(height: 28),
+                    const Divider(height: 1, color: PilooColors.border),
+                    const SizedBox(height: 16),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () =>
+                          context.pushNamed(RouteName.settingsDeleteAccount),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            PhosphorIconsRegular.trash,
+                            size: 18,
+                            color: PilooColors.errorOn,
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Supprimer mon compte',
+                            style: GoogleFonts.manrope(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: PilooColors.errorOn,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -304,96 +327,37 @@ class _Header extends StatelessWidget {
 }
 
 class _AvatarSection extends StatelessWidget {
-  const _AvatarSection({
-    required this.initials,
-    required this.onChangePhoto,
-  });
+  const _AvatarSection({required this.initials});
 
   final String initials;
-  final VoidCallback onChangePhoto;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 96,
-              height: 96,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: PilooColors.primary,
-                boxShadow: [
-                  BoxShadow(
-                    color: PilooColors.primary.withValues(alpha: 0.18),
-                    offset: const Offset(0, 6),
-                    blurRadius: 18,
-                  ),
-                ],
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                initials,
-                style: GoogleFonts.manrope(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            // Petit badge caméra en overlay bottom-right pour
-            // signifier "tap pour changer la photo".
-            Positioned(
-              right: -4,
-              bottom: -4,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: onChangePhoto,
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: PilooColors.surface,
-                    border: Border.all(
-                      color: PilooColors.background,
-                      width: 3,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        offset: const Offset(0, 2),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                  alignment: Alignment.center,
-                  child: const Icon(
-                    PhosphorIconsFill.camera,
-                    size: 16,
-                    color: PilooColors.primary,
-                  ),
-                ),
-              ),
+    return Center(
+      child: Container(
+        width: 96,
+        height: 96,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: PilooColors.primary,
+          boxShadow: [
+            BoxShadow(
+              color: PilooColors.primary.withValues(alpha: 0.18),
+              offset: const Offset(0, 6),
+              blurRadius: 18,
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTap: onChangePhoto,
-          child: Text(
-            'Changer la photo',
-            style: GoogleFonts.manrope(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: PilooColors.primary,
-            ),
+        alignment: Alignment.center,
+        child: Text(
+          initials,
+          style: GoogleFonts.manrope(
+            fontSize: 32,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
           ),
         ),
-      ],
+      ),
     );
   }
 }
