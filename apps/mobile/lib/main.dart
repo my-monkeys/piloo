@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/router/router.dart';
@@ -36,6 +37,19 @@ Future<void> main() async {
   // test/features/auth/session_provider_test.dart.
   final secureStorage = FlutterSecureStorageImpl();
   final storage = SessionStorage(secureStorage);
+
+  // Purge de la session résiduelle au 1er lancement après (ré)installation.
+  // Sur iOS, le Keychain survit à la désinstallation de l'app : sans ça, une
+  // session périmée d'un ancien install est lue au boot → le splash route vers
+  // /today → 1er appel API → 401 → SessionExpiryHandler (#361) bascule vers
+  // /welcome, d'où un flash désagréable. Le flag vit dans shared_preferences,
+  // qui EST effacé à la désinstallation : son absence = install fraîche (#382).
+  final prefs = await SharedPreferences.getInstance();
+  if (!(prefs.getBool('piloo_installed') ?? false)) {
+    await storage.clear();
+    await prefs.setBool('piloo_installed', true);
+  }
+
   final db = LocalDatabase();
   // Router instancié ici (vs avant dans _PilooAppState) pour pouvoir
   // l'exposer via routerProvider — l'overlay onboarding (#351) en a
