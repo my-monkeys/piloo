@@ -13,8 +13,8 @@ un Flutter trop neuf (ex. 3.44+), même si `flutter analyze` passe. 2.1.0 est la
 dernière version publiée de phosphor → pas de bump possible.
 
 **Toujours** lancer via fvm : `fvm flutter run`, `fvm flutter pub get`, `fvm dart run
-build_runner build`. Les CI (`codemagic.yaml`, `.github/workflows/*mobile*`,
-`*android*`) épinglent déjà 3.38.7. Setup : `fvm install` (lit `.fvmrc`).
+build_runner build`. Les CI (`.github/workflows/*mobile*`, `*android*`,
+`build-ios.yml`) épinglent déjà 3.38.7. Setup : `fvm install` (lit `.fvmrc`).
 
 Fix définitif à terme : migrer vers un set d'icônes compatible Flutter récent (ou
 attendre une release phosphor corrigée), puis relever le pin.
