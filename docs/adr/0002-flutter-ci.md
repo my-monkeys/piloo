@@ -1,6 +1,6 @@
 # ADR 001 — Flutter CI : Codemagic vs GitHub Actions + fastlane
 
-- **Statut** : Accepté
+- **Statut** : Remplacé par [ADR 0005](./0005-github-actions-ios.md) (2026-07-20)
 - **Date** : 2026-05-02
 - **Décideur** : Swarm Infrastructure (worker #8)
 - **Périmètre** : pipeline de build mobile (`apps/mobile`, Flutter iOS + Android). Backend/web restent sur GitHub Actions.

@@ -1,9 +1,10 @@
 # Dossier de cadrage — Piloo
 
-> *Projet Piloo — carnet numérique de médicaments pour la maison*
+> _Projet Piloo — carnet numérique de médicaments pour la maison_
 > Version 0.3 · Avril 2026
 
 **Décisions récentes** (non encore intégrées au corps du document, cf. `ui-ux-guidelines.md` pour détails) :
+
 - Nom du produit : **Piloo**
 - Direction visuelle : **A+C** (beige chaleureux + précision nordique + accent terracotta)
 - Mode : light only au MVP
@@ -23,12 +24,14 @@ Une application web et mobile qui permet à chacun de gérer son armoire à phar
 ### 1.2 Problèmes identifiés
 
 **Côté particulier**
+
 - On ne sait jamais vraiment ce qu'on a chez soi : on rachète du Doliprane alors qu'on en a déjà trois boîtes.
 - Les dates de péremption sont ignorées : on jette, ou pire, on prend des médicaments périmés.
 - La gestion d'une ordonnance avec plusieurs médicaments à prises multiples est source d'oublis.
 - Pour les personnes âgées, la charge mentale est lourde et les erreurs fréquentes.
 
 **Côté professionnel (aide-soignant, IDEL, SSIAD)**
+
 - Le suivi des médicaments des patients à domicile se fait souvent sur papier ou dans un fichier Excel partagé.
 - Difficile d'anticiper un renouvellement d'ordonnance ou une rupture de stock chez un patient.
 - Pas de canal structuré entre le pro et le patient (ou son aidant familial) pour signaler un manque.
@@ -36,11 +39,11 @@ Une application web et mobile qui permet à chacun de gérer son armoire à phar
 
 ### 1.3 Proposition de valeur
 
-| Utilisateur | Ce que l'app apporte |
-|---|---|
-| Particulier | Scan rapide, inventaire toujours à jour, rappels de prise, alertes péremption |
-| Aidant familial | Vue partagée de l'officine d'un proche, possibilité d'alerter le pro |
-| Pro de santé | Multi-patients, timeline des prises, alertes croisées stock + non-prise, sync offline sur le terrain |
+| Utilisateur     | Ce que l'app apporte                                                                                 |
+| --------------- | ---------------------------------------------------------------------------------------------------- |
+| Particulier     | Scan rapide, inventaire toujours à jour, rappels de prise, alertes péremption                        |
+| Aidant familial | Vue partagée de l'officine d'un proche, possibilité d'alerter le pro                                 |
+| Pro de santé    | Multi-patients, timeline des prises, alertes croisées stock + non-prise, sync offline sur le terrain |
 
 ### 1.4 Analyse concurrentielle et positionnement
 
@@ -48,26 +51,27 @@ Le marché se scinde en deux mondes distincts qui ne se parlent pas, ce qui ouvr
 
 **Grand public — apps de rappel et suivi médicaments**
 
-| Acteur | Scan CIP/DataMatrix | Inventaire stock | Rappels | Partage aidant | Regroupement molécule | Tarif |
-|---|---|---|---|---|---|---|
-| **Medissimo / Kimed** 🇫🇷 | ✅ | ✅ | ✅ | ✅ | ❌ | Gratuit (couplé au pilulier physique Medipac, financé pharma) |
-| **MyTherapy** 🇩🇪 | ❌ | ✅ | ✅ | ✅ | ❌ | Gratuit (data sharing publicitaire) |
-| **Medisafe** 🇺🇸 | ❌ | ✅ | ✅ | ✅ | ❌ | ~4,99$/mois ou 39,99$/an (passé payant en 2026) |
-| **TOM Medications** 🇨🇭 | ❌ | ✅ | ✅ | ❌ | ❌ | Gratuit |
-| **Preskri / Pharmabox** 🇫🇷 | ❌ | ✅ | ✅ (+ appel vocal) | ⚠️ En dev | ❌ | Gratuit |
-| **Goodmed** 🇫🇷 | ✅ (QR) | ❌ | ❌ | ❌ | ❌ | Gratuit (info uniquement) |
+| Acteur                     | Scan CIP/DataMatrix | Inventaire stock | Rappels            | Partage aidant | Regroupement molécule | Tarif                                                         |
+| -------------------------- | ------------------- | ---------------- | ------------------ | -------------- | --------------------- | ------------------------------------------------------------- |
+| **Medissimo / Kimed** 🇫🇷   | ✅                  | ✅               | ✅                 | ✅             | ❌                    | Gratuit (couplé au pilulier physique Medipac, financé pharma) |
+| **MyTherapy** 🇩🇪           | ❌                  | ✅               | ✅                 | ✅             | ❌                    | Gratuit (data sharing publicitaire)                           |
+| **Medisafe** 🇺🇸            | ❌                  | ✅               | ✅                 | ✅             | ❌                    | ~4,99$/mois ou 39,99$/an (passé payant en 2026)               |
+| **TOM Medications** 🇨🇭     | ❌                  | ✅               | ✅                 | ❌             | ❌                    | Gratuit                                                       |
+| **Preskri / Pharmabox** 🇫🇷 | ❌                  | ✅               | ✅ (+ appel vocal) | ⚠️ En dev      | ❌                    | Gratuit                                                       |
+| **Goodmed** 🇫🇷             | ✅ (QR)             | ❌               | ❌                 | ❌             | ❌                    | Gratuit (info uniquement)                                     |
 
 **Pro — logiciels SSIAD / services à domicile**
 
-| Acteur | Périmètre | Certifications | Tarif |
-|---|---|---|---|
-| **Ximi SSIAD** | Suite ERP complète SSIAD/SAAD | HDS + ISO 27001/27018/20000 + Ségur | Sur devis, plusieurs k€/an |
-| **Domilink SSIAD** (DICSIT) | 450+ SSIAD, dossier soins + mobile offline | Ségur, DMP, MS Santé | Sur devis |
-| **Cedi'Acte** (CERIG) | 300+ ESMS, suite complète | HDS | Sur devis |
-| **iMedicale / AtHome SSIAD** | SSIAD avec bilans et suivi | HDS | Sur devis |
-| **BL.domicile** (Berger-Levrault) | Suite ESMS multi-modules | HDS, Ségur | Licence entreprise |
+| Acteur                            | Périmètre                                  | Certifications                      | Tarif                      |
+| --------------------------------- | ------------------------------------------ | ----------------------------------- | -------------------------- |
+| **Ximi SSIAD**                    | Suite ERP complète SSIAD/SAAD              | HDS + ISO 27001/27018/20000 + Ségur | Sur devis, plusieurs k€/an |
+| **Domilink SSIAD** (DICSIT)       | 450+ SSIAD, dossier soins + mobile offline | Ségur, DMP, MS Santé                | Sur devis                  |
+| **Cedi'Acte** (CERIG)             | 300+ ESMS, suite complète                  | HDS                                 | Sur devis                  |
+| **iMedicale / AtHome SSIAD**      | SSIAD avec bilans et suivi                 | HDS                                 | Sur devis                  |
+| **BL.domicile** (Berger-Levrault) | Suite ESMS multi-modules                   | HDS, Ségur                          | Licence entreprise         |
 
 **Constats clés**
+
 - **Medissimo** est le concurrent français le plus direct côté particulier, mais son écosystème est **couplé au pilulier physique Medipac** et au réseau de pharmacies partenaires. Sans Medipac, l'expérience est dégradée.
 - **Medisafe est passé payant en janvier 2026** → fenêtre d'opportunité concrète pour capter des utilisateurs en recherche d'alternative.
 - **Aucun concurrent ne propose le regroupement par molécule (DCI)** — alors que c'est l'usage naturel quand on ouvre son armoire à pharmacie ("combien de paracétamol j'ai, toutes marques confondues ?").
@@ -85,11 +89,13 @@ Trois angles de différenciation :
 3. **Pont léger pro↔patient** — pour IDEL libéraux et aidants familiaux, sans prétention d'ERP SSIAD. Cible les pros non rattachés à une structure lourde.
 
 **Forces concurrentielles à défendre**
+
 - Timing : vague d'utilisateurs cherchant une alternative à Medisafe devenu payant.
 - Offline-first réel (scan + saisie + consultation sans réseau).
 - Positionnement privacy-first possible si on évite le modèle data-sharing publicitaire de MyTherapy.
 
 **Faiblesses à assumer**
+
 - Pas de data source premium type ordonnance directe depuis pharmacie (contrairement à Medissimo).
 - Pas de HDS au POC → ne peut pas viser le marché SSIAD structuré tant que la migration HDS n'est pas faite.
 - Démarrage from scratch face à des concurrents avec années de polish UX et bases utilisateurs énormes.
@@ -99,6 +105,7 @@ Trois angles de différenciation :
 **L'app est** un carnet de suivi personnel numérique. Elle permet d'enregistrer une ordonnance **déjà délivrée** (prescrite par un médecin, dispensée par un pharmacien), de suivre son stock à la maison, et de s'organiser pour les prises. Même usage côté pro : l'aide-soignant ou l'IDEL s'en sert comme d'un cahier de liaison numérique, pas comme d'un outil d'acte médical.
 
 **L'app n'est pas** :
+
 - Un outil de validation clinique d'ordonnance.
 - Un substitut à l'ordonnance officielle (seule l'ordonnance papier ou e-prescription fait foi).
 - Un outil de prescription ou de modification de prescription.
@@ -106,7 +113,8 @@ Trois angles de différenciation :
 - Un canal d'alerte médicale officiel (pas de remplacement du 15/112, pas de communication patient-médecin réglementée).
 
 **Conséquences concrètes**
-- Mentions à afficher dans l'onboarding, les CGU, l'écran de saisie d'ordonnance, les alertes : *"Cet outil est un aide-mémoire personnel. Il ne remplace ni votre ordonnance, ni l'avis de votre médecin ou pharmacien."*
+
+- Mentions à afficher dans l'onboarding, les CGU, l'écran de saisie d'ordonnance, les alertes : _"Cet outil est un aide-mémoire personnel. Il ne remplace ni votre ordonnance, ni l'avis de votre médecin ou pharmacien."_
 - Pas de marquage CE médical nécessaire (on reste hors champ MDR).
 - Les alertes de "non-prise" envoyées à un aidant ou un pro sont des notifications entre proches, pas des alertes cliniques.
 - L'utilisateur reste responsable de la justesse de ce qu'il saisit (l'OCR aide mais ne valide pas).
@@ -120,12 +128,14 @@ Point **fondamental** à clarifier dès le départ et à rappeler partout (CGU, 
 **L'application est un carnet numérique d'aide-mémoire personnel.** Elle permet d'enregistrer une ordonnance **déjà délivrée** par un professionnel de santé, de suivre le stock de médicaments au domicile, et de générer des rappels de prise.
 
 **L'application n'est pas :**
+
 - Un dispositif médical (DM) au sens du règlement européen MDR 2017/745 — elle ne fait aucune recommandation clinique, aucune aide à la décision thérapeutique, aucune alerte médicale.
 - Un outil de validation ou de prescription — l'ordonnance officielle reste celle délivrée par le médecin, l'app n'en est qu'une retranscription à usage personnel.
 - Un substitut à l'avis du médecin, du pharmacien ou de l'infirmier.
 - Un outil opposable juridiquement — elle ne fait pas foi dans un contexte médico-légal.
 
 **Conséquences pratiques :**
+
 - Pas de marquage CE médical requis, pas de procédure ANSM.
 - Le pro de santé (IDEL, aide-soignant) utilise l'app comme il utiliserait un cahier de liaison ou un tableur partagé, pas comme un acte médical.
 - Les "alertes non-prise" sont des rappels entre proches/aidants, pas des alertes médicales.
@@ -155,7 +165,7 @@ Plusieurs aides-soignants se partagent les tournées. Besoin d'une vue multi-pat
 
 1. **Ajouter une boîte à mon officine** : ouvrir l'app, scanner le DataMatrix, confirmer, c'est ajouté avec date de péremption et lot.
 2. **Savoir combien de Doliprane j'ai** : ouvrir la vue "molécule", paracétamol → 3 boîtes (2 non entamées, 1 à moitié).
-3. **Retranscrire une ordonnance et programmer les prises** : à partir d'une ordonnance déjà délivrée par un médecin, saisir manuellement ou via OCR les prescriptions dans l'app, générer un planning matin/midi/soir pour la durée indiquée, recevoir une notif à chaque échéance. *L'ordonnance originale reste la référence officielle.*
+3. **Retranscrire une ordonnance et programmer les prises** : à partir d'une ordonnance déjà délivrée par un médecin, saisir manuellement ou via OCR les prescriptions dans l'app, générer un planning matin/midi/soir pour la durée indiquée, recevoir une notif à chaque échéance. _L'ordonnance originale reste la référence officielle._
 4. **Valider une prise** : cliquer "pris" sur la notif ou dans l'app. Si non pris dans X minutes, escalade optionnelle.
 5. **Partager mon officine à un pro** : générer un lien d'invitation, définir les droits (éditeur/lecteur), le pro accepte et voit la fiche.
 6. **Pro : voir la tournée du jour** : liste des patients visités aujourd'hui, prises à valider, stocks à vérifier.
@@ -168,24 +178,24 @@ Plusieurs aides-soignants se partagent les tournées. Besoin d'une vue multi-pat
 
 ### 3.1 Fonctionnalités par priorité (MVP → v2 → v3)
 
-| # | Fonctionnalité | Priorité | Phase cible |
-|---|---|---|---|
-| 1 | Scan DataMatrix + inventaire officine particulier | P0 | MVP (M1-M3) |
-| 2 | Résolution CIP via BDPM locale | P0 | MVP |
-| 3 | Regroupement par molécule (DCI) | P0 | MVP |
-| 4 | Timeline de prises + notifications push | P0 | MVP |
-| 5 | Authentification + comptes particulier | P0 | MVP |
-| 6 | Offline complet avec sync | P0 | MVP |
-| 6b | Popup "actions rapides" au rescan d'une boîte connue | P0 | MVP |
-| 7 | Partage officine avec 3 rôles (Propriétaire/Éditeur/Lecteur) | P1 | v2 (M4-M5) |
-| 8 | Compte pro avec fiches patients multiples | P1 | v2 |
-| 9 | Signalement de manque patient → pro | P1 | v2 |
-| 10 | Notifications SMS + email (fiabilité) | P1 | v2 |
-| 11 | OCR d'ordonnance (photo → prescription structurée) | P2 | v3 (M6+) |
-| 12 | Alertes péremption avancées | P2 | v3 |
-| 13 | Estimation date de rupture de stock | P2 | v3 |
-| 14 | Dashboard pro (tournée du jour, indicateurs) | P2 | v3 |
-| 15 | Historique & export PDF (pour médecin traitant) | P3 | v4 |
+| #   | Fonctionnalité                                               | Priorité | Phase cible |
+| --- | ------------------------------------------------------------ | -------- | ----------- |
+| 1   | Scan DataMatrix + inventaire officine particulier            | P0       | MVP (M1-M3) |
+| 2   | Résolution CIP via BDPM locale                               | P0       | MVP         |
+| 3   | Regroupement par molécule (DCI)                              | P0       | MVP         |
+| 4   | Timeline de prises + notifications push                      | P0       | MVP         |
+| 5   | Authentification + comptes particulier                       | P0       | MVP         |
+| 6   | Offline complet avec sync                                    | P0       | MVP         |
+| 6b  | Popup "actions rapides" au rescan d'une boîte connue         | P0       | MVP         |
+| 7   | Partage officine avec 3 rôles (Propriétaire/Éditeur/Lecteur) | P1       | v2 (M4-M5)  |
+| 8   | Compte pro avec fiches patients multiples                    | P1       | v2          |
+| 9   | Signalement de manque patient → pro                          | P1       | v2          |
+| 10  | Notifications SMS + email (fiabilité)                        | P1       | v2          |
+| 11  | OCR d'ordonnance (photo → prescription structurée)           | P2       | v3 (M6+)    |
+| 12  | Alertes péremption avancées                                  | P2       | v3          |
+| 13  | Estimation date de rupture de stock                          | P2       | v3          |
+| 14  | Dashboard pro (tournée du jour, indicateurs)                 | P2       | v3          |
+| 15  | Historique & export PDF (pour médecin traitant)              | P3       | v4          |
 
 ### 3.2 Détail des entités métier
 
@@ -197,7 +207,7 @@ Plusieurs aides-soignants se partagent les tournées. Besoin d'une vue multi-pat
 
 **Molécule / DCI** : substance active. Un médicament a 1..N substances. Permet le regroupement "tous mes paracétamols".
 
-**Ordonnance (retranscrite)** : **copie personnelle** d'une ordonnance papier ou numérique *déjà délivrée* par un médecin. Contient : prescripteur (texte libre), date, lignes de prescription. L'app ne fait que stocker cette retranscription — la valeur opposable reste sur l'ordonnance originale.
+**Ordonnance (retranscrite)** : **copie personnelle** d'une ordonnance papier ou numérique _déjà délivrée_ par un médecin. Contient : prescripteur (texte libre), date, lignes de prescription. L'app ne fait que stocker cette retranscription — la valeur opposable reste sur l'ordonnance originale.
 
 **Prescription (ligne)** : ligne d'une ordonnance retranscrite. Médicament + posologie (ex: 1 cp 3×/j) + durée + indication. Saisie par l'utilisateur (ou extraite via OCR puis validée par l'utilisateur).
 
@@ -217,18 +227,18 @@ Une boîte est identifiée comme "déjà connue" via le couple **numéro de lot 
 
 **Actions proposées dans la popup**
 
-| Action | Effet |
-|---|---|
-| Marquer comme vide | Retire la boîte de l'inventaire, garde trace dans l'historique |
-| Ajuster le stock (rapide) | Boutons prédéfinis : Plein / 3/4 / Moitié / 1/4 / Presque vide |
-| Ajuster le stock (précis) | Champ numérique pour saisir le nombre exact d'unités restantes |
-| Infos rapides sur le médicament | Résumé IA court + infos BDPM + lien notice officielle |
-| Marquer comme périmée | Retire du stock, trace spécifique dans l'historique |
-| Signaler un manque (rôle Lecteur) | Notifie le propriétaire ou le pro lié que la boîte se vide |
+| Action                            | Effet                                                          |
+| --------------------------------- | -------------------------------------------------------------- |
+| Marquer comme vide                | Retire la boîte de l'inventaire, garde trace dans l'historique |
+| Ajuster le stock (rapide)         | Boutons prédéfinis : Plein / 3/4 / Moitié / 1/4 / Presque vide |
+| Ajuster le stock (précis)         | Champ numérique pour saisir le nombre exact d'unités restantes |
+| Infos rapides sur le médicament   | Résumé IA court + infos BDPM + lien notice officielle          |
+| Marquer comme périmée             | Retire du stock, trace spécifique dans l'historique            |
+| Signaler un manque (rôle Lecteur) | Notifie le propriétaire ou le pro lié que la boîte se vide     |
 
 **Composition de la fiche "Infos rapides"**
 
-- **Résumé IA** (2-3 lignes) : à quoi sert le médicament en langage simple, principe actif, précautions courantes. Exemple : *"Paracétamol 1000mg. Antalgique et antipyrétique utilisé contre la douleur et la fièvre. Maximum 3g/jour chez l'adulte. À espacer de 6h entre deux prises."*
+- **Résumé IA** (2-3 lignes) : à quoi sert le médicament en langage simple, principe actif, précautions courantes. Exemple : _"Paracétamol 1000mg. Antalgique et antipyrétique utilisé contre la douleur et la fièvre. Maximum 3g/jour chez l'adulte. À espacer de 6h entre deux prises."_
 - **Infos structurées BDPM** : DCI, dosage, forme pharmaceutique, voie d'administration, laboratoire, taux de remboursement.
 - **Lien vers la notice officielle** (PDF BDPM) pour l'utilisateur qui veut tout détail.
 
@@ -300,36 +310,36 @@ Le surcoût d'avoir deux codebases (double UI, double implémentation d'écrans)
 
 ### 4.3 Stack mobile (Flutter)
 
-| Couche | Techno | Justification |
-|---|---|---|
-| Framework | **Flutter 3.x** + **Dart** | Stabilité, pas de churn, écosystème mature |
-| State mgmt | **Riverpod** | Standard moderne, typé, testable |
-| Navigation | **go_router** | Officiel Flutter, URL-based, deep linking |
-| Modèles immuables | **freezed** + **json_serializable** | Classes data + sérialisation |
-| DB locale | **Drift** (SQLite) | ORM typé, migrations, top écosystème |
-| Sync offline | **Custom** (append-only operations log) | Zéro dépendance tierce, maîtrise totale |
-| HTTP | **Dio** + client généré depuis OpenAPI | Interceptors, retry, typage auto |
-| Scan DataMatrix | **mobile_scanner** (MLKit) | Support GS1 DataMatrix natif |
-| Parsing GS1 | Package communautaire ou custom | Décomposition AI(01/10/17/21) |
-| Forms | **reactive_forms** ou **flutter_hooks** + **form_builder** | |
-| Notifs push | **firebase_messaging** + **flutter_local_notifications** | FCM pour push, local pour rappels de prise |
-| Tests | Dart unit tests + **integration_test** | Built-in Flutter |
-| CI/CD | **Codemagic** ou GitHub Actions + fastlane | |
+| Couche            | Techno                                                     | Justification                              |
+| ----------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| Framework         | **Flutter 3.x** + **Dart**                                 | Stabilité, pas de churn, écosystème mature |
+| State mgmt        | **Riverpod**                                               | Standard moderne, typé, testable           |
+| Navigation        | **go_router**                                              | Officiel Flutter, URL-based, deep linking  |
+| Modèles immuables | **freezed** + **json_serializable**                        | Classes data + sérialisation               |
+| DB locale         | **Drift** (SQLite)                                         | ORM typé, migrations, top écosystème       |
+| Sync offline      | **Custom** (append-only operations log)                    | Zéro dépendance tierce, maîtrise totale    |
+| HTTP              | **Dio** + client généré depuis OpenAPI                     | Interceptors, retry, typage auto           |
+| Scan DataMatrix   | **mobile_scanner** (MLKit)                                 | Support GS1 DataMatrix natif               |
+| Parsing GS1       | Package communautaire ou custom                            | Décomposition AI(01/10/17/21)              |
+| Forms             | **reactive_forms** ou **flutter_hooks** + **form_builder** |                                            |
+| Notifs push       | **firebase_messaging** + **flutter_local_notifications**   | FCM pour push, local pour rappels de prise |
+| Tests             | Dart unit tests + **integration_test**                     | Built-in Flutter                           |
+| CI/CD             | **GitHub Actions + fastlane** (cf. ADR 0005)               |                                            |
 
 ### 4.4 Stack web (Next.js)
 
-| Couche | Techno | Justification |
-|---|---|---|
-| Framework | **Next.js 15** App Router + **TypeScript** | Server Components, SSR, routing moderne |
-| Styling | **Tailwind CSS** + **shadcn/ui** | Rapide, composants de qualité, full customisation |
-| Forms & validation | **React Hook Form** + **Zod** | Zod sert aussi côté backend |
-| State serveur | **TanStack Query** | Cache, invalidation, retries |
-| State client | **Zustand** | Léger, typé |
-| ORM serveur | **Drizzle** | Typage TS natif, migrations SQL claires |
-| Auth | **Better Auth** ou **Clerk** | Clerk si on veut aller très vite, Better Auth si on veut zéro vendor |
-| Validation API | **Zod** → génération **OpenAPI** via `zod-to-openapi` | Contrat partagé avec Flutter |
-| Tests | **Vitest** + **Playwright** | Unit + E2E |
-| Déploiement | **Vercel** (POC) ou **Railway** | Vercel zero-config, Railway plus économique |
+| Couche             | Techno                                                | Justification                                                        |
+| ------------------ | ----------------------------------------------------- | -------------------------------------------------------------------- |
+| Framework          | **Next.js 15** App Router + **TypeScript**            | Server Components, SSR, routing moderne                              |
+| Styling            | **Tailwind CSS** + **shadcn/ui**                      | Rapide, composants de qualité, full customisation                    |
+| Forms & validation | **React Hook Form** + **Zod**                         | Zod sert aussi côté backend                                          |
+| State serveur      | **TanStack Query**                                    | Cache, invalidation, retries                                         |
+| State client       | **Zustand**                                           | Léger, typé                                                          |
+| ORM serveur        | **Drizzle**                                           | Typage TS natif, migrations SQL claires                              |
+| Auth               | **Better Auth** ou **Clerk**                          | Clerk si on veut aller très vite, Better Auth si on veut zéro vendor |
+| Validation API     | **Zod** → génération **OpenAPI** via `zod-to-openapi` | Contrat partagé avec Flutter                                         |
+| Tests              | **Vitest** + **Playwright**                           | Unit + E2E                                                           |
+| Déploiement        | **Vercel** (POC) ou **Railway**                       | Vercel zero-config, Railway plus économique                          |
 
 ### 4.5 Stack backend partagée (dans Next.js)
 
@@ -347,15 +357,18 @@ Le surcoût d'avoir deux codebases (double UI, double implémentation d'écrans)
 Choix validé : pas de PowerSync/Electric, on code la sync nous-mêmes. Voici le pattern à implémenter :
 
 **Côté client (Flutter)**
+
 - Chaque modification locale (ajout boîte, marquage vide, validation prise…) est enregistrée à la fois dans la base Drift ET dans une table `pending_operations` (file d'attente).
 - Chaque opération a : `id` (UUID client), `type`, `payload`, `timestamp_local`, `statut` (pending | syncing | synced | conflict).
 - Au retour du réseau (détecté via `connectivity_plus`), un worker vide la file : il envoie les opérations au serveur, attend les ACK, marque `synced`.
 
 **Côté serveur**
+
 - Endpoint `POST /sync/push` reçoit un batch d'opérations client, les applique, retourne les ACK + éventuels conflits.
 - Endpoint `GET /sync/pull?since=timestamp` renvoie les modifs serveur postérieures au timestamp client → pour la synchro entrante (ex : autre utilisateur a modifié l'officine partagée).
 
 **Gestion des conflits**
+
 - Stratégie MVP : **last-write-wins** sur le timestamp serveur. Simple, prédictible.
 - Cas particulier : suppressions. On ne supprime jamais vraiment → on marque `deleted_at`. Le client applique les soft-deletes à la sync.
 - Cas limite à documenter : deux pros éditent la même boîte offline pendant 2h, synchronisent dans des ordres différents → le plus récent gagne. Acceptable au MVP, à affiner avec CRDT plus tard si besoin.
@@ -385,6 +398,7 @@ Choix validé : pas de PowerSync/Electric, on code la sync nous-mêmes. Voici le
 ```
 
 **Avantages**
+
 - Un seul endroit où définir la forme des données (Zod côté serveur).
 - Clients Dart et TS regénérés automatiquement à chaque changement d'API.
 - Documentation API vivante (Swagger UI sur `/docs`).
@@ -395,6 +409,7 @@ Choix validé : pas de PowerSync/Electric, on code la sync nous-mêmes. Voici le
 ### 4.8 Décodage du DataMatrix pharmaceutique
 
 Les boîtes françaises portent un DataMatrix au format **GS1** contenant :
+
 - AI (01) : code GTIN/CIP13 → identifie le médicament
 - AI (17) : date de péremption (YYMMDD)
 - AI (10) : numéro de lot
@@ -500,6 +515,7 @@ pending_operations (id, user_id, type, payload, timestamp_local, statut) -- mobi
 ### 6.1 Planning macro
 
 **Mois 1 — Fondations techniques**
+
 - Setup monorepo Turborepo : `apps/web` (Next.js 15), `apps/mobile` (Flutter), `packages/db-schema`, `packages/api-contract`.
 - Postgres managé + Drizzle migrations (source de vérité DB).
 - Backend Next.js : premières routes API + validation Zod + pipeline `zod-to-openapi` + génération client Dart.
@@ -510,6 +526,7 @@ pending_operations (id, user_id, type, payload, timestamp_local, statut) -- mobi
 - POC sync : endpoints `/sync/push` + `/sync/pull` + table `pending_operations` côté Flutter.
 
 **Mois 2 — Features cœur particulier**
+
 - CRUD complet officine + boîtes (mobile + web).
 - Popup actions rapides au rescan (cf. section 3.3).
 - Regroupement par molécule (DCI).
@@ -520,6 +537,7 @@ pending_operations (id, user_id, type, payload, timestamp_local, statut) -- mobi
 - Déploiement web sur Vercel, builds TestFlight + APK interne.
 
 **Mois 3 — Partage et test terrain**
+
 - Modèle de partage avec 3 rôles + invitations par lien signé.
 - Vue multi-officines côté mobile + web (bascule rapide pour les pros testeurs).
 - Signalement de manque patient → pro (notif push côté pro).
@@ -550,28 +568,28 @@ pending_operations (id, user_id, type, payload, timestamp_local, statut) -- mobi
 
 ### 7.1 Hypothèse d'équipe
 
-| Profil | Charge estimée MVP |
-|---|---|
-| Dev fullstack (toi) | 3 mois à ~50% (side-project) |
-| Dev renfort mobile (si possible) | 1-2 mois à 30% |
-| Design UX | 2-3 semaines concentrées M1 |
+| Profil                           | Charge estimée MVP           |
+| -------------------------------- | ---------------------------- |
+| Dev fullstack (toi)              | 3 mois à ~50% (side-project) |
+| Dev renfort mobile (si possible) | 1-2 mois à 30%               |
+| Design UX                        | 2-3 semaines concentrées M1  |
 
 **Seul sur 3 mois à 50%**, le MVP décrit est **très ambitieux mais atteignable** en resserrant le scope et en acceptant que "polish" soit réduit. Il faudra couper ruthlessly si on dérape.
 
 ### 7.2 Budget externe POC
 
-| Poste | Estimation mensuelle POC |
-|---|---|
-| Hébergement (Railway/Fly) | 20-40 € |
-| Auth (Clerk free tier) | 0 € |
-| DB managée | inclus ou 15 € |
-| Notifs push (Expo) | 0 € |
-| SMS (Brevo, 100 SMS test) | 5-10 € |
-| Email transac | 0 € (free tier) |
-| Nom de domaine | 10 € / an |
-| Certificat Apple Developer | 99 € / an |
-| Google Play Developer | 25 € (one-shot) |
-| **Total POC** | ~50 €/mois + frais fixes |
+| Poste                      | Estimation mensuelle POC |
+| -------------------------- | ------------------------ |
+| Hébergement (Railway/Fly)  | 20-40 €                  |
+| Auth (Clerk free tier)     | 0 €                      |
+| DB managée                 | inclus ou 15 €           |
+| Notifs push (Expo)         | 0 €                      |
+| SMS (Brevo, 100 SMS test)  | 5-10 €                   |
+| Email transac              | 0 € (free tier)          |
+| Nom de domaine             | 10 € / an                |
+| Certificat Apple Developer | 99 € / an                |
+| Google Play Developer      | 25 € (one-shot)          |
+| **Total POC**              | ~50 €/mois + frais fixes |
 
 En prod réelle avec HDS, multiplier par 5-10 selon le volume.
 
@@ -579,21 +597,21 @@ En prod réelle avec HDS, multiplier par 5-10 selon le volume.
 
 ## 8. Risques & points de vigilance
 
-| Risque | Impact | Mitigation |
-|---|---|---|
-| Scope trop ambitieux pour 3 mois | Fort | Priorisation stricte, MVP = 3 premières features seulement |
-| Sync custom plus complexe que prévu | Moyen-fort | POC sync dès la fin M1, scénarios de conflit documentés, last-write-wins en MVP |
-| Double codebase = charge UI dupliquée | Moyen | Accepté par choix ; se concentrer sur mobile en priorité, web minimal au MVP |
-| Parsing DataMatrix GS1 capricieux | Moyen | Tester dès la première semaine sur des boîtes réelles variées (au moins 10) |
-| Désynchronisation contrat OpenAPI ↔ clients | Moyen | Pipeline CI qui fail si OpenAPI change sans regen des clients |
-| BDPM : mauvais matches CIP | Moyen | Fallback saisie manuelle + report au user |
-| Conformité HDS ignorée = bloquant pour vraie prod | Fort (après POC) | Plan de migration documenté, tri des données sensibles anticipé |
-| Notifications iOS capricieuses en background | Moyen | Prévoir email/SMS comme backup dès v2 |
-| Firebase (FCM) = vendor lock-in léger | Faible | Couche d'abstraction côté backend pour pouvoir changer de provider |
-| Concurrence (Medissimo, Medisafe, suites SSIAD) | Moyen | Analyse initiale faite (cf. 1.4), différenciateurs identifiés ; à affiner par tests utilisateurs réels |
-| Adoption pros difficile (workflow métier) | Fort | Interviews utilisateurs dès M1 avec 2-3 IDEL/aide-soignants |
-| Pré-génération résumés IA coûteuse ou erronée | Moyen | Job batch one-shot, relecture échantillon, possibilité de désactiver résumé IA et retomber sur BDPM brut |
-| Numéro de série GS1 absent sur vieilles boîtes | Faible-Moyen | Fallback : identification par (CIP13 + lot) si pas de n° série, prévenir l'utilisateur |
+| Risque                                            | Impact           | Mitigation                                                                                               |
+| ------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------- |
+| Scope trop ambitieux pour 3 mois                  | Fort             | Priorisation stricte, MVP = 3 premières features seulement                                               |
+| Sync custom plus complexe que prévu               | Moyen-fort       | POC sync dès la fin M1, scénarios de conflit documentés, last-write-wins en MVP                          |
+| Double codebase = charge UI dupliquée             | Moyen            | Accepté par choix ; se concentrer sur mobile en priorité, web minimal au MVP                             |
+| Parsing DataMatrix GS1 capricieux                 | Moyen            | Tester dès la première semaine sur des boîtes réelles variées (au moins 10)                              |
+| Désynchronisation contrat OpenAPI ↔ clients       | Moyen            | Pipeline CI qui fail si OpenAPI change sans regen des clients                                            |
+| BDPM : mauvais matches CIP                        | Moyen            | Fallback saisie manuelle + report au user                                                                |
+| Conformité HDS ignorée = bloquant pour vraie prod | Fort (après POC) | Plan de migration documenté, tri des données sensibles anticipé                                          |
+| Notifications iOS capricieuses en background      | Moyen            | Prévoir email/SMS comme backup dès v2                                                                    |
+| Firebase (FCM) = vendor lock-in léger             | Faible           | Couche d'abstraction côté backend pour pouvoir changer de provider                                       |
+| Concurrence (Medissimo, Medisafe, suites SSIAD)   | Moyen            | Analyse initiale faite (cf. 1.4), différenciateurs identifiés ; à affiner par tests utilisateurs réels   |
+| Adoption pros difficile (workflow métier)         | Fort             | Interviews utilisateurs dès M1 avec 2-3 IDEL/aide-soignants                                              |
+| Pré-génération résumés IA coûteuse ou erronée     | Moyen            | Job batch one-shot, relecture échantillon, possibilité de désactiver résumé IA et retomber sur BDPM brut |
+| Numéro de série GS1 absent sur vieilles boîtes    | Faible-Moyen     | Fallback : identification par (CIP13 + lot) si pas de n° série, prévenir l'utilisateur                   |
 
 ---
 
@@ -602,7 +620,7 @@ En prod réelle avec HDS, multiplier par 5-10 selon le volume.
 Quelques décisions que je te recommande de prendre rapidement :
 
 1. **Nom du produit et branding** — tu as une idée ? Ça influence le ton, le logo, le domaine à acheter.
-2. **Rédaction des mentions d'information** — CGU, disclaimer d'onboarding, texte affiché sur les écrans de saisie d'ordonnance. À faire relire par un juriste avant la beta publique. Idéalement, phrase-type à afficher : *"Ce carnet numérique est un aide-mémoire personnel. Il ne remplace ni votre ordonnance, ni l'avis de votre médecin, pharmacien ou infirmier."*
+2. **Rédaction des mentions d'information** — CGU, disclaimer d'onboarding, texte affiché sur les écrans de saisie d'ordonnance. À faire relire par un juriste avant la beta publique. Idéalement, phrase-type à afficher : _"Ce carnet numérique est un aide-mémoire personnel. Il ne remplace ni votre ordonnance, ni l'avis de votre médecin, pharmacien ou infirmier."_
 3. **Validation du pipeline OpenAPI → client Dart** — à POC en première semaine pour vérifier que le workflow de régénération tient la route.
 4. **Moteur OCR ordonnance** — Claude, Mistral, ou Gemini ? Les trois ont des capacités vision. À tester sur 10 ordonnances réelles pour comparer.
 5. **Monétisation à terme** — freemium ? B2B pros payants ? Gratuit pour particulier + abonnement pro ? Ça influence les choix techniques (multi-tenant, facturation).
@@ -623,4 +641,4 @@ Quelques décisions que je te recommande de prendre rapidement :
 
 ---
 
-*Fin du document — à amender ensemble lors de la prochaine revue.*
+_Fin du document — à amender ensemble lors de la prochaine revue._

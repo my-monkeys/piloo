@@ -1,14 +1,17 @@
 name: Build iOS
 
-# Manuel (bouton « Run workflow ») ou tag ios-v* → build sur runner macOS (Xcode
-# GM du runner, pas de beta), signé, uploadé sur TestFlight. Règle les blocages
-# de version Xcode (beta refusée / GM local trop ancien) en déléguant le build à
-# l'Xcode du runner GitHub. Calqué sur la CI iOS de `glance`.
+# Release iOS officielle (remplace Codemagic — ADR docs/adr/0005-github-actions-ios.md).
+# Tag `v*` (le même que android-release.yml : un tag = les deux plateformes) ou
+# manuel (bouton « Run workflow ») → build sur runner macOS (Xcode GM du runner,
+# pas de beta), signé, uploadé sur TestFlight. Règle les blocages de version
+# Xcode (beta refusée / GM local trop ancien) en déléguant le build à l'Xcode
+# du runner GitHub. Calqué sur la CI iOS de `glance`.
 on:
   workflow_dispatch:
   push:
     tags:
-      - "ios-v*"
+      - "v*"
+      - "!v*-demo" # flux demo iOS abandonné (servi 1 fois) — cf. #387
 
 permissions:
   contents: write
@@ -55,11 +58,22 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: pnpm openapi:generate-dart-client
 
-      # Numéro de build unique + croissant (epoch) → jamais de collision TestFlight.
-      - name: Numéro de build unique
+      # Sur tag vX.Y.Z : version dérivée du tag (convention Codemagic conservée).
+      # En dispatch : le build-name du pubspec est gardé tel quel. Build number
+      # epoch, unique + croissant → jamais de collision TestFlight.
+      - name: Version depuis le tag + numéro de build unique
         run: |
           BN=$(date +%s)
-          sed -i '' -E "s/^(version: [0-9.]+)\+.*/\1+$BN/" pubspec.yaml
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "❌ Tag invalide : '$GITHUB_REF_NAME' (attendu : vX.Y.Z)" >&2
+              exit 1
+            fi
+            VN="${GITHUB_REF_NAME#v}"
+            sed -i '' -E "s/^version: .*/version: ${VN}+${BN}/" pubspec.yaml
+          else
+            sed -i '' -E "s/^(version: [0-9.]+)\+.*/\1+${BN}/" pubspec.yaml
+          fi
           grep '^version:' pubspec.yaml
 
       # Certificat de distribution (Apple Distribution) dans un trousseau dédié.
@@ -89,6 +103,11 @@ jobs:
           echo "$KEY_B64" | base64 --decode > "$HOME/.appstoreconnect/private_keys/AuthKey_${KEY_ID}.p8"
 
       - run: flutter pub get
+
+      # Parité Codemagic : fail fast avant de payer les ~10 min de build signé.
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test
+
       - run: flutter build ios --release --no-codesign
 
       - name: Build signé + upload TestFlight (fastlane)
