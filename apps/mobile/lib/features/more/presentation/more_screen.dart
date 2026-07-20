@@ -17,6 +17,9 @@
 //    pour la signaler — rappel constant du positionnement).
 //  - Bouton "Se déconnecter" : surface + bord + texte + icône rouge
 //    $error-on
+//  - Lien "Supprimer mon compte" → écran Compte (#385) : accès direct
+//    en plus de celui du Profil (découvrabilité, cf. review Apple
+//    5.1.1(v))
 //  - Footer version "Piloo v0.1.0 · BDPM 2026-04"
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,12 +34,9 @@ import 'package:piloo/core/theme/radius.dart';
 import 'package:piloo/features/auth/presentation/session_provider.dart';
 import 'package:piloo/features/officines/data/officines_list_provider.dart';
 import 'package:piloo/features/onboarding/presentation/onboarding_tour_provider.dart';
+import 'package:piloo/shared/app_info/app_version_provider.dart';
 import 'package:piloo/shared/bdpm/bdpm_provider.dart';
 import 'package:piloo/shared/widgets/piloo_screen_header.dart';
-
-/// Version produit côté UI. Synchronisée manuellement avec `pubspec.yaml`
-/// au moment des releases — voir Codemagic. Mise dans le footer du Plus.
-const String _kAppVersion = '0.1.26';
 
 class _Row {
   const _Row({
@@ -148,6 +148,9 @@ class MoreScreen extends ConsumerWidget {
     final bdpmVersion = ref
         .watch(bdpmDbProvider)
         .maybeWhen(data: (db) => db?.version, orElse: () => null);
+    final appVersion = ref
+        .watch(appVersionProvider)
+        .maybeWhen(data: (v) => v, orElse: () => null);
     final name = session?.name.trim().isNotEmpty == true
         ? session!.name
         : (session?.email.split('@').first ?? '');
@@ -191,8 +194,13 @@ class MoreScreen extends ConsumerWidget {
                     },
                   ),
                   const SizedBox(height: 14),
+                  _DeleteAccountLink(
+                    onTap: () =>
+                        context.pushNamed(RouteName.settingsDeleteAccount),
+                  ),
+                  const SizedBox(height: 14),
                   Text(
-                    _formatFooter(bdpmVersion),
+                    _formatFooter(appVersion, bdpmVersion),
                     textAlign: TextAlign.center,
                     style: GoogleFonts.manrope(
                       fontSize: 11,
@@ -218,9 +226,10 @@ String _computeInitials(String name, String email) {
   return letters.join();
 }
 
-String _formatFooter(String? bdpmVersion) {
+String _formatFooter(String? appVersion, String? bdpmVersion) {
+  final version = appVersion ?? '—';
   final bdpm = bdpmVersion ?? '—';
-  return 'Piloo v$_kAppVersion · BDPM $bdpm';
+  return 'Piloo v$version · BDPM $bdpm';
 }
 
 class _ProfileCard extends StatelessWidget {
@@ -620,6 +629,42 @@ class _FaqItem extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _DeleteAccountLink extends StatelessWidget {
+  const _DeleteAccountLink({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              PhosphorIconsRegular.trash,
+              size: 14,
+              color: PilooColors.errorOn,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Supprimer mon compte',
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: PilooColors.errorOn,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

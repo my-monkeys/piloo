@@ -53,7 +53,7 @@ void main() {
   group('MoreScreen', () {
     testWidgets('rendu : header + profil + 3 sections + logout',
         (tester) async {
-      await tester.binding.setSurfaceSize(const Size(390, 1200));
+      await tester.binding.setSurfaceSize(const Size(390, 1400));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
       await tester.pumpWidget(_harness());
@@ -79,6 +79,10 @@ void main() {
       expect(find.text("Ce n'est pas un dispositif médical"), findsOneWidget);
 
       expect(find.text('Se déconnecter'), findsOneWidget);
+
+      // Accès direct à la suppression de compte (#385) — en plus de
+      // celui du Profil, pour la découvrabilité (review Apple 5.1.1(v)).
+      expect(find.text('Supprimer mon compte'), findsOneWidget);
     });
   });
 }
