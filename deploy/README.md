@@ -110,8 +110,34 @@ docker compose -f deploy/docker-compose.yml pull && \
   docker compose -f deploy/docker-compose.yml up -d --build   # mise à jour
 ```
 
-**Backups** (à ta charge maintenant — Neon donnait le PITR). Cron suggéré :
+## Crons applicatifs (self-host, #389)
 
-```cron
-0 4 * * * docker exec piloo-db pg_dump -U piloo -Fc piloo > /home/maxim/backups/piloo_$(date +\%F).dump
+Les crons de `apps/web/vercel.json` ne tournaient que sur Vercel Cron — depuis la
+migration self-host ils sont déclenchés par la **crontab de `maxim` sur
+cookie-server** (heure locale Europe/Paris), via
+`/home/maxim/piloo/cron-api.sh <path> <GET|POST>` : curl authentifié
+`Authorization: Bearer CRON_SECRET` (lu dans `deploy/.env`) vers
+`https://piloo.my-monkey.fr<path>`, log dans `/home/maxim/piloo/logs/cron.log`.
+
+| Horaire (Paris) | Route                               | Méthode |
+| --------------- | ----------------------------------- | ------- |
+| `0 3 5 * *`     | `/api/cron/import-bdpm`             | GET     |
+| `0 4 5 * *`     | `/api/v1/cron/bdpm-auto-link`       | GET     |
+| `0 2 * * *`     | `/api/v1/cron/generation-glissante` | POST    |
+| `0 5 * * *`     | `/api/v1/cron/anonymize-accounts`   | POST    |
+| `0 6 * * *`     | `/api/v1/cron/stock-bas`            | POST    |
+| `0 7 * * *`     | `/api/v1/cron/rappels-prises`       | GET     |
+| `0 12 * * *`    | `/api/v1/cron/rappels-retard`       | GET     |
+| `0 22 * * *`    | `/api/v1/cron/prise-oubliee`        | POST    |
+
+⚠️ La méthode HTTP varie selon la route (4 GET, 4 POST) — un mauvais verbe
+renvoie 405. `/api/v1/cron/peremption` existe mais n'est volontairement pas
+planifiée (elle ne l'était pas non plus sur Vercel).
+
+**Backups** : `/home/maxim/piloo/backup-db.sh` en crontab (`0 4 * * *`) —
+`pg_dump -Fc` de `piloo-db` vers `/home/maxim/backups/piloo/piloo_<date>.dump`,
+rétention 30 jours, log dans `/home/maxim/piloo/logs/backup.log`. Restauration :
+
+```bash
+docker exec -i piloo-db pg_restore -U piloo -d piloo --clean --if-exists < piloo_<date>.dump
 ```
