@@ -64,7 +64,7 @@ mon-officine/
 - **pnpm** comme package manager (meilleur pour les monorepos).
 - **Flutter** vit à côté, piloté par son propre `flutter pub` et `flutter build`. Turbo l'ignore.
 - **CI/CD** :
-  - GitHub Actions pour le backend/web (lint, tests, deploy Vercel).
+  - GitHub Actions pour le backend/web (lint, tests) ; deploy web = image Docker sur cookie-server (cf. `deploy/README.md`).
   - **GitHub Actions + fastlane** pour Flutter (build iOS TestFlight + APK Android sur tag `v*`). Voir [ADR 0005](./adr/0005-github-actions-ios.md).
 
 ---
@@ -89,19 +89,19 @@ mon-officine/
 
 ### Web (Next.js)
 
-| Couche         | Techno                   | Rôle                                                       |
-| -------------- | ------------------------ | ---------------------------------------------------------- |
-| Framework      | Next.js 15 App Router    | SSR + API Routes                                           |
-| Lang           | TypeScript strict        |                                                            |
-| Styling        | Tailwind CSS + shadcn/ui | Components accessibles                                     |
-| Forms          | React Hook Form + Zod    | Validation partagée avec backend                           |
-| Server state   | TanStack Query           | Cache, invalidation                                        |
-| Client state   | Zustand                  | Léger, typé                                                |
-| ORM            | Drizzle                  | Typage TS natif, migrations SQL                            |
-| Auth           | Better Auth              | Tranché en M1, cf. [ADR 0004](./adr/0004-auth-provider.md) |
-| Validation API | Zod + zod-to-openapi     | Contrat partagé                                            |
-| Tests          | Vitest + Playwright      | Unit + E2E                                                 |
-| Deploy         | Vercel (POC) ou Railway  |                                                            |
+| Couche         | Techno                           | Rôle                                                       |
+| -------------- | -------------------------------- | ---------------------------------------------------------- |
+| Framework      | Next.js 15 App Router            | SSR + API Routes                                           |
+| Lang           | TypeScript strict                |                                                            |
+| Styling        | Tailwind CSS + shadcn/ui         | Components accessibles                                     |
+| Forms          | React Hook Form + Zod            | Validation partagée avec backend                           |
+| Server state   | TanStack Query                   | Cache, invalidation                                        |
+| Client state   | Zustand                          | Léger, typé                                                |
+| ORM            | Drizzle                          | Typage TS natif, migrations SQL                            |
+| Auth           | Better Auth                      | Tranché en M1, cf. [ADR 0004](./adr/0004-auth-provider.md) |
+| Validation API | Zod + zod-to-openapi             | Contrat partagé                                            |
+| Tests          | Vitest + Playwright              | Unit + E2E                                                 |
+| Deploy         | Self-host cookie-server (Docker) |                                                            |
 
 ### Backend (dans Next.js)
 
@@ -110,14 +110,14 @@ mon-officine/
 - **OpenAPI** : généré automatiquement via `zod-to-openapi` + script post-build.
 - **Auth** : JWT côté mobile, session cookies côté web.
 - **Sync** : endpoints `/api/sync/push` et `/api/sync/pull`.
-- **Jobs background** : cron Vercel ou Railway pour :
+- **Jobs background** : crontab cookie-server → routes `/api/*/cron` (cf. `deploy/README.md`) pour :
   - Refresh BDPM mensuel
   - Génération des résumés IA pour nouveaux médicaments
   - Envoi emails/SMS en queue
 
 ### Infrastructure
 
-- **Hébergement** : Vercel (web + API) + Neon ou Railway (Postgres managé).
+- **Hébergement** : self-host cookie-server (Docker : `piloo-web` + `piloo-db` Postgres 17), exposé via tunnel Cloudflare + Caddy (cf. `deploy/README.md`). Historique Vercel+Neon : abandonné 2026-06/07 (#357, #391).
 - **Storage** : S3 compatible (Scaleway Object Storage, BackBlaze) pour les photos d'ordonnances OCR.
 - **Notifications** : Firebase Cloud Messaging (push), Brevo (email + SMS).
 - **Monitoring** : Sentry (erreurs) + Plausible (analytics privacy-first, en dehors des écrans médicaux) en v2.

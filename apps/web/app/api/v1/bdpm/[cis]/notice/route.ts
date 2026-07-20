@@ -3,14 +3,15 @@
 // Stratégie :
 //   1. Cache hit fresh (< 7j)   → renvoie depuis DB (~20ms, pas de scrape).
 //   2. Cache hit stale (>= 7j)  → renvoie le cache stale immédiatement +
-//      déclenche un refresh background (waitUntil). L'user n'attend pas.
+//      déclenche un refresh background (fire-and-forget — le serveur
+//      self-host est un process Node long-running, pas une lambda).
+//      L'user n'attend pas.
 //   3. Cache miss               → scrape live, insert, renvoie (~500ms-2s).
 //
 // Public (BDPM = open data). Plus de Cache-Control HTTP edge : la DB est
 // désormais la source de vérité, et on veut que les refresh background
 // passent immédiatement (sans cache CDN qui mémorise une réponse vide).
 import { z } from 'zod';
-import { waitUntil } from '@vercel/functions';
 
 import type { BdpmNoticeResponse } from '@piloo/api-contract';
 
@@ -50,7 +51,8 @@ export async function GET(_request: Request, context: RouteContext): Promise<Res
         // re-scrape. Sinon, un autre worker s'en occupe déjà.
         const gotLock = await tryAcquireRefreshLock(db, cis);
         if (gotLock) {
-          waitUntil(refreshInBackground(cis));
+          // refreshInBackground gère ses erreurs (catch + clearRefreshLock).
+          void refreshInBackground(cis);
         }
       }
       return Response.json(
