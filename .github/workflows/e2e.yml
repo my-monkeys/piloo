@@ -25,8 +25,11 @@ jobs:
           POSTGRES_USER: piloo
           POSTGRES_PASSWORD: piloo
           POSTGRES_DB: piloo_e2e
+        # Port hôte DYNAMIQUE : le runner self-hosted est partagé, un
+        # port fixe (5432) finit toujours squatté par un autre projet
+        # (#393). L'URL est injectée via GITHUB_ENV au premier step.
         ports:
-          - 5432:5432
+          - 5432/tcp
         options: >-
           --health-cmd pg_isready
           --health-interval 5s
@@ -34,14 +37,20 @@ jobs:
           --health-retries 10
 
     env:
-      DATABASE_URL: postgres://piloo:piloo@localhost:5432/piloo_e2e
-      DATABASE_POOL_URL: postgres://piloo:piloo@localhost:5432/piloo_e2e
       BETTER_AUTH_SECRET: e2e-secret-not-used-in-prod-1234567890abcdef
       BETTER_AUTH_URL: http://localhost:3100
       NEXT_PUBLIC_APP_URL: http://localhost:3100
       PILOO_DISABLE_EMAIL_VERIFICATION: "1"
 
     steps:
+      # job.services n'est pas accessible dans jobs.<id>.env → on exporte
+      # les URLs DB (port dynamique du service) via GITHUB_ENV.
+      - name: Exposer l'URL de la DB e2e (port dynamique)
+        run: |
+          DB_URL="postgres://piloo:piloo@localhost:${{ job.services.postgres.ports['5432'] }}/piloo_e2e"
+          echo "DATABASE_URL=$DB_URL" >> "$GITHUB_ENV"
+          echo "DATABASE_POOL_URL=$DB_URL" >> "$GITHUB_ENV"
+
       - name: Checkout
         uses: actions/checkout@v4
 
