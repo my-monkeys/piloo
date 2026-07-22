@@ -3,10 +3,11 @@
 // Nav sticky de la landing (#394) : fond translucide + blur, bordure qui
 // apparaît au scroll, menu burger mobile. Seul morceau client de la
 // landing — tout le reste est statique.
+import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { ListIcon as List, PillIcon as Pill, XIcon as X } from '@phosphor-icons/react';
+import { ListIcon as List, XIcon as X } from '@phosphor-icons/react';
 
 const LINKS = [
   { href: '#atouts', label: 'Fonctionnalités' },
@@ -42,9 +43,7 @@ export function LandingNav() {
     >
       <div className="mx-auto flex h-[68px] max-w-[1120px] items-center gap-4 px-[22px] sm:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="grid size-[34px] place-items-center rounded-[10px] bg-piloo-accent text-white">
-            <Pill size={19} weight="fill" />
-          </span>
+          <Image src="/logo-piloo.png" alt="" width={36} height={36} priority />
           <span className="font-display text-[22px] font-semibold tracking-tight text-foreground">
             Piloo
           </span>

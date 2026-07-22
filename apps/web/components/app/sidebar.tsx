@@ -9,10 +9,10 @@
 import {
   CaretUpDownIcon as CaretUpDown,
   CheckIcon as Check,
-  PillIcon as Pill,
   SignOutIcon as SignOut,
 } from '@phosphor-icons/react';
 import { $api } from '@piloo/api-client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -163,9 +163,7 @@ export function Sidebar({ userName, userEmail }: { userName?: string; userEmail?
   return (
     <aside className="sticky top-0 hidden h-screen w-[266px] shrink-0 flex-col gap-1 border-r border-border bg-piloo-background p-[22px_16px] md:flex">
       <Link href="/dashboard" className="flex items-center gap-[10px] px-2 pb-4 pt-1">
-        <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-piloo-accent text-white">
-          <Pill size={19} weight="fill" />
-        </span>
+        <Image src="/logo-piloo.png" alt="" width={36} height={36} />
         <span className="font-display text-[22px] font-semibold">Piloo</span>
       </Link>
 

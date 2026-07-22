@@ -3,6 +3,7 @@
 //
 // Server Component statique : pas de fetch, pas de state. Seule la nav
 // (scroll + burger) est un composant client.
+import Image from 'next/image';
 import Link from 'next/link';
 
 import {
@@ -17,7 +18,6 @@ import {
   MapPinIcon as MapPin,
   NotebookIcon as Notebook,
   PauseCircleIcon as PauseCircle,
-  PillIcon as Pill,
   ScanIcon as Scan,
   SealCheckIcon as SealCheck,
   SquaresFourIcon as SquaresFour,
@@ -389,9 +389,7 @@ function Footer() {
         <div className="mb-11 grid grid-cols-2 gap-7 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:gap-9">
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
-              <span className="grid size-[34px] place-items-center rounded-[10px] bg-piloo-accent text-white">
-                <Pill size={19} weight="fill" />
-              </span>
+              <Image src="/logo-piloo.png" alt="" width={36} height={36} />
               <span className="font-display text-[22px] font-semibold tracking-tight text-foreground">
                 Piloo
               </span>

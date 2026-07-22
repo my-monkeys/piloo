@@ -2,8 +2,8 @@
 // tab bar fixe en bas. Remplace la sidebar, masquée sur mobile.
 'use client';
 
-import { PillIcon as Pill } from '@phosphor-icons/react';
 import { $api } from '@piloo/api-client';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -22,9 +22,7 @@ export function MobileTopBar() {
   return (
     <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-border bg-[color-mix(in_srgb,var(--piloo-color-background)_90%,transparent)] px-[18px] py-3 backdrop-blur-md md:hidden">
       <Link href="/dashboard" className="flex items-center gap-[10px]">
-        <span className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-piloo-accent text-white">
-          <Pill size={17} weight="fill" />
-        </span>
+        <Image src="/logo-piloo.png" alt="" width={30} height={30} />
         <span className="font-display text-[19px] font-semibold">Piloo</span>
       </Link>
       {avatar && (
