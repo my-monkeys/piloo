@@ -1,131 +1,203 @@
-// Landing publique piloo.vercel.app/ (#168).
+// Landing publique (#168, refonte #394 — maquette Claude Design
+// Landing.dc.html, même système visuel que le redesign app #370).
 //
-// Vitrine pour les visiteurs anonymes. Hero, features, positionnement,
-// CTA inscription. Server Component statique — pas de fetch, pas de
-// state.
+// Server Component statique : pas de fetch, pas de state. Seule la nav
+// (scroll + burger) est un composant client.
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
+import {
+  BellRingingIcon as BellRinging,
+  CalendarDotsIcon as CalendarDots,
+  CheckCircleIcon as CheckCircle,
+  CheckIcon as Check,
+  EyeSlashIcon as EyeSlash,
+  FileTextIcon as FileText,
+  InfoIcon as Info,
+  LockSimpleIcon as LockSimple,
+  MapPinIcon as MapPin,
+  NotebookIcon as Notebook,
+  PauseCircleIcon as PauseCircle,
+  PillIcon as Pill,
+  ScanIcon as Scan,
+  SealCheckIcon as SealCheck,
+  SquaresFourIcon as SquaresFour,
+  UsersThreeIcon as UsersThree,
+  WifiSlashIcon as WifiSlash,
+  XCircleIcon as XCircle,
+  XIcon as X,
+} from '@phosphor-icons/react/dist/ssr';
+import type { Icon } from '@phosphor-icons/react';
+
+import { HeroVisual } from '@/components/landing/hero-visual';
+import { LandingNav } from '@/components/landing/landing-nav';
+import { PhoneMockup } from '@/components/landing/phone-mockup';
+import { StoreButtons } from '@/components/landing/store-buttons';
 
 export const dynamic = 'force-static';
 
+const CONTAINER = 'mx-auto max-w-[1120px] px-[22px] sm:px-8';
+
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-piloo-background">
-      <NavBar />
+    <main className="min-h-screen overflow-x-clip bg-piloo-background text-[15px]">
+      <LandingNav />
       <Hero />
+      <TrustStrip />
       <Features />
+      <Spotlight />
       <Positioning />
-      <Cta />
+      <CtaBand />
       <Footer />
     </main>
   );
 }
 
-function NavBar() {
-  return (
-    <header className="border-b border-border bg-piloo-surface">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="font-display text-2xl">
-          <span className="text-piloo-primary">pil</span>
-          <span className="text-piloo-accent">oo</span>
-        </Link>
-        <nav className="flex items-center gap-3">
-          <Link
-            href="/pricing"
-            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-          >
-            Tarifs
-          </Link>
-          <Link
-            href="/status"
-            className="hidden text-sm text-muted-foreground hover:text-foreground sm:inline"
-          >
-            Status
-          </Link>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/sign-in">Se connecter</Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/sign-up">Créer un compte</Link>
-          </Button>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
 function Hero() {
   return (
-    <section className="mx-auto max-w-4xl px-6 py-20 text-center">
-      <p className="mb-3 text-sm font-medium uppercase tracking-wide text-piloo-accent">
-        Carnet numérique de médicaments
-      </p>
-      <h1 className="font-display text-5xl leading-tight sm:text-6xl">
-        Tes médicaments, <span className="text-piloo-primary">au calme</span>.
-      </h1>
-      <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-        Scanne tes boîtes, suis tes prises, partage le suivi avec un proche. Sans pub, sans
-        tracking, sans recommandation clinique automatique — juste un meilleur cahier.
-      </p>
-      <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-        <Button asChild size="lg">
-          <Link href="/sign-up">Essayer Piloo</Link>
-        </Button>
-        <Button asChild size="lg" variant="outline">
-          <Link href="/legal/privacy">Lire la politique de confidentialité</Link>
-        </Button>
+    <section className="relative pb-6 pt-11 lg:pb-[34px] lg:pt-[70px]">
+      <span className="pointer-events-none absolute -top-[120px] right-[-80px] z-0 size-[460px] rounded-full bg-piloo-primary-soft opacity-55 blur-[70px]" />
+      <span className="pointer-events-none absolute -bottom-[120px] left-[-120px] z-0 size-[360px] rounded-full bg-piloo-accent-soft opacity-45 blur-[70px]" />
+      <div
+        className={`${CONTAINER} relative z-[1] grid items-center gap-12 lg:grid-cols-[1.04fr_0.96fr] lg:gap-14`}
+      >
+        <div>
+          <span className="mb-[22px] inline-flex max-w-full animate-rise items-center gap-2 whitespace-nowrap rounded-full border border-border bg-piloo-surface py-1.5 pl-[9px] pr-3.5 text-[13px] font-semibold text-secondary-foreground">
+            <Notebook size={15} weight="fill" className="shrink-0 text-piloo-accent" />
+            <span className="truncate">
+              Ton carnet de médicaments,{' '}
+              <b className="font-bold text-piloo-primary-hover">à la maison</b>
+            </span>
+          </span>
+          <h1 className="m-0 mb-5 animate-rise font-display text-[40px] font-medium leading-[1.02] tracking-[-0.025em] [animation-delay:0.05s] sm:text-5xl lg:text-[60px]">
+            Tes médicaments,
+            <br />
+            <span className="text-piloo-primary">au calme.</span>
+          </h1>
+          <p className="m-0 mb-[30px] max-w-[500px] animate-rise text-[17px] leading-[1.55] text-secondary-foreground [animation-delay:0.12s] lg:text-[19px]">
+            Scanne tes boîtes, suis ton stock et tes dates de péremption, et partage un carnet clair
+            avec tes proches. Sans stress, sans jargon.
+          </p>
+          <div className="animate-rise [animation-delay:0.18s]">
+            <StoreButtons variant="dark" />
+          </div>
+          <p className="mt-[18px] flex animate-rise items-center gap-2 text-[13.5px] font-medium text-muted-foreground [animation-delay:0.24s]">
+            <CheckCircle size={16} weight="fill" className="text-piloo-success-on" />
+            <span>
+              Gratuit pour commencer ·{' '}
+              <Link href="/sign-up" className="text-piloo-primary hover:text-piloo-primary-hover">
+                ou continuer dans le navigateur
+              </Link>
+            </span>
+          </p>
+        </div>
+        <HeroVisual />
       </div>
-      <p className="mt-4 text-xs text-muted-foreground">
-        iOS · Android · Web · 100% gratuit pendant le bêta
-      </p>
     </section>
   );
 }
 
-function Features() {
-  const items: { title: string; body: string }[] = [
-    {
-      title: 'Scan DataMatrix',
-      body: "Pointe l'appareil photo sur le code de la boîte — on reconnaît le médicament dans la base BDPM officielle et on enregistre la péremption pour toi.",
-    },
-    {
-      title: "Timeline d'aujourd'hui",
-      body: 'Tu vois tes prises du jour groupées par moment (matin / midi / soir / coucher). Un tap valide. Notifications locales pour ne plus oublier.',
-    },
-    {
-      title: 'Carnet partagé',
-      body: "Invite un proche pour qu'il puisse aider à gérer (rôle éditeur) ou juste consulter (rôle lecteur). Idéal pour suivre tes parents.",
-    },
-    {
-      title: 'OCR ordonnance',
-      body: 'Prends en photo une ordonnance papier, on extrait les médicaments et la posologie. Tu valides chaque ligne — pas de magie noire.',
-    },
-    {
-      title: "Hors-ligne d'abord",
-      body: "Tu ajoutes une boîte en pharmacie sans réseau ? La sync se fait en arrière-plan dès que la connexion revient. Pas d'écran d'erreur.",
-    },
-    {
-      title: 'BDPM officielle',
-      body: "Base de Données Publique des Médicaments mise à jour 2× par jour. 20 000+ médicaments avec dosage, forme, voie d'administration, remboursement.",
-    },
-  ];
+const TRUST_ITEMS: { icon: Icon; label: string }[] = [
+  { icon: SealCheck, label: 'Base officielle BDPM' },
+  { icon: LockSimple, label: 'Données de santé chiffrées' },
+  { icon: EyeSlash, label: 'Aucun tracker tiers' },
+  { icon: MapPin, label: 'Pensé pour la France' },
+];
+
+function TrustStrip() {
   return (
-    <section className="bg-piloo-surface py-20">
-      <div className="mx-auto max-w-6xl px-6">
-        <header className="mb-12 max-w-2xl">
-          <h2 className="font-display text-3xl">Ce que Piloo fait pour toi</h2>
-          <p className="mt-2 text-muted-foreground">
-            Les essentiels d&apos;un carnet de suivi, en mieux foutu et plus rapide qu&apos;un
-            Excel.
+    <div className="border-y border-piloo-surfaceSubtle bg-[rgba(241,237,226,0.4)]">
+      <div
+        className={`${CONTAINER} flex flex-wrap items-center justify-center gap-x-8 gap-y-3.5 py-5`}
+      >
+        {TRUST_ITEMS.map((it, i) => (
+          <div key={it.label} className="contents">
+            {i > 0 ? (
+              <span className="hidden size-[5px] shrink-0 rounded-full bg-border sm:block" />
+            ) : null}
+            <span className="flex items-center gap-[9px] text-sm font-semibold text-secondary-foreground">
+              <it.icon size={19} className="text-piloo-primary" />
+              {it.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const FEATURES: { icon: Icon; tint: 'oral' | 'inj'; title: string; text: string }[] = [
+  {
+    icon: Scan,
+    tint: 'oral',
+    title: 'Scan DataMatrix',
+    text: 'Vise le code de la boîte : nom, lot et péremption se remplissent tout seuls. Zéro saisie.',
+  },
+  {
+    icon: CalendarDots,
+    tint: 'inj',
+    title: 'Timeline du jour',
+    text: 'Ce qui est à prendre, ce qui est fait, ce qui a été oublié. Matin, midi, soir, coucher.',
+  },
+  {
+    icon: UsersThree,
+    tint: 'oral',
+    title: 'Carnet partagé',
+    text: 'Partage un carnet avec tes proches, avec les bons rôles : Propriétaire, Éditeur, Lecteur.',
+  },
+  {
+    icon: FileText,
+    tint: 'inj',
+    title: 'OCR ordonnance',
+    text: 'Prends ton ordonnance en photo : Piloo lit la prescription et pré-remplit les traitements.',
+  },
+  {
+    icon: WifiSlash,
+    tint: 'oral',
+    title: 'Marche hors-ligne',
+    text: 'Consulte et mets à jour ton carnet partout. La synchro se fait au retour du réseau.',
+  },
+  {
+    icon: SealCheck,
+    tint: 'inj',
+    title: 'Base BDPM officielle',
+    text: 'Noms, formes et dosages viennent de la base officielle des médicaments. Des infos fiables.',
+  },
+];
+
+function Features() {
+  return (
+    <section className="py-16 lg:py-[86px]" id="atouts">
+      <div className={CONTAINER}>
+        <div className="mx-auto mb-[52px] max-w-[640px] text-center">
+          <p className="m-0 mb-3 text-[13px] font-bold uppercase tracking-[0.06em] text-piloo-accent">
+            Ce que fait Piloo
           </p>
-        </header>
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it) => (
-            <div key={it.title} className="rounded-lg border border-border bg-piloo-background p-6">
-              <h3 className="mb-2 font-display text-xl">{it.title}</h3>
-              <p className="text-sm text-muted-foreground">{it.body}</p>
-            </div>
+          <h2 className="m-0 mb-3.5 font-display text-[31px] font-medium leading-[1.1] tracking-[-0.02em] md:text-[40px]">
+            Tout ce qu’il faut, rien de trop.
+          </h2>
+          <p className="m-0 text-[17px] leading-[1.55] text-secondary-foreground">
+            De la boîte scannée à la prise du soir, Piloo garde ton armoire à pharmacie claire et à
+            jour.
+          </p>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <article
+              key={f.title}
+              className="rounded-[18px] border border-piloo-surfaceSubtle bg-piloo-surface p-[26px] shadow-[0_1px_2px_rgba(37,42,48,0.03)] transition duration-200 hover:-translate-y-[3px] hover:border-border hover:shadow-[0_18px_40px_-22px_rgba(37,42,48,0.3)]"
+            >
+              <span
+                className={`mb-[18px] grid size-[52px] place-items-center rounded-[14px] ${
+                  f.tint === 'oral'
+                    ? 'bg-piloo-primary-soft text-piloo-primary-hover'
+                    : 'bg-piloo-accent-soft text-piloo-accent'
+                }`}
+              >
+                <f.icon size={27} />
+              </span>
+              <h3 className="m-0 mb-2 text-lg font-bold tracking-tight">{f.title}</h3>
+              <p className="m-0 text-[14.5px] leading-[1.55] text-secondary-foreground">{f.text}</p>
+            </article>
           ))}
         </div>
       </div>
@@ -133,83 +205,230 @@ function Features() {
   );
 }
 
-function Positioning() {
-  return (
-    <section className="mx-auto max-w-4xl px-6 py-20">
-      <h2 className="mb-6 font-display text-3xl">Ce que Piloo n&apos;est pas</h2>
-      <ul className="space-y-3 text-muted-foreground">
-        <li>
-          <strong className="text-foreground">Pas un dispositif médical</strong> au sens du
-          règlement MDR — pas de validation d&apos;ordonnance, pas d&apos;alerte d&apos;interaction
-          médicamenteuse, pas de recommandation clinique.
-        </li>
-        <li>
-          <strong className="text-foreground">Pas un substitut</strong> à ton ordonnance officielle
-          ou à l&apos;avis de ton médecin / pharmacien.
-        </li>
-        <li>
-          <strong className="text-foreground">Pas une mine de données</strong> pour la publicité ou
-          la recherche commerciale. Aucun tracker tiers, aucun partage avec un labo, aucune
-          monétisation des données médicales.
-        </li>
-      </ul>
-      <div className="mt-8 rounded-lg border border-piloo-accent bg-piloo-accent-soft p-6 text-sm">
-        <p className="font-medium text-piloo-accent">C&apos;est un aide-mémoire personnel.</p>
-        <p className="mt-2 text-piloo-accent">
-          Le meilleur cahier que tu pourrais avoir, à la place du papier dans le tiroir de la
-          cuisine.
-        </p>
-      </div>
-    </section>
-  );
-}
+const SPOT_FEATS: { icon: Icon; title: string; text: string }[] = [
+  {
+    icon: SquaresFour,
+    title: 'Organisé par moment',
+    text: 'Matin, midi, soir, coucher — chaque prise à sa place, comme un vrai pilulier.',
+  },
+  {
+    icon: BellRinging,
+    title: 'Rappels à l’heure',
+    text: 'Une notification douce au bon moment. Tu coches, et c’est réglé.',
+  },
+  {
+    icon: PauseCircle,
+    title: 'Pause & reprise',
+    text: 'Traitement terminé ou en pause ? Suspends un rappel sans le supprimer.',
+  },
+];
 
-function Cta() {
+function Spotlight() {
   return (
-    <section className="border-t border-border bg-piloo-primary-soft py-16">
-      <div className="mx-auto max-w-3xl px-6 text-center">
-        <h2 className="font-display text-3xl">Prêt à essayer ?</h2>
-        <p className="mt-3 text-muted-foreground">
-          Création de compte en 30 secondes. Aucune carte bancaire demandée.
-        </p>
-        <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <Button asChild size="lg">
-            <Link href="/sign-up">Créer mon compte</Link>
-          </Button>
-          <Button asChild size="lg" variant="outline">
-            <Link href="/sign-in">J&apos;ai déjà un compte</Link>
-          </Button>
+    <section className="border-y border-piloo-surfaceSubtle bg-[rgba(241,237,226,0.5)] py-16 lg:py-[88px]">
+      <div
+        className={`${CONTAINER} grid items-center justify-items-center gap-11 lg:grid-cols-[0.92fr_1.08fr] lg:gap-[60px]`}
+      >
+        <PhoneMockup />
+        <div className="mx-auto max-w-[520px] text-center lg:mx-0 lg:max-w-none lg:text-left">
+          <p className="m-0 mb-3 text-[13px] font-bold uppercase tracking-[0.06em] text-piloo-accent">
+            Comme un pilulier, en mieux
+          </p>
+          <h2 className="m-0 mb-3.5 font-display text-[31px] font-medium leading-[1.1] tracking-[-0.02em] md:text-[40px]">
+            Tes prises, déjà rangées.
+          </h2>
+          <p className="m-0 text-[17px] leading-[1.55] text-secondary-foreground">
+            Piloo range tes médicaments par moment de la journée et te rappelle chaque prise. Fini
+            les petites cases en plastique à remplir le dimanche soir.
+          </p>
+          <div className="mt-7 flex flex-col gap-[18px] text-left">
+            {SPOT_FEATS.map((f) => (
+              <div key={f.title} className="flex gap-3.5">
+                <span className="grid size-11 shrink-0 place-items-center rounded-[13px] bg-piloo-primary-soft text-piloo-primary-hover">
+                  <f.icon size={22} />
+                </span>
+                <div>
+                  <div className="text-[15.5px] font-bold tracking-tight">{f.title}</div>
+                  <div className="mt-[3px] text-sm leading-normal text-secondary-foreground">
+                    {f.text}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
+const NOT_LIST = [
+  'Un dispositif médical',
+  'Un validateur d’ordonnance',
+  'Un remplaçant de ton médecin ou pharmacien',
+];
+
+const IS_LIST = [
+  'Un aide-mémoire personnel',
+  'Un carnet partagé avec tes proches',
+  'Un rappel clair de tes prises',
+];
+
+function Positioning() {
+  return (
+    <section className="pb-16 pt-2 lg:pb-[86px] lg:pt-5">
+      <div className={CONTAINER}>
+        <div className="grid overflow-hidden rounded-3xl border border-piloo-surfaceSubtle bg-piloo-surface shadow-[0_2px_4px_rgba(37,42,48,0.03),0_24px_50px_-30px_rgba(37,42,48,0.22)] md:grid-cols-2">
+          <div className="border-b border-piloo-surfaceSubtle p-7 md:border-b-0 md:border-r md:p-[44px_46px]">
+            <p className="m-0 mb-[22px] inline-flex items-center gap-[9px] text-[13px] font-bold uppercase tracking-[0.04em] text-piloo-error-on">
+              <XCircle size={16} weight="fill" />
+              Ce que Piloo n’est pas
+            </p>
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              {NOT_LIST.map((n) => (
+                <li key={n} className="flex items-start gap-[13px] text-base font-semibold">
+                  <span className="mt-px grid size-[26px] shrink-0 place-items-center rounded-lg bg-piloo-error text-piloo-error-on">
+                    <X size={16} />
+                  </span>
+                  <span className="text-secondary-foreground">{n}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="m-0 mt-[30px] text-[14.5px] leading-[1.6] text-secondary-foreground">
+              Pour toute question de santé,{' '}
+              <b className="font-bold text-foreground">ton médecin et ton pharmacien</b> restent tes
+              interlocuteurs. Piloo ne les remplace pas.
+            </p>
+          </div>
+          <div className="bg-[rgba(219,227,224,0.28)] p-7 md:p-[44px_46px]">
+            <p className="m-0 mb-[22px] inline-flex items-center gap-[9px] text-[13px] font-bold uppercase tracking-[0.04em] text-piloo-success-on">
+              <CheckCircle size={16} weight="fill" />
+              Ce que Piloo est
+            </p>
+            <ul className="m-0 flex list-none flex-col gap-4 p-0">
+              {IS_LIST.map((n) => (
+                <li key={n} className="flex items-start gap-[13px] text-base font-semibold">
+                  <span className="mt-px grid size-[26px] shrink-0 place-items-center rounded-lg bg-piloo-success text-piloo-success-on">
+                    <Check size={16} />
+                  </span>
+                  <span>{n}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="m-0 mt-[30px] text-[14.5px] leading-[1.6] text-secondary-foreground">
+              Un <b className="font-bold text-foreground">aide-mémoire personnel</b>, calme et
+              rassurant. Rien de plus, et c’est déjà beaucoup.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function CtaBand() {
+  return (
+    <section className="pb-16 lg:pb-[86px]">
+      <div className={CONTAINER}>
+        <div className="relative overflow-hidden rounded-[28px] bg-piloo-primary px-[26px] py-[52px] text-center shadow-[0_30px_60px_-30px_rgba(74,107,100,0.6)] lg:px-10 lg:py-[70px]">
+          <span className="absolute -top-[140px] left-[-60px] size-[320px] rounded-full bg-[#6d8b84] opacity-35 blur-[60px]" />
+          <span className="absolute -bottom-[140px] right-[-40px] size-[280px] rounded-full bg-piloo-accent opacity-20 blur-[60px]" />
+          <h2 className="relative z-[1] mx-auto mb-3.5 max-w-[620px] font-display text-[31px] font-medium leading-[1.08] tracking-[-0.02em] text-white lg:text-[42px]">
+            Prêt à ranger tes médicaments, au calme ?
+          </h2>
+          <p className="relative z-[1] mx-auto mb-[30px] max-w-[480px] text-[17px] text-white/80">
+            Crée ton carnet en deux minutes. Scanne ta première boîte ce soir.
+          </p>
+          <div className="relative z-[1]">
+            <StoreButtons variant="light" />
+          </div>
+          <p className="relative z-[1] mt-4 text-[13.5px] font-medium text-white/70">
+            Gratuit · Famille à 4,99 €/mois ·{' '}
+            <Link href="/sign-up" className="text-white underline hover:text-white">
+              ou crée ton carnet dans le navigateur
+            </Link>
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+const FOOTER_COLS: { title: string; links: { href: string; label: string }[] }[] = [
+  {
+    title: 'Produit',
+    links: [
+      { href: '#atouts', label: 'Fonctionnalités' },
+      { href: '/pricing', label: 'Tarifs' },
+      { href: '/status', label: 'État du système' },
+    ],
+  },
+  {
+    title: 'Compte',
+    links: [
+      { href: '/sign-in', label: 'Se connecter' },
+      { href: '/sign-up', label: 'Créer un compte' },
+    ],
+  },
+  {
+    title: 'Légal',
+    links: [
+      { href: '/legal/cgu', label: 'CGU' },
+      { href: '/legal/privacy', label: 'Confidentialité' },
+      { href: '/legal/mentions', label: 'Mentions légales' },
+      { href: '/legal/cookies', label: 'Cookies' },
+    ],
+  },
+];
+
 function Footer() {
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-border bg-piloo-surface">
-      <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-4 px-6 py-8 sm:flex-row sm:items-center">
-        <p className="text-sm text-muted-foreground">
-          © {year} Piloo. Carnet médicaments — pas un dispositif médical.
-        </p>
-        <nav className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <Link href="/legal/mentions" className="hover:text-foreground">
-            Mentions légales
-          </Link>
-          <Link href="/legal/privacy" className="hover:text-foreground">
-            Confidentialité
-          </Link>
-          <Link href="/legal/cgu" className="hover:text-foreground">
-            CGU
-          </Link>
-          <Link href="/legal/cookies" className="hover:text-foreground">
-            Cookies
-          </Link>
-          <Link href="/status" className="hover:text-foreground">
-            Status
-          </Link>
-        </nav>
+    <footer className="border-t border-border pb-[34px] pt-[60px]">
+      <div className={CONTAINER}>
+        <div className="mb-11 grid grid-cols-2 gap-7 md:grid-cols-[1.6fr_1fr_1fr_1fr] md:gap-9">
+          <div className="col-span-2 md:col-span-1">
+            <Link href="/" className="flex items-center gap-2.5">
+              <span className="grid size-[34px] place-items-center rounded-[10px] bg-piloo-accent text-white">
+                <Pill size={19} weight="fill" />
+              </span>
+              <span className="font-display text-[22px] font-semibold tracking-tight text-foreground">
+                Piloo
+              </span>
+            </Link>
+            <p className="m-0 mt-4 max-w-[280px] text-[14.5px] leading-[1.55] text-secondary-foreground">
+              Le carnet numérique de médicaments pour la maison. Tes médicaments, au calme.
+            </p>
+          </div>
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title}>
+              <h4 className="m-0 mb-4 text-xs font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                {col.title}
+              </h4>
+              <ul className="m-0 flex list-none flex-col gap-[11px] p-0">
+                {col.links.map((l) => (
+                  <li key={l.href}>
+                    <a
+                      href={l.href}
+                      className="text-[14.5px] font-semibold text-secondary-foreground transition-colors hover:text-foreground"
+                    >
+                      {l.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-piloo-surfaceSubtle pt-[26px]">
+          <span className="flex items-center gap-[9px] text-[13px] font-semibold text-muted-foreground">
+            <Info size={16} />
+            Piloo n’est pas un dispositif médical.
+          </span>
+          <span className="text-[13px] text-muted-foreground">
+            © {year} Piloo · Fait avec soin en France
+          </span>
+        </div>
       </div>
     </footer>
   );
