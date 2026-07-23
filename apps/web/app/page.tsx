@@ -340,7 +340,7 @@ function CtaBand() {
             Crée ton carnet en deux minutes. Scanne ta première boîte ce soir.
           </p>
           <div className="relative z-[1]">
-            <StoreButtons variant="light" />
+            <StoreButtons variant="light" align="center" />
           </div>
           <p className="relative z-[1] mt-4 text-[13.5px] font-medium text-white/70">
             Gratuit · Famille à 4,99 €/mois ·{' '}
