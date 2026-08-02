@@ -11,7 +11,7 @@ concurrency:
 jobs:
   ci:
     name: lint / typecheck / test / openapi
-    runs-on: [self-hosted, linux, cookie]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:

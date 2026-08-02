@@ -15,7 +15,7 @@ concurrency:
 jobs:
   ci:
     name: analyze / test
-    runs-on: [self-hosted, linux, cookie]
+    runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
@@ -23,8 +23,8 @@ jobs:
         uses: actions/checkout@v4
 
       # openapi:generate-dart-client s'appuie sur openapi-generator (Java).
-      # Le runner cookie n'a pas de Java système → on l'installe ici (aligné
-      # sur android-release.yml).
+      # On pin explicitement le JDK plutôt que de dépendre de celui de
+      # l'image du runner (aligné sur android-release.yml).
       - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
