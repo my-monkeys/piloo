@@ -31,7 +31,7 @@ concurrency:
 jobs:
   build-and-release:
     name: Build APK signé + publish GitHub Release
-    runs-on: [self-hosted, linux, cookie]
+    runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
@@ -54,7 +54,7 @@ jobs:
           flutter-version: 3.38.7
           cache: true
 
-      # Idem android-release : runner self-hosted sans Android SDK.
+      # Idem android-release : pin des composants du SDK Android.
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
