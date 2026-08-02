@@ -4,7 +4,9 @@
     "target": {
       "namespace": "android_app",
       "package_name": "fr.mymonkey.piloo",
-      "sha256_cert_fingerprints": []
+      "sha256_cert_fingerprints": [
+        "EF:E2:71:C5:D6:FB:CE:CC:39:E8:EB:6E:06:D2:C0:FE:3A:C6:9C:86:3F:35:F9:75:4C:73:19:6D:7E:45:0D:BF"
+      ]
     }
   }
 ]

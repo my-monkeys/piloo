@@ -8,7 +8,11 @@
 //  - Notifications (optionnel) : switch. Toggle on → ask. Toggle off →
 //    ne révoque pas l'OS (impossible programmatiquement) : on garde
 //    juste le state local pour le UX d'onboarding.
-//  - Contacts (optionnel) : switch également. Même logique.
+//
+// Pas de carte « Contacts » : l'app ne lit aucun carnet d'adresses (les
+// invitations se font par email saisi). Demander READ_CONTACTS sans
+// usage réel = permission sensible à justifier côté Play Store, et
+// contraire à la minimisation RGPD (#398).
 //
 // Boutons :
 //  - "Terminer" : navigue vers /today. On ne bloque PAS sur la caméra
@@ -46,7 +50,6 @@ class PermissionsScreen extends StatefulWidget {
 class _PermissionsScreenState extends State<PermissionsScreen> {
   PermissionStatus _camera = PermissionStatus.denied;
   PermissionStatus _notifications = PermissionStatus.denied;
-  PermissionStatus _contacts = PermissionStatus.denied;
 
   @override
   void initState() {
@@ -58,13 +61,11 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final results = await Future.wait([
       Permission.camera.status,
       Permission.notification.status,
-      Permission.contacts.status,
     ]);
     if (!mounted) return;
     setState(() {
       _camera = results[0];
       _notifications = results[1];
-      _contacts = results[2];
     });
   }
 
@@ -97,20 +98,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
     final next = await Permission.notification.request();
     if (!mounted) return;
     setState(() => _notifications = next);
-  }
-
-  Future<void> _toggleContacts(bool desired) async {
-    if (!desired) {
-      setState(() => _contacts = PermissionStatus.denied);
-      return;
-    }
-    if (_contacts.isPermanentlyDenied) {
-      await _openSettings();
-      return;
-    }
-    final next = await Permission.contacts.request();
-    if (!mounted) return;
-    setState(() => _contacts = next);
   }
 
   Future<void> _openSettings() async {
@@ -156,16 +143,6 @@ class _PermissionsScreenState extends State<PermissionsScreen> {
                       description: 'Rappels de prise et alertes péremption',
                       value: _notifications.isGranted,
                       onChanged: _toggleNotifications,
-                    ),
-                    const SizedBox(height: 10),
-                    _ToggleCard(
-                      icon: PhosphorIconsRegular.addressBook,
-                      iconColor: PilooColors.textSecondary,
-                      iconBgColor: PilooColors.surfaceSubtle,
-                      title: 'Contacts (optionnel)',
-                      description: 'Pour inviter tes proches plus facilement',
-                      value: _contacts.isGranted,
-                      onChanged: _toggleContacts,
                     ),
                     const SizedBox(height: 18),
                     _HelpBar(),

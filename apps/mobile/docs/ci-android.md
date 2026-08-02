@@ -26,6 +26,24 @@ Le tag git est la source de vérité : `v1.2.3` → `pubspec.yaml` réécrit en 
 
 Le `.jks` source est sauvegardé hors-repo (coffre-fort). `key.properties` et `keystore.jks` sont gitignorés et régénérés à chaque build.
 
+## Deep links (App Links)
+
+Le manifest déclare `https://piloo.my-monkey.fr/invitations/*` en `autoVerify`.
+La vérification s'appuie sur `apps/web/public/.well-known/assetlinks.json`, qui
+contient l'empreinte SHA-256 de **notre** clé de signature (celle du keystore
+`ANDROID_KEYSTORE_BASE64`, CN=Piloo) :
+
+```
+EF:E2:71:C5:D6:FB:CE:CC:39:E8:EB:6E:06:D2:C0:FE:3A:C6:9C:86:3F:35:F9:75:4C:73:19:6D:7E:45:0D:BF
+```
+
+⚠️ **Le jour où l'app passe sur le Play Store** : avec Play App Signing, Google
+re-signe le binaire avec _sa_ clé, et notre keystore devient une simple _upload
+key_. Les liens ne se vérifieront plus tant que l'empreinte affichée dans
+`Play Console → Configuration → Intégrité de l'app` n'aura pas été **ajoutée**
+au tableau `sha256_cert_fingerprints` (garder les deux : sideload + Play).
+Récupérer l'empreinte d'un APK : `apksigner verify --print-certs <apk>`.
+
 ## Runbook panne
 
 Si GitHub Actions est down et qu'il faut publier en urgence :

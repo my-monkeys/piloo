@@ -10,7 +10,7 @@ Widget _harness() {
 
 void main() {
   group('PermissionsScreen', () {
-    testWidgets('rendu : titre + 3 cartes (caméra/notifs/contacts) + '
+    testWidgets('rendu : titre + 2 cartes (caméra/notifs) + '
         'help + 2 boutons', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -30,11 +30,9 @@ void main() {
         find.text('Rappels de prise et alertes péremption'),
         findsOneWidget,
       );
-      expect(find.text('Contacts (optionnel)'), findsOneWidget);
-      expect(
-        find.text('Pour inviter tes proches plus facilement'),
-        findsOneWidget,
-      );
+      // Pas de carte Contacts : permission retirée (#398) — l'app ne lit
+      // aucun carnet d'adresses.
+      expect(find.text('Contacts (optionnel)'), findsNothing);
       expect(find.text('Requis'), findsOneWidget);
       expect(
         find.textContaining('On ne partage ces accès'),
