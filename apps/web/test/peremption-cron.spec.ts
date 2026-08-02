@@ -2,7 +2,7 @@
 //
 // On invoque `runPeremptionCron(db, today)` avec une date contrôlée
 // pour stabiliser les fenêtres 30j/7j sans dépendre de l'horloge réelle.
-import { alertes, boites, officines, partages } from '@piloo/db-schema';
+import { alertes, boites, medicamentsBdpm, officines, partages } from '@piloo/db-schema';
 import { setupTestDb, type TestDb } from '@piloo/db-schema/testing';
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -198,5 +198,29 @@ describe('runPeremptionCron', () => {
       boite_id: boiteId,
       cip13: '3400930000019',
     });
+  });
+
+  it('payload porte la dénomination BDPM quand le CIP est connu (#400)', async () => {
+    await env.handle.db.insert(medicamentsBdpm).values({
+      cip13: '3400930000019',
+      cis: '60000001',
+      denomination: 'DOLIPRANE 1000 mg, comprimé',
+      versionBdpm: '2026-08-02',
+    });
+    await makeBoite(isoOffset(20));
+    await runPeremptionCron(env.handle.db, TODAY);
+    const [a] = await env.handle.db.select().from(alertes).limit(1);
+    expect(a?.payload).toMatchObject({ medicament_nom: 'DOLIPRANE 1000 mg, comprimé' });
+  });
+
+  it("crée quand même l'alerte si le CIP est absent de la BDPM (#400)", async () => {
+    // `beforeEach` ne purge pas la table BDPM (read-only en prod) : on
+    // l'assainit ici pour ne pas hériter du test précédent.
+    await env.handle.db.delete(medicamentsBdpm);
+    const boiteId = await makeBoite(isoOffset(20));
+    const result = await runPeremptionCron(env.handle.db, TODAY);
+    expect(result.alertsCreated).toBeGreaterThan(0);
+    const [a] = await env.handle.db.select().from(alertes).limit(1);
+    expect(a?.payload).toMatchObject({ boite_id: boiteId, medicament_nom: null });
   });
 });

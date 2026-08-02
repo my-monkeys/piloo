@@ -12,7 +12,7 @@
 // Le cron est exposé via `app/api/v1/cron/peremption/route.ts`. Pour
 // tester sans cron réel, on appelle `runPeremptionCron(db, today)`
 // directement avec une date contrôlée.
-import { alertes, boites, officines, partages, type Db } from '@piloo/db-schema';
+import { alertes, boites, medicamentsBdpm, officines, partages, type Db } from '@piloo/db-schema';
 import { and, eq, exists, inArray, isNull, lte, ne, not, or, sql } from 'drizzle-orm';
 
 import { log } from '@/lib/server/logger';
@@ -62,14 +62,21 @@ async function scanThreshold(
   // péremption tombe entre aujourd'hui et la limite. On exclut les
   // boîtes déjà périmées car elles relèvent d'un autre flux (tri à
   // la poubelle, hors scope MVP de ce cron).
+  // La dénomination BDPM est jointe ici pour être figée dans le payload
+  // de l'alerte (`medicament_nom`) : sans elle, les clients n'ont que le
+  // CIP13 à afficher (#400). LEFT JOIN — un CIP absent de la base BDPM
+  // (retiré du marché, import en retard) ne doit pas faire disparaître
+  // l'alerte.
   const eligibles = await db
     .select({
       boiteId: boites.id,
       officineId: boites.officineId,
       cip13: boites.cip13,
       peremption: boites.peremption,
+      denomination: medicamentsBdpm.denomination,
     })
     .from(boites)
+    .leftJoin(medicamentsBdpm, eq(medicamentsBdpm.cip13, boites.cip13))
     .where(
       and(
         isNull(boites.deletedAt),
@@ -114,6 +121,7 @@ async function scanThreshold(
         payload: {
           boite_id: b.boiteId,
           cip13: b.cip13,
+          medicament_nom: b.denomination,
           peremption: b.peremption,
         },
       })),
