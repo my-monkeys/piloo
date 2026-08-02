@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      /* Visuel Play Store 1080x1920 (9:16). Même direction que les
+         captures App Store : fond crème, blobs sage/terracotta floutés,
+         titre Fraunces avec l'accent en primary, téléphone posé en bas. */
+      :root {
+        --bg: #faf8f3;
+        --ink: #252a30;
+        --ink2: #6b7280;
+        --sage: #4a6b64;
+        --sage-soft: #dbe3e0;
+        --terra: #a8472e;
+        --terra-soft: #f3d9cd;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        position: relative;
+        background: var(--bg);
+        font-family: 'Manrope', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .blob {
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(90px);
+      }
+      .blob-a {
+        width: 720px;
+        height: 720px;
+        top: -240px;
+        right: -200px;
+        background: var(--sage-soft);
+        opacity: 0.75;
+      }
+      .blob-b {
+        width: 460px;
+        height: 460px;
+        bottom: 120px;
+        left: -180px;
+        background: var(--terra-soft);
+        opacity: 0.5;
+      }
+      .copy {
+        position: absolute;
+        top: 108px;
+        left: 84px;
+        right: 84px;
+        z-index: 2;
+      }
+      .eyebrow {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-size: 25px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--terra);
+      }
+      .eyebrow::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--terra);
+      }
+      h1 {
+        margin-top: 26px;
+        font-family: 'Fraunces', Georgia, serif;
+        font-optical-sizing: auto;
+        font-size: 78px;
+        line-height: 1.04;
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+      }
+      h1 em {
+        display: block;
+        font-style: normal;
+        color: var(--sage);
+      }
+      .sub {
+        margin-top: 26px;
+        font-size: 30px;
+        line-height: 1.45;
+        font-weight: 500;
+        color: var(--ink2);
+        max-width: 860px;
+      }
+      /* Le téléphone déborde volontairement en bas : on montre le haut de
+         l'écran (le contenu utile) sans écraser la capture. */
+      .phone {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        top: 566px;
+        width: 640px;
+        border-radius: 54px;
+        background: #1e2226;
+        padding: 12px;
+        box-shadow:
+          0 60px 110px -30px rgba(37, 42, 48, 0.45),
+          0 0 0 1px rgba(37, 42, 48, 0.06);
+        z-index: 1;
+      }
+      .phone img {
+        display: block;
+        width: 100%;
+        border-radius: 44px;
+      }
+    </style>
+  </head>
+  <body>
+    <span class="blob blob-a"></span>
+    <span class="blob blob-b"></span>
+    <div class="copy">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="title"></h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <div class="phone"><img id="shot" alt="" /></div>
+  </body>
+</html>
