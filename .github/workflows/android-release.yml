@@ -155,14 +155,25 @@ jobs:
         working-directory: apps/mobile
         run: flutter build apk --release
 
-      - name: Renommer l'APK avec le tag
+      # Le Play Store n'accepte que des Android App Bundle pour une
+      # nouvelle app (#404). L'APK reste produit pour le sideload.
+      - name: Build AAB signé (Play Store)
+        working-directory: apps/mobile
+        run: flutter build appbundle --release
+
+      - name: Renommer les artefacts avec le tag
         run: |
           set -eu
-          SRC="apps/mobile/build/app/outputs/flutter-apk/app-release.apk"
-          DST="apps/mobile/build/app/outputs/flutter-apk/piloo-${GITHUB_REF_NAME}.apk"
-          mv "${SRC}" "${DST}"
-          echo "APK_PATH=${DST}" >> "$GITHUB_ENV"
-          ls -lh "${DST}"
+          APK_SRC="apps/mobile/build/app/outputs/flutter-apk/app-release.apk"
+          APK_DST="apps/mobile/build/app/outputs/flutter-apk/piloo-${GITHUB_REF_NAME}.apk"
+          mv "${APK_SRC}" "${APK_DST}"
+          echo "APK_PATH=${APK_DST}" >> "$GITHUB_ENV"
+
+          AAB_SRC="apps/mobile/build/app/outputs/bundle/release/app-release.aab"
+          AAB_DST="apps/mobile/build/app/outputs/bundle/release/piloo-${GITHUB_REF_NAME}.aab"
+          mv "${AAB_SRC}" "${AAB_DST}"
+          echo "AAB_PATH=${AAB_DST}" >> "$GITHUB_ENV"
+          ls -lh "${APK_DST}" "${AAB_DST}"
 
       - name: Cleanup secrets locaux
         if: always()
@@ -170,18 +181,23 @@ jobs:
           rm -f apps/mobile/android/key.properties
           rm -f apps/mobile/android/app/keystore.jks
 
-      - name: Create GitHub Release avec l'APK
+      - name: Create GitHub Release avec l'APK et l'AAB
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
           body: |
-            Build Android signé pointant sur https://piloo.vercel.app.
+            Build Android signé pointant sur https://piloo.my-monkey.fr.
 
-            **Installation** :
+            **Installer sur un téléphone (sideload)** :
             1. Télécharge `piloo-${{ github.ref_name }}.apk` ci-dessous depuis ton téléphone Android
             2. Autoriser l'install depuis cette source si Android le demande (Réglages → Sécurité → "Sources inconnues")
             3. Ouvre l'app → Welcome → sign-up ou sign-in
-          files: ${{ env.APK_PATH }}
+
+            **Publier sur le Play Store** : utiliser `piloo-${{ github.ref_name }}.aab`
+            (Google n'accepte pas les APK pour une nouvelle app).
+          files: |
+            ${{ env.APK_PATH }}
+            ${{ env.AAB_PATH }}
           draft: false
           prerelease: false
