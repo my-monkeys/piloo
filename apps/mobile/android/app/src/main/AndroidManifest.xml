@@ -3,10 +3,10 @@
          CAMERA      : scan DataMatrix des boîtes (mobile_scanner #80).
          POST_NOTIFICATIONS : rappels de prise + alertes péremption
                               (Android 13+, runtime).
-         READ_CONTACTS : invitation des proches (officines partagées). -->
+         Pas de READ_CONTACTS : les invitations passent par un email saisi,
+         l'app ne lit jamais le carnet d'adresses (#398). -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
     <!-- Notifications locales pour rappels de prise (#128).
          - SCHEDULE_EXACT_ALARM : Android 12 (S, API 31). Sans ça
            AndroidScheduleMode.exactAllowWhileIdle tombe sur un alarm
@@ -27,7 +27,7 @@
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
-        android:label="piloo"
+        android:label="Piloo"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:allowBackup="false"
@@ -60,7 +60,7 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
             <!-- Deep links : ouvre l'app quand l'user tape un lien
-                 piloo.vercel.app/invitations/* sur Android. autoVerify
+                 piloo.my-monkey.fr/invitations/* sur Android. autoVerify
                  déclenche la validation via /.well-known/assetlinks.json. -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
@@ -68,7 +68,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data
                     android:scheme="https"
-                    android:host="piloo.vercel.app"
+                    android:host="piloo.my-monkey.fr"
                     android:pathPrefix="/invitations" />
             </intent-filter>
         </activity>

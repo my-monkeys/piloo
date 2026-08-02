@@ -377,6 +377,7 @@ const FOOTER_COLS: { title: string; links: { href: string; label: string }[] }[]
       { href: '/legal/privacy', label: 'Confidentialité' },
       { href: '/legal/mentions', label: 'Mentions légales' },
       { href: '/legal/cookies', label: 'Cookies' },
+      { href: '/legal/suppression-compte', label: 'Supprimer mon compte' },
     ],
   },
 ];

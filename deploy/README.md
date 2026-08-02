@@ -129,10 +129,16 @@ cookie-server** (heure locale Europe/Paris), via
 | `0 7 * * *`     | `/api/v1/cron/rappels-prises`       | GET     |
 | `0 12 * * *`    | `/api/v1/cron/rappels-retard`       | GET     |
 | `0 22 * * *`    | `/api/v1/cron/prise-oubliee`        | POST    |
+| `30 6 * * *`    | `/api/v1/cron/peremption`           | POST    |
 
-⚠️ La méthode HTTP varie selon la route (4 GET, 4 POST) — un mauvais verbe
-renvoie 405. `/api/v1/cron/peremption` existe mais n'est volontairement pas
-planifiée (elle ne l'était pas non plus sur Vercel).
+⚠️ La méthode HTTP varie selon la route (4 GET, 5 POST) — un mauvais verbe
+renvoie 405.
+
+`peremption` a été ajoutée le 2026-08-02 : elle ne figurait pas dans
+`vercel.json`, donc **les alertes de péremption n'avaient jamais été générées
+en production** alors que c'est une fonctionnalité mise en avant (landing,
+fiches stores). Découvert en testant l'app Android avec un compte peuplé — un
+premier passage manuel a créé 9 alertes sur 7 boîtes.
 
 **Backups** : `/home/maxim/piloo/backup-db.sh` en crontab (`0 4 * * *`) —
 `pg_dump -Fc` de `piloo-db` vers `/home/maxim/backups/piloo/piloo_<date>.dump`,
