@@ -1,0 +1,26 @@
+[
+  {
+    "file": "01-officine.png",
+    "eyebrow": "Ton armoire à pharmacie",
+    "title": "Ton armoire,<em>sous contrôle.</em>",
+    "sub": "Chaque boîte, son stock et sa date de péremption. Périmé ou bientôt épuisé : tu le vois d'un coup d'œil."
+  },
+  {
+    "file": "02-fiche.png",
+    "eyebrow": "La fiche médicament",
+    "title": "Chaque médoc,<em>expliqué.</em>",
+    "sub": "Indications, posologie et précautions issues des données officielles ANSM. La notice, en lisible."
+  },
+  {
+    "file": "03-scan.png",
+    "eyebrow": "Ajouter une boîte",
+    "title": "Une boîte ?<em>Un scan.</em>",
+    "sub": "Vise le DataMatrix au dos : nom, dosage et péremption se remplissent tout seuls."
+  },
+  {
+    "file": "04-alertes.png",
+    "eyebrow": "Alertes",
+    "title": "On te prévient,<em>à temps.</em>",
+    "sub": "Péremption qui approche, stock qui baisse : Piloo te le signale avant que ça devienne un problème."
+  }
+]

@@ -58,14 +58,25 @@ Piloo est développé en France par My-Monkey, à Montpellier.
 | Asset                          | Format requis                       | État                                                                            |
 | ------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------- |
 | **Icône**                      | 512 × 512 PNG 32 bits               | ✅ dispo — `apps/mobile/assets/branding/app-icon.png` (1024², à redimensionner) |
-| **Feature graphic**            | 1024 × 500 PNG/JPG, **obligatoire** | ⬜ à produire (bandeau titre + visuel, pas de texte < 24 px)                    |
-| **Captures téléphone**         | 2 à 8, ratio 9:16, min 320 px       | ⬜ à produire — reprendre le pipeline `docs/appstore/` (mêmes 6 scènes)         |
+| **Feature graphic**            | 1024 × 500 PNG/JPG, **obligatoire** | ✅ `out/feature-graphic.png`                                                    |
+| **Captures téléphone**         | 2 à 8, ratio 9:16, min 320 px       | ✅ `out/screenshot-1..4.png` (1080 × 1920)                                      |
 | **Captures tablette 7" / 10"** | optionnelles                        | ⬜ facultatif (des captures iPad existent déjà)                                 |
 
-Les captures App Store (1284 × 2778) ne sont pas réutilisables telles quelles :
-le ratio Play est libre mais l'habillage doit être refait au format Android.
-L'émulateur de cookie-server (AVD `glance`, 1080 × 2400) permet de capturer les
-écrans réels — cf. `docs/playstore/README-captures.md`.
+### Régénérer les visuels
+
+```bash
+node docs/playstore/generate.mjs
+```
+
+- `raw/` — captures brutes de l'émulateur (écrans réels, compte peuplé)
+- `slides.json` — accroches et sous-titres
+- `template.html` — habillage 1080 × 1920 (fond crème, blobs, titre Fraunces)
+- `out/` — visuels prêts à téléverser
+
+Les captures App Store (1290 × 2796) ne sont pas réutilisables : leur ratio 2,17
+dépasse la limite Play de 2:1. Le format retenu est le 9:16 canonique.
+Pour recapturer les écrans : émulateur de cookie-server (AVD `glance`,
+1080 × 2400), helper `~/piloo-emu.sh`, compte de test peuplé.
 
 ## 4. URLs obligatoires
 
