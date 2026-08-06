@@ -14,5 +14,6 @@
     "@wdio/mocha-framework": "^9.0.0",
     "@wdio/spec-reporter": "^9.0.0",
     "webdriverio": "^9.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.26.1"
 }
